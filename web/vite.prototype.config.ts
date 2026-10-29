@@ -14,7 +14,7 @@ export default defineConfig({
     outDir: 'dist-prototype',
     rollupOptions: {
       input: fileURLToPath(new URL('./prototype.html', import.meta.url)),
-      output: { entryFileNames: 'assets/app.js', assetFileNames: 'assets/app[extname]' },
+      output: { entryFileNames: 'assets/app.js', assetFileNames: (i) => ((i.names?.[0] ?? '').endsWith('.css') ? 'assets/app.css' : 'assets/[name][extname]') },
     },
   },
 });

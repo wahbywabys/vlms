@@ -11,6 +11,7 @@ import {
 import { tx, type Txt } from './i18n';
 import { explorerStringsAr, inductionMotorPartsAr } from './motorAr';
 import { useL, useStore } from './store';
+import { CardHead, PageHeader } from './ui';
 
 type Mode = 'Guided' | 'Sandbox' | 'Exam';
 const MODE_LABEL: Record<Mode, Txt> = { Guided: tx('Guided', 'موجّه'), Sandbox: tx('Sandbox', 'تجريبي حر'), Exam: tx('Exam', 'امتحان') };
@@ -23,16 +24,18 @@ export function StudentLab() {
   const [seenExplore, setSeenExplore] = useState(false);
   return (
     <div className="lab">
-      <div className="lab-head">
-        <div>
-          <p className="eyebrow">{L('Student · Unit ELEC-L3-U04 · Diagnose faults in motor control circuits', 'الطالب · الوحدة ELEC-L3-U04 · تشخيص أعطال دوائر تحكم المحركات')}</p>
-          <h1>{tab === 'vlab' ? L('DOL Motor Starter · Fault test', 'بادئ المحرك المباشر DOL · اختبار الأعطال') : L('3-Phase Induction Motor · IEC 132M', 'محرك حثي ثلاثي الأطوار · IEC 132M')}</h1>
-        </div>
-        <div className="tabs" role="tablist" aria-label={L('Lab activity', 'نشاط المعمل')}>
-          <button type="button" role="tab" aria-selected={tab === 'explore'} onClick={() => { setTab('explore'); setSeenExplore(true); }}>{L('Explore the motor', 'استكشف المحرك')}</button>
-          <button type="button" role="tab" aria-selected={tab === 'vlab'} onClick={() => setTab('vlab')}>{L('V-Lab fault test', 'اختبار الأعطال الافتراضي')}</button>
-        </div>
-      </div>
+      <PageHeader
+        crumbs={[L('My learning', 'تعلّمي'), 'ELEC-L3-U04', L('Diagnose faults in motor control circuits', 'تشخيص أعطال دوائر تحكم المحركات')]}
+        title={tab === 'vlab' ? L('DOL motor starter · Fault test', 'بادئ المحرك المباشر DOL · اختبار الأعطال') : L('3-phase induction motor · IEC 132M', 'محرك حثي ثلاثي الأطوار · IEC 132M')}
+        meta={tab === 'vlab'
+          ? L('Find and fix the fault safely. Your actions are scored against the unit rubric.', 'حدّد العطل وأصلحه بأمان. تُقيَّم إجراءاتك وفق معايير الوحدة.')
+          : L('Take the motor apart, inspect each part and read its specification.', 'فكّك المحرك وافحص كل قطعة واقرأ مواصفاتها.')}
+        actions={
+          <div className="tabs" role="tablist" aria-label={L('Lab activity', 'نشاط المعمل')}>
+            <button type="button" role="tab" aria-selected={tab === 'explore'} onClick={() => { setTab('explore'); setSeenExplore(true); }}>{L('1 · Explore the motor', '1 · استكشف المحرك')}</button>
+            <button type="button" role="tab" aria-selected={tab === 'vlab'} onClick={() => setTab('vlab')}>{L('2 · V-Lab fault test', '2 · اختبار الأعطال الافتراضي')}</button>
+          </div>
+        } />
       {/* The 3D explorer mounts on first visit and then stays mounted: unmounting
           drei's <Html> pins mid-session throws a removeChild error. */}
       {seenExplore && <div hidden={tab !== 'explore'}><Explore /></div>}
@@ -69,8 +72,8 @@ function Explore() {
 function TelemetryStrip({ items, empty }: { items: { seq: number; verb: string; objectRef?: string | null; note?: string }[]; empty: string }) {
   const { L } = useL();
   return (
-    <section className="telemetry" aria-label={L('Telemetry', 'القياس عن بعد')}>
-      <strong>{L('Telemetry sent to the LMS', 'أحداث القياس المرسلة إلى نظام إدارة التعلم')}</strong>
+    <section className="card telemetry" aria-label={L('Telemetry', 'القياس عن بعد')}>
+      <CardHead title={L('Activity log', 'سجل النشاط')} sub={L('Telemetry sent to VTC_LMS, newest first', 'أحداث القياس المرسلة إلى VTC_LMS، الأحدث أولًا')} />
       {items.length === 0 ? <p className="muted">{empty}</p> : (
         <ol reversed dir="ltr">
           {items.map((e) => (
@@ -203,7 +206,7 @@ function FaultTest() {
 
   return (
     <div className="vlab">
-      <div className="vlab-bar">
+      <div className="vlab-bar card">
         <div className="modes" role="radiogroup" aria-label={L('Mode', 'الوضع')}>
           {(['Guided', 'Sandbox', 'Exam'] as Mode[]).map((m) => (
             <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => reset(m)}>{pick(MODE_LABEL[m])}</button>
@@ -220,12 +223,13 @@ function FaultTest() {
       </div>
 
       <div className="vlab-grid">
-        <section className="rig" aria-label={L('Starter panel', 'لوحة البادئ')}>
-          <div className="rig-status">
-            <StatusChip on={rig.ppe} label={L('PPE', 'الوقاية')} onText={L('On', 'مرتداة')} offText={L('Not worn', 'غير مرتداة')} />
-            <StatusChip on={rig.locked} label={L('Q1 isolator', 'المفصل Q1')} onText={L('Locked off', 'مفصول ومقفول')} offText={L('Live', 'موصول')} danger={!rig.locked} />
-            <StatusChip on={rig.panelOpen} label={L('Panel door', 'باب اللوحة')} onText={L('Open', 'مفتوح')} offText={L('Closed', 'مغلق')} neutral />
-          </div>
+        <section className="card rig" aria-labelledby="rig-title">
+          <CardHead id="rig-title" title={L('Starter panel', 'لوحة البادئ')} sub={L('Tap a blue test point to measure it.', 'اضغط نقطة قياس زرقاء لقياسها.')}
+            actions={<div className="rig-status">
+              <StatusChip on={rig.ppe} label={L('PPE', 'الوقاية')} onText={L('On', 'مرتداة')} offText={L('Not worn', 'غير مرتداة')} />
+              <StatusChip on={rig.locked} label="Q1" onText={L('Locked off', 'مفصول ومقفول')} offText={L('Live', 'موصول')} danger={!rig.locked} />
+              <StatusChip on={rig.panelOpen} label={L('Door', 'الباب')} onText={L('Open', 'مفتوح')} offText={L('Closed', 'مغلق')} neutral />
+            </div>} />
           <Schematic rig={rig} onMeasure={measure} active={meter?.tp.ref} />
           <div className="rig-actions">
             <button type="button" onClick={donPpe} disabled={rig.ppe || locked}>{L('Put on PPE', 'ارتدِ معدات الوقاية')}</button>
@@ -244,6 +248,8 @@ function FaultTest() {
           </div>
 
           {mode === 'Guided' && !result && (
+            <section className="card" aria-labelledby="steps-title">
+            <CardHead id="steps-title" title={L('Procedure', 'خطوات العمل')} sub={L(`Step ${Math.min(step === -1 ? 8 : step + 1, 8)} of 8`, `الخطوة ${Math.min(step === -1 ? 8 : step + 1, 8)} من 8`)} />
             <ol className="steps">
               {GUIDED_STEPS.map((s, i) => (
                 <li key={s.en} className={stepDone[i] ? 'done' : i === step ? 'now' : ''}>
@@ -251,11 +257,12 @@ function FaultTest() {
                 </li>
               ))}
             </ol>
+            </section>
           )}
 
           {!result ? (
-            <div className="diag">
-              <p className="eyebrow">{L('Diagnosis', 'التشخيص')}</p>
+            <section className="card diag" aria-labelledby="diag-title">
+              <CardHead id="diag-title" title={L('Diagnosis & repair', 'التشخيص والإصلاح')} sub={L('Record what you found, then submit.', 'سجّل ما وجدته ثم أرسل.')} />
               <label className="field"><span>{L('Faulty component', 'المكوّن المعطوب')}</span>
                 <select id="diag-component" value={diag.component} onChange={(e) => setDiag((d) => ({ ...d, component: e.target.value }))} disabled={locked}>
                   <option value="">{L('Choose…', 'اختر…')}</option>
@@ -282,7 +289,7 @@ function FaultTest() {
                 <button type="button" className="btn-replace" onClick={replacePart} disabled={!swap || locked}>{L('Replace', 'استبدل')}</button>
               </div>
               <button type="button" className="primary btn-submit" onClick={submit} disabled={events.length === 0 || result !== null}>{L('Submit for scoring', 'أرسل للتقييم')}</button>
-            </div>
+            </section>
           ) : (
             <Result res={result} fault={fault.title} onRetry={() => reset()} />
           )}
@@ -313,7 +320,7 @@ function Result({ res, fault, onRetry }: { res: EvaluationResult; fault: Txt; on
   const { L, pick } = useL();
   const level = res.gateFailures.length ? L('No credit (safety gate failed)', 'لا رصيد (رسوب في شرط أمان)') : pick(LEVELS[levelForScore(res.totalScore)]!);
   return (
-    <div className="result">
+    <section className="card result">
       <div className={`result-head ${res.passed ? 'v-pass' : 'v-fail'}`}>
         <span className="v-score">{res.totalScore}</span>
         <span><strong>{res.passed ? L('Pass', 'ناجح') : L('Not yet', 'لم يجتز بعد')}</strong><br />
@@ -334,7 +341,7 @@ function Result({ res, fault, onRetry }: { res: EvaluationResult; fault: Txt; on
         </tbody>
       </table>
       <button type="button" onClick={onRetry}>{L('Start a new attempt', 'ابدأ محاولة جديدة')}</button>
-    </div>
+    </section>
   );
 }
 

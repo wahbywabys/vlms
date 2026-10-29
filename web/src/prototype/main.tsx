@@ -7,6 +7,8 @@ import { LogoMark, Wordmark } from './Logo';
 import { StoreProvider, useL, useStore, type Role } from './store';
 import { StudentLab } from './StudentLab';
 import { TrainerFloor } from './TrainerFloor';
+import wabysLogoDark from './assets/wabys-logo-dark.png';
+import wabysLogo from './assets/wabys-logo.png';
 import './prototype.css';
 
 const ROLES = [
@@ -26,6 +28,11 @@ function Shell() {
       <header className="topbar">
         <div className="topbar-inner">
           <div className="brand">
+            <span className="org" role="img" aria-label={L('WABYS for Training and Education', 'وابيز للتدريب والتعليم')}>
+              <img className="org-logo org-light" src={wabysLogo} alt="" width={143} height={44} />
+              <img className="org-logo org-dark" src={wabysLogoDark} alt="" width={143} height={44} />
+            </span>
+            <span className="brand-divider" aria-hidden="true" />
             <LogoMark />
             <div className="brand-text">
               <Wordmark />
@@ -69,6 +76,12 @@ function Shell() {
         <div hidden={role !== 'student'}><StudentLab /></div>
         <div hidden={role !== 'director'}><DirectorDashboard /></div>
       </main>
+      <footer className="app-foot">
+        <img className="org-logo org-light" src={wabysLogo} alt="" width={78} height={24} />
+        <img className="org-logo org-dark" src={wabysLogoDark} alt="" width={78} height={24} />
+        <span>{L('VTC_LMS is a product of WABYS for Training and Education.', 'VTC_LMS منتج من وابيز للتدريب والتعليم.')}</span>
+        <span className="muted">{L('Prototype · sample data only', 'نموذج أولي · بيانات تجريبية فقط')}</span>
+      </footer>
     </div>
   );
 }

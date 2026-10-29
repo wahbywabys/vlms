@@ -5,6 +5,7 @@ import {
 } from './data';
 import type { Lang } from './i18n';
 import { useL, useStore } from './store';
+import { PageHeader } from './ui';
 
 /** Deterministic nudge so each filter combination shows plausible, stable numbers. */
 function nudge(seed: string, i: number, span: number) {
@@ -62,20 +63,20 @@ export function DirectorDashboard() {
 
   return (
     <div className="dash">
-      <div className="dash-head">
-        <div>
-          <p className="eyebrow">{L('Director · Institutional health', 'المدير · صحة المؤسسة')}</p>
-          <h1>{pick(INSTITUTIONS[inst]!.name)}</h1>
-        </div>
-        <div className="filters">
-          <label className="field"><span>{L('School', 'المدرسة')}</span>
-            <select id="f-inst" value={inst} onChange={(e) => setInst(Number(e.target.value))}>{INSTITUTIONS.map((x, i) => <option key={x.name.en} value={i}>{pick(x.name)}</option>)}</select></label>
-          <label className="field"><span>{L('Term', 'الفصل الدراسي')}</span>
-            <select id="f-term" value={term} onChange={(e) => setTerm(Number(e.target.value))}>{TERMS.map((x, i) => <option key={x.en} value={i}>{pick(x)}</option>)}</select></label>
-          <label className="field"><span>{L('Trade', 'التخصص')}</span>
-            <select id="f-trade" value={trade} onChange={(e) => setTrade(Number(e.target.value))}>{TRADES.map((x, i) => <option key={x.en} value={i}>{pick(x)}</option>)}</select></label>
-          <button type="button" className="primary" onClick={() => void exportPack()}>{L('Export IQA pack', 'تصدير حزمة ضمان الجودة')}</button>
-        </div>
+      <PageHeader
+        crumbs={[L('Network', 'الشبكة'), pick(INSTITUTIONS[inst]!.name)]}
+        title={L('Institutional health', 'صحة المؤسسة')}
+        meta={<>{pick(INSTITUTIONS[inst]!.name)} · {pick(TERMS[term]!)} · {pick(TRADES[trade]!)}</>}
+        actions={<button type="button" className="primary" onClick={() => void exportPack()}>{L('Export IQA pack', 'تصدير حزمة ضمان الجودة')}</button>} />
+
+      <div className="card filters" role="group" aria-label={L('Filters', 'عوامل التصفية')}>
+        <label className="field"><span>{L('School', 'المدرسة')}</span>
+          <select id="f-inst" value={inst} onChange={(e) => setInst(Number(e.target.value))}>{INSTITUTIONS.map((x, i) => <option key={x.name.en} value={i}>{pick(x.name)}</option>)}</select></label>
+        <label className="field"><span>{L('Term', 'الفصل الدراسي')}</span>
+          <select id="f-term" value={term} onChange={(e) => setTerm(Number(e.target.value))}>{TERMS.map((x, i) => <option key={x.en} value={i}>{pick(x)}</option>)}</select></label>
+        <label className="field"><span>{L('Trade', 'التخصص')}</span>
+          <select id="f-trade" value={trade} onChange={(e) => setTrade(Number(e.target.value))}>{TRADES.map((x, i) => <option key={x.en} value={i}>{pick(x)}</option>)}</select></label>
+        {!isBase && <button type="button" className="ghost" onClick={() => { setInst(0); setTerm(0); setTrade(0); }}>{L('Reset filters', 'إعادة الضبط')}</button>}
       </div>
 
       <div className="kpis">
@@ -96,7 +97,7 @@ export function DirectorDashboard() {
       </div>
 
       {drillK && (
-        <section className="panel drill" aria-label={pick(drillK.label)}>
+        <section className="card panel drill" aria-label={pick(drillK.label)}>
           <header className="panel-head">
             <h2>{pick(drillK.label)} · {L('last 8 weeks', 'آخر 8 أسابيع')}</h2>
             <button type="button" className="ghost" onClick={() => setDrill(null)}>{L('Close', 'إغلاق')}</button>
@@ -107,7 +108,7 @@ export function DirectorDashboard() {
       )}
 
       <div className="dash-grid">
-        <section className="panel" aria-label={L('Regional skill heatmap', 'خريطة المهارات الإقليمية')}>
+        <section className="card panel" aria-label={L('Regional skill heatmap', 'خريطة المهارات الإقليمية')}>
           <header className="panel-head"><h2>{L('Regional skill heatmap', 'خريطة المهارات الإقليمية')}</h2>
             <span className="muted">{L('% of learners at autonomous or above', '% المتدربين بمستوى "مستقل" أو أعلى')}</span></header>
           <div className="scroll-x">
@@ -131,7 +132,7 @@ export function DirectorDashboard() {
             'أضعف خلية: الصعيد · U04 تتبع أعطال دوائر تحكم المحركات. سيُخصَّص هناك معمل بادئ DOL الافتراضي في الفصل القادم.')}</p>
         </section>
 
-        <section className="panel" aria-label={L('Asset utilisation', 'استغلال الأصول')}>
+        <section className="card panel" aria-label={L('Asset utilisation', 'استغلال الأصول')}>
           <header className="panel-head"><h2>{L('Asset utilisation · 30 days', 'استغلال الأصول · 30 يومًا')}</h2>
             <span className="muted">{L('booked ÷ available hours', 'الساعات المحجوزة ÷ المتاحة')}</span></header>
           <ul className="bars">
@@ -154,7 +155,7 @@ export function DirectorDashboard() {
             'العلامتان تحددان حدي 35% و85%. المخرطتان CNC تعملان فوق 85%: أضف فترة CNC يوم السبت أو انقل JC-121 إلى MILL-04.')}</p>
         </section>
 
-        <section className="panel" aria-label={L('Compliance and IQA', 'الامتثال وضمان الجودة')}>
+        <section className="card panel" aria-label={L('Compliance and IQA', 'الامتثال وضمان الجودة')}>
           <header className="panel-head"><h2>{L('Compliance & IQA', 'الامتثال وضمان الجودة الداخلي')}</h2></header>
           <ul className="queue">
             {COMPLIANCE.map((c) => (
@@ -174,7 +175,7 @@ export function DirectorDashboard() {
           </ul>
         </section>
 
-        <section className="panel" aria-label={L('Question bank quality', 'جودة بنك الأسئلة')}>
+        <section className="card panel" aria-label={L('Question bank quality', 'جودة بنك الأسئلة')}>
           <header className="panel-head"><h2>{L('Item quality', 'جودة الأسئلة')}</h2>
             <span className="muted">{L('1,240 items · 38 flagged', '1,240 سؤالًا · 38 بحاجة لمراجعة')}</span></header>
           <p className="muted small">{L('Flagged when difficulty p < 0.2 or > 0.85, or discrimination D < 0.2.',
@@ -193,7 +194,7 @@ export function DirectorDashboard() {
           </div>
         </section>
 
-        <section className="panel wide" aria-label={L('Latest V-Lab evaluations', 'أحدث تقييمات المعمل الافتراضي')}>
+        <section className="card panel wide" aria-label={L('Latest V-Lab evaluations', 'أحدث تقييمات المعمل الافتراضي')}>
           <header className="panel-head"><h2>{L('Latest V-Lab evaluations', 'أحدث تقييمات المعمل الافتراضي')}</h2>
             <span className="muted">{L('scored by the rubric engine · new attempts appear here live', 'مقيّمة بمحرك المعايير · تظهر المحاولات الجديدة هنا مباشرة')}</span></header>
           <div className="scroll-x">
