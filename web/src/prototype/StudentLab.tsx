@@ -3,12 +3,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { FullscreenIcon, useFullscreen } from './fullscreen';
 import { MachineExplorer, type ExplorerEvent } from '../components/MachineExplorer';
 import { inductionMotorParts } from '../models/inductionMotor';
-import { DOL_LAB } from './data';
-import {
-  COMPONENTS, CRITERION_LABELS, DOL_RUBRIC, FAULTS, GUIDED_STEPS, TEST_POINTS, detectGateViolations, evaluate, levelForScore, readMeter, toEvent,
-  type EvaluationResult, type Fault, type RigState, type TelemetryEvent, type TestPoint,
-} from './dolStarter';
 import { tx, type Txt } from './i18n';
+import { TRADES, type Trade } from './trades';
+import type { Diagram, Fault, Lab, RigState, TestPoint } from './trades/types';
+import { detectGateViolations, evaluate, levelForScore, toEvent, type EvaluationResult, type TelemetryEvent } from './vlab';
 import { explorerStringsAr, inductionMotorPartsAr } from './motorAr';
 import { useL, useStore } from './store';
 import { CardHead, PageHeader } from './ui';
@@ -16,36 +14,45 @@ import { CardHead, PageHeader } from './ui';
 type Mode = 'Guided' | 'Sandbox' | 'Exam';
 const MODE_LABEL: Record<Mode, Txt> = { Guided: tx('Guided', 'موجّه'), Sandbox: tx('Sandbox', 'تجريبي حر'), Exam: tx('Exam', 'امتحان') };
 const TIME_LIMIT_S = 1800;
-const LEARNER = tx('Omar Lotfy', 'عمر لطفي');
 
 export function StudentLab() {
-  const { L } = useL();
-  const [tab, setTab] = useState<'explore' | 'vlab'>('vlab');
+  const { L, pick } = useL();
+  const { trade } = useStore();
+  const { lab } = trade;
+  const [tabPick, setTab] = useState<'explore' | 'vlab'>('vlab');
+  const tab = lab.explore ? tabPick : 'vlab';
   const [seenExplore, setSeenExplore] = useState(false);
+  // Each trade's attempt stays mounted once opened, so switching trade and back keeps it.
+  const [visited, setVisited] = useState<string[]>([trade.id]);
+  useEffect(() => { setVisited((v) => (v.includes(trade.id) ? v : [...v, trade.id])); }, [trade.id]);
   return (
     <div className="lab">
       <PageHeader
-        crumbs={[L('My learning', 'تعلّمي'), 'ELEC-L3-U04', L('Diagnose faults in motor control circuits', 'تشخيص أعطال دوائر تحكم المحركات')]}
-        title={tab === 'vlab' ? L('DOL motor starter · Fault test', 'بادئ المحرك المباشر DOL · اختبار الأعطال') : L('3-phase induction motor · IEC 132M', 'محرك حثي ثلاثي الأطوار · IEC 132M')}
+        crumbs={[L('My learning', 'تعلّمي'), pick(trade.name), lab.unit.code, pick(lab.unit.title)]}
+        title={tab === 'vlab' || !lab.explore ? pick(lab.intro) : pick(lab.explore.title)}
         meta={tab === 'vlab'
           ? L('Find and fix the fault safely. Your actions are scored against the unit rubric.', 'حدّد العطل وأصلحه بأمان. تُقيَّم إجراءاتك وفق معايير الوحدة.')
           : L('Take the motor apart, inspect each part and read its specification.', 'فكّك المحرك وافحص كل قطعة واقرأ مواصفاتها.')}
         actions={
-          <div className="tabs" role="tablist" aria-label={L('Lab activity', 'نشاط المعمل')}>
-            <button type="button" role="tab" aria-selected={tab === 'explore'} onClick={() => { setTab('explore'); setSeenExplore(true); }}>{L('1 · Explore the motor', '1 · استكشف المحرك')}</button>
-            <button type="button" role="tab" aria-selected={tab === 'vlab'} onClick={() => setTab('vlab')}>{L('2 · V-Lab fault test', '2 · اختبار الأعطال الافتراضي')}</button>
-          </div>
+          lab.explore ? (
+            <div className="tabs" role="tablist" aria-label={L('Lab activity', 'نشاط المعمل')}>
+              <button type="button" role="tab" aria-selected={tab === 'explore'} onClick={() => { setTab('explore'); setSeenExplore(true); }}>{L('1 · Explore the motor', '1 · استكشف المحرك')}</button>
+              <button type="button" role="tab" aria-selected={tab === 'vlab'} onClick={() => setTab('vlab')}>{L('2 · V-Lab fault test', '2 · اختبار الأعطال الافتراضي')}</button>
+            </div>
+          ) : undefined
         } />
       {/* The 3D explorer mounts on first visit and then stays mounted: unmounting
           drei's <Html> pins mid-session throws a removeChild error. */}
-      {seenExplore && <div hidden={tab !== 'explore'}><Explore /></div>}
-      <div hidden={tab !== 'vlab'}><FaultTest /></div>
+      {seenExplore && <div hidden={tab !== 'explore'}><Explore title={lab.explore?.title} assetTag={lab.explore?.assetTag} /></div>}
+      {TRADES.filter((t) => visited.includes(t.id)).map((t) => (
+        <div key={t.id} hidden={tab !== 'vlab' || t.id !== trade.id}><FaultTest trade={t} /></div>
+      ))}
     </div>
   );
 }
 
-function Explore() {
-  const { lang, L } = useL();
+function Explore({ title, assetTag }: { title?: Txt; assetTag?: string }) {
+  const { lang, L, pick } = useL();
   const [log, setLog] = useState<(ExplorerEvent & { seq: number })[]>([]);
   const onEvent = useCallback((e: ExplorerEvent) => setLog((l) => [{ ...e, seq: (l[0]?.seq ?? 0) + 1 }, ...l].slice(0, 5)), []);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -58,7 +65,7 @@ function Explore() {
         <FullscreenIcon exit={fs.isFull} />
         <span className="fs-text">{fs.isFull ? L('Exit', 'خروج') : L('Full screen', 'ملء الشاشة')}</span>
       </button>
-      <MachineExplorer title={L('3-Phase Induction Motor · IEC 132M', 'محرك حثي ثلاثي الأطوار · IEC 132M')} assetTag="WS-ELEC-07 / MTR-0132"
+      <MachineExplorer title={title ? pick(title) : L('3-Phase Induction Motor · IEC 132M', 'محرك حثي ثلاثي الأطوار · IEC 132M')} assetTag={assetTag ?? 'WS-ELEC-07 / MTR-0132'}
         parts={lang === 'ar' ? inductionMotorPartsAr : inductionMotorParts} strings={lang === 'ar' ? explorerStringsAr : undefined}
         onEvent={onEvent} height="min(620px, 72vh)" />
       </div>
@@ -87,13 +94,17 @@ function TelemetryStrip({ items, empty }: { items: { seq: number; verb: string; 
 
 const fmt = (s: number) => `${String(Math.floor(Math.max(0, s) / 60)).padStart(2, '0')}:${String(Math.max(0, s) % 60).padStart(2, '0')}`;
 const INITIAL_RIG: RigState = { ppe: false, locked: false, panelOpen: false, replaced: [] };
-const label = (ref: string) => COMPONENTS.find((c) => c.ref === ref)?.label ?? tx(ref, ref);
 
-function FaultTest() {
-  const { faultCode, raiseAlert, addEval, setVlab } = useStore();
+function FaultTest({ trade }: { trade: Trade }) {
+  const { faultCodes, raiseAlert, addEval, setVlab: setVlabFor } = useStore();
   const { L, pick } = useL();
+  const { lab } = trade;
+  const LEARNER = trade.learner.name;
+  const faultCode = faultCodes[trade.id]!;
+  const setVlab = (v: Parameters<typeof setVlabFor>[1]) => setVlabFor(trade.id, v);
+  const label = (ref: string) => lab.components.find((c) => c.ref === ref)?.label ?? tx(ref, ref);
   const [mode, setMode] = useState<Mode>('Guided');
-  const [fault, setFault] = useState<Fault>(() => FAULTS.find((f) => f.code === faultCode)!);
+  const [fault, setFault] = useState<Fault>(() => lab.faults.find((f) => f.code === faultCode)!);
   const [events, setEvents] = useState<TelemetryEvent[]>([]);
   const [rig, setRig] = useState<RigState>(INITIAL_RIG);
   const [startedAt, setStartedAt] = useState(() => new Date());
@@ -107,7 +118,7 @@ function FaultTest() {
   eventsRef.current = events;
 
   const reset = (m: Mode = mode) => {
-    setMode(m); setFault(FAULTS.find((f) => f.code === faultCode)!); setEvents([]); setRig(INITIAL_RIG);
+    setMode(m); setFault(lab.faults.find((f) => f.code === faultCode)!); setEvents([]); setRig(INITIAL_RIG);
     setStartedAt(new Date()); setMeter(null); setNotice(null); setDiag({ component: '', condition: '' }); setSwap(''); setResult(null);
     setVlab({ mode: m === 'Exam' ? 'Exam' : 'Guided', events: 0, status: 'idle' });
   };
@@ -121,9 +132,9 @@ function FaultTest() {
   const emit = (verb: string, objectRef?: string, value: Record<string, unknown> = {}): boolean => {
     const prior = eventsRef.current;
     const ev = toEvent((prior.at(-1)?.seq ?? 0) + 1, verb, objectRef, value);
-    const violations = detectGateViolations(DOL_RUBRIC, prior, [ev], { startedAt, faults: [fault] });
+    const violations = detectGateViolations(lab.rubric, prior, [ev], { startedAt, faults: [fault] });
     if (violations.length && mode === 'Guided') {
-      const c = CRITERION_LABELS[violations[0]!.criterionKey]!;
+      const c = lab.criterionLabels[violations[0]!.criterionKey]!;
       setNotice({ kind: 'block', text: tx(`Blocked by safety guardrail: ${c.en}.`, `أوقفه حاجز الأمان: ${c.ar}.`) });
       return false;
     }
@@ -132,9 +143,9 @@ function FaultTest() {
     setEvents(next);
     setVlab({ events: next.length, status: 'in progress', mode: mode === 'Exam' ? 'Exam' : 'Guided' });
     if (violations.length && mode === 'Exam') {
-      const broken = violations.map((v) => CRITERION_LABELS[v.criterionKey]!);
+      const broken = violations.map((v) => lab.criterionLabels[v.criterionKey]!);
       raiseAlert({
-        learner: LEARNER, source: 'V-Lab',
+        trade: trade.id, learner: LEARNER, source: 'V-Lab',
         text: tx(`Exam: ${verb.replace('_', ' ')} broke ${broken.map((b) => b.en.toLowerCase()).join('; ')}`,
           `امتحان: الإجراء (${verb}) خالف ${broken.map((b) => b.ar).join('؛ ')}`),
       });
@@ -146,62 +157,59 @@ function FaultTest() {
 
   const donPpe = act(() => { if (!rig.ppe && emit('ppe_donned')) setRig((r) => ({ ...r, ppe: true })); });
   const toggleLoto = act(() => {
-    if (!rig.locked) { if (emit('loto_applied', 'Q1')) setRig((r) => ({ ...r, locked: true })); }
-    else if (emit('loto_removed', 'Q1')) setRig((r) => ({ ...r, locked: false }));
+    if (!rig.locked) { if (emit('loto_applied', lab.isolation.ref)) setRig((r) => ({ ...r, locked: true })); }
+    else if (emit('loto_removed', lab.isolation.ref)) setRig((r) => ({ ...r, locked: false }));
   });
   const togglePanel = act(() => {
     if (!rig.panelOpen) { if (emit('panel_opened', 'panel')) setRig((r) => ({ ...r, panelOpen: true })); }
     else if (emit('panel_closed', 'panel')) setRig((r) => ({ ...r, panelOpen: false }));
   });
+  const say = (t: Txt) => setNotice({ kind: 'info', text: t });
   const pressStart = act(() => {
-    if (rig.locked) { info('Nothing happens: Q1 is locked off, so there is no supply.', 'لا شيء يحدث: Q1 مقفول، فلا توجد تغذية.'); return; }
-    if (rig.panelOpen) { info('Close the panel door before operating the starter.', 'أغلق باب اللوحة قبل تشغيل البادئ.'); return; }
-    if (!emit('start_pressed', 'S2')) return;
-    if (rig.replaced.includes(fault.componentRef)) info('KM1 pulls in and the motor runs. Press stop when done.', 'يجذب KM1 ويدور المحرك. اضغط الإيقاف عند الانتهاء.');
-    else info('Symptom: nothing happens. KM1 does not pull in and the motor stays still.', 'العَرَض: لا شيء يحدث. لا يجذب KM1 ويبقى المحرك ساكنًا.');
+    if (rig.locked) { say(lab.run.whileLocked); return; }
+    if (rig.panelOpen) { say(lab.run.whileOpen); return; }
+    if (!emit('start_pressed', 'run')) return;
+    if (rig.replaced.includes(fault.componentRef)) say(lab.run.repaired);
+    else say(tx(`Symptom: ${fault.symptom.en}`, `العَرَض: ${fault.symptom.ar}`));
   });
   const measure = (tp: TestPoint) => act(() => {
-    if (tp.inside && !rig.panelOpen) { info(`${tp.label.en} is inside the panel. Open the panel door first.`, `${tp.label.ar} داخل اللوحة. افتح باب اللوحة أولًا.`); return; }
+    if (tp.inside && !rig.panelOpen) { info(`${tp.label.en} ${lab.enclosure.mustOpen.en}`, `${tp.label.ar} ${lab.enclosure.mustOpen.ar}`); return; }
     if (tp.inside && !rig.locked) {
       if (emit('energized_contact', tp.ref)) {
-        setMeter({ tp, display: '230 V AC', live: true });
-        setNotice({ kind: 'danger', text: tx('You touched live terminals. The control circuit is energised because Q1 is not locked off.',
-          'لمست أطرافًا مكهربة. دائرة التحكم ما زالت موصولة بالتغذية لأن Q1 غير مقفول.') });
+        setMeter({ tp, display: pick(lab.danger.display), live: true });
+        setNotice({ kind: 'danger', text: lab.danger.text });
       }
       return;
     }
-    const r = readMeter(tp, fault, rig);
+    const r = tp.read(fault, rig);
     if (emit('measured', tp.ref, { reading: r.reading, unit: r.unit })) setMeter({ tp, display: r.display });
   })();
   const submitDiagnosis = act(() => {
-    const code = FAULTS.find((f) => f.componentRef === diag.component && conditionOf(f.code) === diag.condition)?.code
+    const code = lab.faults.find((f) => f.componentRef === diag.component && f.condition === diag.condition)?.code
       ?? `${diag.component}:${diag.condition}`;
     if (emit('diagnosis_submitted', diag.component, { faultCode: code })) {
       info('Diagnosis recorded. You can still replace a part before submitting.', 'تم تسجيل التشخيص. ما زال بإمكانك استبدال قطعة قبل الإرسال.');
     }
   });
   const replacePart = act(() => {
-    if (!rig.panelOpen) { info('Open the panel door to reach the part.', 'افتح باب اللوحة للوصول إلى القطعة.'); return; }
+    if (!rig.panelOpen) { info(`The part ${lab.enclosure.mustOpen.en}`, `القطعة ${lab.enclosure.mustOpen.ar}`); return; }
     if (emit('component_replaced', swap)) {
       setRig((r) => ({ ...r, replaced: [...r.replaced, swap] }));
       const c = label(swap);
-      info(`${c.en} replaced.`, `تم استبدال ${c.ar}.`);
+      info(`${c.en}: fixed or replaced.`, `${c.ar}: تم الإصلاح أو الاستبدال.`);
     }
   });
   const submit = () => {
-    const res = evaluate(DOL_RUBRIC, eventsRef.current, { startedAt, submittedAt: new Date(), faults: [fault] });
+    const res = evaluate(lab.rubric, eventsRef.current, { startedAt, submittedAt: new Date(), faults: [fault] });
     setResult(res);
     setVlab({ status: 'submitted' });
-    addEval({ learner: LEARNER, lab: DOL_LAB, mode: mode === 'Exam' ? 'Exam' : 'Guided', score: res.totalScore, passed: res.passed, gateFailures: res.gateFailures });
+    addEval({ trade: trade.id, learner: LEARNER, mode: mode === 'Exam' ? 'Exam' : 'Guided', score: res.totalScore, passed: res.passed, gateFailures: res.gateFailures });
   };
 
   // Guided step pointer: first step whose evidence is not in the stream yet.
   const has = (verb: string, ref?: string) => events.some((e) => e.verb === verb && (!ref || e.objectRef === ref));
-  const stepDone = [
-    rig.ppe, has('start_pressed') && has('measured', 'X1:L1-L2'), has('loto_applied'), has('measured', 'Q1:load_side'),
-    has('panel_opened'), ['Q1:control_supply', 'S1:stop_pb', 'F2:95-96'].every((r) => has('measured', r)) || has('measured', 'KM1:A1-A2'),
-    has('diagnosis_submitted'), has('component_replaced'),
-  ];
+  const stepDone = lab.steps.map((s) => s.done(has, rig));
+  const nSteps = lab.steps.length;
   const step = stepDone.findIndex((d) => !d);
 
   return (
@@ -224,36 +232,39 @@ function FaultTest() {
 
       <div className="vlab-grid">
         <section className="card rig" aria-labelledby="rig-title">
-          <CardHead id="rig-title" title={L('Starter panel', 'لوحة البادئ')} sub={L('Tap a blue test point to measure it.', 'اضغط نقطة قياس زرقاء لقياسها.')}
+          <CardHead id={`rig-title-${trade.id}`} title={pick(lab.rigTitle)} sub={L('Tap a blue test point to measure or inspect it.', 'اضغط نقطة قياس زرقاء لقياسها أو فحصها.')}
             actions={<div className="rig-status">
               <StatusChip on={rig.ppe} label={L('PPE', 'الوقاية')} onText={L('On', 'مرتداة')} offText={L('Not worn', 'غير مرتداة')} />
-              <StatusChip on={rig.locked} label="Q1" onText={L('Locked off', 'مفصول ومقفول')} offText={L('Live', 'موصول')} danger={!rig.locked} />
-              <StatusChip on={rig.panelOpen} label={L('Door', 'الباب')} onText={L('Open', 'مفتوح')} offText={L('Closed', 'مغلق')} neutral />
+              <StatusChip on={rig.locked} label={lab.isolation.chip} onText={pick(lab.isolation.on)} offText={pick(lab.isolation.off)} danger={!rig.locked} />
+              <StatusChip on={rig.panelOpen} label={pick(lab.enclosure.chip)} onText={L('Open', 'مفتوح')} offText={L('Closed', 'مغلق')} neutral />
             </div>} />
-          <Schematic rig={rig} onMeasure={measure} active={meter?.tp.ref} />
+          {lab.diagram === 'dol'
+            ? <Schematic lab={lab} rig={rig} onMeasure={measure} active={meter?.tp.ref} />
+            : <BlockDiagram lab={lab} d={lab.diagram} rig={rig} onMeasure={measure} active={meter?.tp.ref} />}
           <div className="rig-actions">
-            <button type="button" onClick={donPpe} disabled={rig.ppe || locked}>{L('Put on PPE', 'ارتدِ معدات الوقاية')}</button>
-            <button type="button" onClick={pressStart} disabled={locked}>{L('Press START', 'اضغط START')}</button>
-            <button type="button" onClick={toggleLoto} disabled={locked}>{rig.locked ? L('Remove lock & tag', 'إزالة القفل والبطاقة') : L('Lock off Q1 (LOTO)', 'افصل واقفل Q1 (LOTO)')}</button>
-            <button type="button" onClick={togglePanel} disabled={locked}>{rig.panelOpen ? L('Close panel door', 'أغلق باب اللوحة') : L('Open panel door', 'افتح باب اللوحة')}</button>
+            <button type="button" onClick={donPpe} disabled={rig.ppe || locked}>{pick(lab.ppe.button)}</button>
+            <button type="button" onClick={pressStart} disabled={locked}>{pick(lab.run.button)}</button>
+            <button type="button" onClick={toggleLoto} disabled={locked}>{rig.locked ? pick(lab.isolation.unlock) : pick(lab.isolation.lock)}</button>
+            <button type="button" onClick={togglePanel} disabled={locked}>{rig.panelOpen ? pick(lab.enclosure.close) : pick(lab.enclosure.open)}</button>
           </div>
           {notice && <p className={`notice notice-${notice.kind}`} role={notice.kind === 'info' ? 'status' : 'alert'}>{pick(notice.text)}</p>}
         </section>
 
         <aside className="side">
           <div className={`meter ${meter?.live ? 'meter-live' : ''}`} aria-live="polite">
-            <span className="meter-mode mono">{meter ? (meter.live ? L('DANGER', 'خطر') : meter.tp.mode === 'V' ? 'V AC' : 'Ω') : L('Multimeter', 'جهاز القياس المتعدد')}</span>
+            <span className="meter-mode mono">{meter ? (meter.live ? L('DANGER', 'خطر') : meter.tp.instrument) : L('Meter & gauges', 'أجهزة القياس')}</span>
             <span className="meter-value mono" dir="ltr">{meter?.display ?? '– – –'}</span>
             <span className="meter-tp">{meter ? pick(meter.tp.label) : L('Tap a test point on the drawing', 'اضغط نقطة قياس على المخطط')}</span>
           </div>
 
           {mode === 'Guided' && !result && (
-            <section className="card" aria-labelledby="steps-title">
-            <CardHead id="steps-title" title={L('Procedure', 'خطوات العمل')} sub={L(`Step ${Math.min(step === -1 ? 8 : step + 1, 8)} of 8`, `الخطوة ${Math.min(step === -1 ? 8 : step + 1, 8)} من 8`)} />
+            <section className="card" aria-labelledby={`steps-title-${trade.id}`}>
+            <CardHead id={`steps-title-${trade.id}`} title={L('Procedure', 'خطوات العمل')}
+              sub={L(`Step ${step === -1 ? nSteps : step + 1} of ${nSteps}`, `الخطوة ${step === -1 ? nSteps : step + 1} من ${nSteps}`)} />
             <ol className="steps">
-              {GUIDED_STEPS.map((s, i) => (
-                <li key={s.en} className={stepDone[i] ? 'done' : i === step ? 'now' : ''}>
-                  <span className="step-mark" aria-hidden="true">{stepDone[i] ? '✓' : i + 1}</span>{pick(s)}
+              {lab.steps.map((s, i) => (
+                <li key={s.text.en} className={stepDone[i] ? 'done' : i === step ? 'now' : ''}>
+                  <span className="step-mark" aria-hidden="true">{stepDone[i] ? '✓' : i + 1}</span>{pick(s.text)}
                 </li>
               ))}
             </ol>
@@ -261,37 +272,34 @@ function FaultTest() {
           )}
 
           {!result ? (
-            <section className="card diag" aria-labelledby="diag-title">
-              <CardHead id="diag-title" title={L('Diagnosis & repair', 'التشخيص والإصلاح')} sub={L('Record what you found, then submit.', 'سجّل ما وجدته ثم أرسل.')} />
+            <section className="card diag" aria-labelledby={`diag-title-${trade.id}`}>
+              <CardHead id={`diag-title-${trade.id}`} title={L('Diagnosis & repair', 'التشخيص والإصلاح')} sub={L('Record what you found, then submit.', 'سجّل ما وجدته ثم أرسل.')} />
               <label className="field"><span>{L('Faulty component', 'المكوّن المعطوب')}</span>
-                <select id="diag-component" value={diag.component} onChange={(e) => setDiag((d) => ({ ...d, component: e.target.value }))} disabled={locked}>
+                <select id={`diag-component-${trade.id}`} value={diag.component} onChange={(e) => setDiag((d) => ({ ...d, component: e.target.value }))} disabled={locked}>
                   <option value="">{L('Choose…', 'اختر…')}</option>
-                  {COMPONENTS.map((c) => <option key={c.ref} value={c.ref}>{pick(c.label)}</option>)}
+                  {lab.components.map((c) => <option key={c.ref} value={c.ref}>{pick(c.label)}</option>)}
                 </select>
               </label>
               <label className="field"><span>{L('Condition', 'الحالة')}</span>
-                <select id="diag-condition" value={diag.condition} onChange={(e) => setDiag((d) => ({ ...d, condition: e.target.value }))} disabled={locked}>
+                <select id={`diag-condition-${trade.id}`} value={diag.condition} onChange={(e) => setDiag((d) => ({ ...d, condition: e.target.value }))} disabled={locked}>
                   <option value="">{L('Choose…', 'اختر…')}</option>
-                  <option value="open">{L('Open circuit / contact open', 'دائرة مفتوحة / تلامس مفتوح')}</option>
-                  <option value="blown">{L('Blown', 'محروق')}</option>
-                  <option value="welded">{L('Contacts welded shut', 'تلامسات ملتحمة')}</option>
-                  <option value="short">{L('Short circuit', 'قصر')}</option>
+                  {lab.conditions.map((c) => <option key={c.value} value={c.value}>{pick(c.label)}</option>)}
                 </select>
               </label>
               <button type="button" onClick={submitDiagnosis} disabled={!diag.component || !diag.condition || locked}>{L('Record diagnosis', 'سجّل التشخيص')}</button>
               <div className="swap">
-                <label className="field"><span>{L('Replace a part', 'استبدال قطعة')}</span>
-                  <select id="swap-part" value={swap} onChange={(e) => setSwap(e.target.value)} disabled={locked}>
+                <label className="field"><span>{L('Fix or replace', 'إصلاح أو استبدال')}</span>
+                  <select id={`swap-part-${trade.id}`} value={swap} onChange={(e) => setSwap(e.target.value)} disabled={locked}>
                     <option value="">{L('Choose…', 'اختر…')}</option>
-                    {COMPONENTS.map((c) => <option key={c.ref} value={c.ref}>{pick(c.label)}</option>)}
+                    {lab.components.map((c) => <option key={c.ref} value={c.ref}>{pick(c.label)}</option>)}
                   </select>
                 </label>
-                <button type="button" className="btn-replace" onClick={replacePart} disabled={!swap || locked}>{L('Replace', 'استبدل')}</button>
+                <button type="button" className="btn-replace" onClick={replacePart} disabled={!swap || locked}>{L('Fix', 'أصلح')}</button>
               </div>
               <button type="button" className="primary btn-submit" onClick={submit} disabled={events.length === 0 || result !== null}>{L('Submit for scoring', 'أرسل للتقييم')}</button>
             </section>
           ) : (
-            <Result res={result} fault={fault.title} onRetry={() => reset()} />
+            <Result lab={lab} res={result} fault={fault.title} onRetry={() => reset()} />
           )}
         </aside>
       </div>
@@ -305,8 +313,6 @@ function FaultTest() {
   );
 }
 
-function conditionOf(code: string) { return code === 'F-F1-BLOWN' ? 'blown' : 'open'; }
-
 function StatusChip({ on, label, onText, offText, danger, neutral }: { on: boolean; label: string; onText: string; offText: string; danger?: boolean; neutral?: boolean }) {
   const cls = neutral ? 'chip-neutral' : on ? 'chip-on' : danger ? 'chip-danger' : 'chip-off';
   return <span className={`status-chip ${cls}`}><b>{label}</b> {on ? onText : offText}</span>;
@@ -316,7 +322,7 @@ const LEVELS: Record<string, Txt> = {
   not_yet: tx('not yet', 'لم يصل بعد'), novice: tx('novice', 'مبتدئ'), intermediate: tx('intermediate', 'متوسط'), autonomous: tx('autonomous', 'مستقل'),
 };
 
-function Result({ res, fault, onRetry }: { res: EvaluationResult; fault: Txt; onRetry: () => void }) {
+function Result({ lab, res, fault, onRetry }: { lab: Lab; res: EvaluationResult; fault: Txt; onRetry: () => void }) {
   const { L, pick } = useL();
   const level = res.gateFailures.length ? L('No credit (safety gate failed)', 'لا رصيد (رسوب في شرط أمان)') : pick(LEVELS[levelForScore(res.totalScore)]!);
   return (
@@ -324,7 +330,7 @@ function Result({ res, fault, onRetry }: { res: EvaluationResult; fault: Txt; on
       <div className={`result-head ${res.passed ? 'v-pass' : 'v-fail'}`}>
         <span className="v-score">{res.totalScore}</span>
         <span><strong>{res.passed ? L('Pass', 'ناجح') : L('Not yet', 'لم يجتز بعد')}</strong><br />
-          <small>{L('Pass mark 70 · competency', 'درجة النجاح 70 · مستوى الجدارة')}: {level}</small></span>
+          <small>{L(`Pass mark ${lab.rubric.passThreshold} · competency`, `درجة النجاح ${lab.rubric.passThreshold} · مستوى الجدارة`)}: {level}</small></span>
       </div>
       <p className="muted">{L('Injected fault', 'العطل المزروع')}: {pick(fault)}</p>
       <table className="crit">
@@ -332,7 +338,7 @@ function Result({ res, fault, onRetry }: { res: EvaluationResult; fault: Txt; on
         <tbody>
           {res.criteria.map((c) => (
             <tr key={c.key} className={c.gateFailed ? 'gate-failed' : ''}>
-              <td>{pick(CRITERION_LABELS[c.key] ?? tx(c.label, c.label))}{c.isGate && <span className="gate">{L('Gate', 'شرط أمان')}</span>}
+              <td>{pick(lab.criterionLabels[c.key] ?? tx(c.label, c.label))}{c.isGate && <span className="gate">{L('Gate', 'شرط أمان')}</span>}
                 <small dir="ltr" className="detail">{c.detail}</small></td>
               <td className="num">{c.score}</td>
               <td className="num">{c.weight}</td>
@@ -346,9 +352,9 @@ function Result({ res, fault, onRetry }: { res: EvaluationResult; fault: Txt; on
 }
 
 /** Ladder drawing of the starter, always drawn left-to-right as on a real panel. Test points are the tappable circles. */
-function Schematic({ rig, onMeasure, active }: { rig: RigState; onMeasure: (tp: TestPoint) => void; active?: string }) {
+function Schematic({ lab, rig, onMeasure, active }: { lab: Lab; rig: RigState; onMeasure: (tp: TestPoint) => void; active?: string }) {
   const { lang, L, pick } = useL();
-  const tp = (ref: string) => TEST_POINTS.find((t) => t.ref === ref)!;
+  const tp = (ref: string) => lab.testPoints.find((t) => t.ref === ref)!;
   // A render helper rather than a component, so points keep focus across renders.
   const pt = ({ r, x, y, label, dx = 0, dy = -16 }: { r: string; x: number; y: number; label: string; dx?: number; dy?: number }) => {
     const t = tp(r);
@@ -423,6 +429,52 @@ function Schematic({ rig, onMeasure, active }: { rig: RigState; onMeasure: (tp: 
       {pt({ r: 'S2:start_pb', x: 259, y: 196, label: 'S2' })}
       {pt({ r: 'F2:95-96', x: 403, y: 200, label: '95–96' })}
       {pt({ r: 'KM1:A1-A2', x: 492, y: 188, label: 'A1–A2' })}
+    </svg>
+  );
+}
+
+/** Block drawing for rigs described as data (trades/*.ts). Same test-point behaviour as the DOL ladder. */
+function BlockDiagram({ lab, d, rig, onMeasure, active }: { lab: Lab; d: Diagram; rig: RigState; onMeasure: (tp: TestPoint) => void; active?: string }) {
+  const { lang, L, pick } = useL();
+  const pt = (p: Diagram['points'][number]) => {
+    const t = lab.testPoints.find((x) => x.ref === p.ref)!;
+    const reachable = !t.inside || rig.panelOpen;
+    return (
+      <g key={p.ref} className={`tp ${active === p.ref ? 'tp-active' : ''} ${reachable ? '' : 'tp-blocked'}`} role="button" tabIndex={0}
+        aria-label={L(`Measure ${t.label.en}`, `قِس ${t.label.ar}`)} data-tp={p.ref} onClick={() => onMeasure(t)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onMeasure(t); } }}>
+        <title>{pick(t.label)}</title>
+        <circle cx={p.x} cy={p.y} r={18} className="tp-hit" />
+        <circle cx={p.x} cy={p.y} r={7} className="tp-dot" />
+        <text x={p.x + (p.dx ?? 0)} y={p.y + (p.dy ?? -16)} textAnchor="middle" className="tp-label">{pick(p.label)}</text>
+      </g>
+    );
+  };
+  return (
+    <svg className="schematic" viewBox="0 0 640 330" role="group" aria-label={L(`${lab.rigTitle.en} with test points`, `${lab.rigTitle.ar} مع نقاط القياس`)}>
+      {d.captions.map((c) => (
+        <text key={c.text.en} x={lang === 'ar' ? 320 : c.x} y={c.y} textAnchor={lang === 'ar' ? 'middle' : 'start'} className="sch-cap">{pick(c.text)}</text>
+      ))}
+      <path d={d.wires} className="sch-wire" fill="none" />
+      {d.boxes.map((b) => (
+        <g key={b.label + b.x}>
+          <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={b.round ? Math.min(b.w, b.h) / 2 : 4}
+            className={`sch-box ${b.isolator && rig.locked ? 'sch-locked' : ''}`} />
+          <text x={b.x + b.w / 2} y={b.y + b.h / 2 + (b.sub ? -2 : 5)} textAnchor="middle" className="sch-txt">{b.label}</text>
+          {b.sub && <text x={b.x + b.w / 2} y={b.y + b.h / 2 + 14} textAnchor="middle" className="sch-small">{b.sub}</text>}
+          {b.isolator && rig.locked && (
+            <g><rect x={b.x + b.w / 2 - 24} y={b.y + b.h + 4} width="48" height="22" rx="3" className="tag" />
+              <text x={b.x + b.w / 2} y={b.y + b.h + 19} textAnchor="middle" className="tag-txt">{L('LOCKED', 'مقفول')}</text></g>
+          )}
+        </g>
+      ))}
+      {!rig.panelOpen && (
+        <g className="door">
+          <rect x={d.cover.x} y={d.cover.y} width={d.cover.w} height={d.cover.h} rx="8" />
+          <text x={d.cover.x + d.cover.w / 2} y={d.cover.y + d.cover.h / 2 + 6} textAnchor="middle">{pick(d.cover.text)}</text>
+        </g>
+      )}
+      {d.points.map(pt)}
     </svg>
   );
 }

@@ -5,22 +5,26 @@ import { FullscreenIcon, useFullscreen } from './fullscreen';
 import { tx } from './i18n';
 import { LogoMark, Wordmark } from './Logo';
 import { StoreProvider, useL, useStore, type Role } from './store';
+import { TradeBar } from './TradeBar';
+import type { Trade } from './trades';
 import { StudentLab } from './StudentLab';
 import { TrainerFloor } from './TrainerFloor';
 import wabysLogoDark from './assets/wabys-logo-dark.png';
 import wabysLogo from './assets/wabys-logo.png';
 import './prototype.css';
 
-const ROLES = [
-  { id: 'trainer' as Role, initials: tx('HK', 'ه'), label: tx('Trainer', 'المدرب'), who: tx('Eng. Huda Kamal', 'م. هدى كمال'), device: tx('Tablet', 'جهاز لوحي') },
-  { id: 'student' as Role, initials: tx('OL', 'ع'), label: tx('Student', 'الطالب'), who: tx('Omar Lotfy', 'عمر لطفي'), device: tx('Laptop', 'حاسوب محمول') },
+/** The trainer and student follow the active trade; the director oversees all of them. */
+const roles = (t: Trade) => [
+  { id: 'trainer' as Role, initials: t.bay.trainerInitials, label: tx('Trainer', 'المدرب'), who: t.bay.trainer, device: tx('Tablet', 'جهاز لوحي') },
+  { id: 'student' as Role, initials: t.learner.initials, label: tx('Student', 'الطالب'), who: t.learner.name, device: tx('Laptop', 'حاسوب محمول') },
   { id: 'director' as Role, initials: tx('SR', 'س'), label: tx('Director', 'المدير'), who: tx('Dr. Samia Rashad', 'د. سامية رشاد'), device: tx('Desktop', 'حاسوب مكتبي') },
 ];
 
 function Shell() {
-  const { role, setRole, alerts, lang, setLang } = useStore();
+  const { role, setRole, alerts, lang, setLang, trade } = useStore();
   const { L, pick } = useL();
-  const open = alerts.filter((a) => !a.resolution).length;
+  const open = alerts.filter((a) => !a.resolution && a.trade === trade.id).length;
+  const ROLES = roles(trade);
   const appRef = useRef<HTMLDivElement>(null);
   const fs = useFullscreen(appRef);
   return (
@@ -70,6 +74,7 @@ function Shell() {
           </div>
         </div>
       </header>
+      <TradeBar />
       <main className="screen">
         {/* All three stay mounted so a half-finished V-Lab attempt or rubric survives a role switch. */}
         <div hidden={role !== 'trainer'}><TrainerFloor /></div>
