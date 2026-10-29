@@ -11,4 +11,4 @@ const db = createPool();
 const realtime = createRealtime(process.env.REDIS_URL, log);
 const port = Number(process.env.PORT ?? 4000);
 
-createApp({ db, realtime, log, jwtSecret }).listen(port, () => log.info({ port }, 'VLMS API listening'));
+createApp({ db, realtime, log, jwtSecret }).listen(port, () => log.info({ port }, 'VTC_LMS API listening'));
