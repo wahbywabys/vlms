@@ -5,8 +5,8 @@
 export interface LearningMeta { accent: string; models: number; lessons: number; safety: number }
 
 export const LEARNING_META: Record<string, LearningMeta> = {
-  cnc: { accent: '#2f8fd8', models: 2, lessons: 2, safety: 1 },
-  auto: { accent: '#d9463b', models: 1, lessons: 2, safety: 1 },
+  cnc: { accent: '#2f8fd8', models: 3, lessons: 3, safety: 2 },
+  auto: { accent: '#d9463b', models: 1, lessons: 3, safety: 1 },
   elec: { accent: '#e8a70a', models: 2, lessons: 2, safety: 1 },
-  weld: { accent: '#f06721', models: 1, lessons: 2, safety: 1 },
+  weld: { accent: '#f06721', models: 2, lessons: 3, safety: 2 },
 };

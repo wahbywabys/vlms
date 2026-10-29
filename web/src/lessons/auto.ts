@@ -119,4 +119,75 @@ export const startingCircuit: Lesson = {
   ],
 };
 
-export const autoLessons = [fourStroke, startingCircuit];
+
+export const engineSafety: Lesson = {
+  id: 'auto-l3-safety',
+  title: tx('Safe work on a hot engine', 'العمل الآمن على محرك ساخن'),
+  summary: tx('The WABYS student prepares to change an alternator straight after a test run: engine off, cool-down, battery negative first, belts and hot parts.',
+    'متدرب WABYS يستعد لتغيير الدينامو بعد تجربة تشغيل مباشرة: إطفاء المحرك والتبريد وفصل السالب أولًا والسيور والأجزاء الساخنة.'),
+  model: carEngine,
+  duration: 108,
+  student: { boots: true, glasses: false, gloves: null, jewellery: true },
+  chapters: [
+    { at: 0, title: tx('Ready to work', 'الاستعداد للعمل') },
+    { at: 26, title: tx('Engine off, let it cool', 'أطفئ المحرك واتركه يبرد') },
+    { at: 56, title: tx('Battery: negative first', 'البطارية: السالب أولًا') },
+    { at: 82, title: tx('Belts and pulleys', 'السيور والبكرات') },
+  ],
+  shots: [
+    shot(0, [-1.5, 3.4, 10.5], [-4.6, 0.4, 4.2], 'The WABYS student starts at the PPE station: safety glasses for acid and coolant, nitrile gloves for oil.',
+      'يبدأ متدرب WABYS عند محطة الوقاية: نظارة للحمض وسائل التبريد، وقفازات نيتريل للزيت.', { avatar: { at: 'ppe' }, running: true }),
+    shot(12, [-2.6, 2.6, 8.4], [-5.0, 1.0, 4.6], 'Rings and watches come off. On a battery, a ring is a short circuit waiting to happen.',
+      'تُخلع الخواتم والساعات. على البطارية، الخاتم دائرة قصر تنتظر أن تحدث.', { avatar: { ppe: { glasses: true, gloves: 'nitrile', jewellery: false } }, running: true }),
+    shot(26, [3.6, 3.0, 9.2], [0, 0.2, 1.2], 'The engine is still idling after its test. The student switches it off and takes the key.',
+      'المحرك ما زال يعمل بعد التجربة. يطفئه المتدرب ويأخذ المفتاح.', { avatar: { at: 'front', pose: 'operate' }, running: true, move: 2.4 }),
+    shot(38, [2.2, 2.2, 6.4], [0.3, -0.1, 0.8], 'The exhaust manifold is still at about 400 °C, and the cooling system is under pressure.',
+      'مجمّع العادم ما زال عند 400 °م تقريبًا، ودائرة التبريد تحت الضغط.', { avatar: { pose: 'inspect', reach: [0.3, 0.4, 0.78] }, highlight: 'exhaust' }),
+    shot(48, [5.4, 2.0, 5.8], [1.6, 0.0, 0.2], 'Never open the coolant cap hot. The student waits and checks with the IR thermometer before touching anything.',
+      'لا تفتح غطاء سائل التبريد والمحرك ساخن. ينتظر المتدرب ويفحص بالترمومتر الحراري قبل لمس أي شيء.', { avatar: { pose: 'point', reach: [1.25, 0.9, -0.55] } }),
+    shot(56, [6.8, 1.4, 4.4], [2.2, -0.6, 0.3], 'At the battery: the negative comes off first. Then a spanner touching the body on the positive side does nothing.',
+      'عند البطارية: يُفصل السالب أولًا. بعدها لا يحدث شيء إذا لمس المفتاح جسم السيارة من جهة الموجب.', { avatar: { at: 'battery', reach: [2.2, -0.58, 0.1] }, highlight: 'battery', move: 2.2 }),
+    shot(70, [4.8, 0.6, 3.4], [1.4, -0.4, -0.4], 'The B+ lead from the battery to the starter and the alternator often has no fuse. With the negative off, it is dead.',
+      'كابل B+ من البطارية إلى المارش والدينامو غالبًا بلا فيوز. مع فصل السالب يصبح بلا تيار.', { avatar: { reach: [2.2, -0.58, 0.5] }, xray: true, highlight: 'battery' }),
+    shot(82, [-6.8, 1.6, 3.4], [-1.2, 0.0, 0.3], 'Belts and pulleys: only with the engine off and the key out. An electric fan can start by itself even then.',
+      'السيور والبكرات: فقط والمحرك متوقف والمفتاح خارجه. والمروحة الكهربائية قد تعمل وحدها حتى في هذه الحالة.', { avatar: { at: 'timing' }, highlight: 'timing', move: 2.4 }),
+    shot(96, [-5.4, 2.4, 5.2], [-1.0, 0.2, 0.4], 'Now the alternator can come off safely: cool, dead and still.',
+      'الآن يمكن فك الدينامو بأمان: بارد وبلا تيار وساكن.', { avatar: { pose: 'reach', reach: [-0.9, 0.2, 0.75] }, highlight: 'alternator' }),
+  ],
+  callouts: [
+    { id: 'c-hot', at: 38, until: 56, anchor: [0.3, 0.0, 0.85], label: tx('≈ 400 °C', '≈ 400 °م'), sub: tx('Exhaust manifold after a run', 'مجمّع العادم بعد التشغيل'), tone: 'bad', dx: 90, dy: -70 },
+    { id: 'c-neg', at: 58, until: 70, anchor: [2.2, -0.58, -0.2], label: tx('Negative (−) first', 'السالب (−) أولًا'), sub: tx('Off first, on last', 'يُفصل أولًا ويوصل أخيرًا'), tone: 'ok', dx: 80, dy: -90 },
+    { id: 'c-bplus', at: 70, until: 82, anchor: [1.12, -0.18, -0.66], label: tx('B+ lead: no fuse', 'كابل B+: بلا فيوز'), tone: 'warn', dx: -100, dy: -70 },
+    { id: 'c-belt', at: 84, until: 96, anchor: [-1.2, 0.3, 0.2], label: tx('Pinch point', 'نقطة انحشار'), sub: tx('Belt meets pulley', 'تلاقي السير بالبكرة'), tone: 'bad', dx: -100, dy: -80 },
+  ],
+  flows: [
+    { id: 'f-current', at: 70, until: 82, points: [[2.2, -0.6, 0.5], [1.9, -0.45, 0.2], [1.5, -0.5, -0.5], [1.12, -0.18, -0.66]], color: '#ff4d3a', label: tx('Battery current (up to 600 A)', 'تيار البطارية (حتى 600 أمبير)'), size: 0.07 },
+  ],
+  cards: [
+    { id: 'k-ppe', at: 4, until: 26, side: 'end', kind: 'dodont', title: tx('At the engine', 'عند المحرك'),
+      do: [tx('Safety glasses', 'نظارة السلامة'), tx('Nitrile gloves for oil and coolant', 'قفازات نيتريل للزيت والتبريد'), tx('Safety boots', 'حذاء الأمان')],
+      dont: [tx('Rings or a metal watch strap', 'خواتم أو سوار ساعة معدني'), tx('Touching hot parts before checking', 'لمس الأجزاء الساخنة قبل الفحص'), tx('Opening a hot cooling system', 'فتح دائرة تبريد ساخنة')] },
+    { id: 'k-temp', at: 40, until: 56, side: 'start', kind: 'spec', title: tx('After a 10-minute run', 'بعد تشغيل 10 دقائق'),
+      rows: [[tx('Exhaust manifold', 'مجمّع العادم'), '350 – 450 °C'], [tx('Coolant', 'سائل التبريد'), '90 – 105 °C, 1.1 bar'], [tx('Safe to touch', 'آمن للمس'), '< 50 °C']] },
+    { id: 'k-batt', at: 58, until: 80, side: 'start', kind: 'steps', title: tx('Battery off and on', 'فصل البطارية وتوصيلها'),
+      items: [tx('Negative (−) off first', 'افصل السالب (−) أولًا'), tx('Then positive (+), cover the clamp', 'ثم الموجب (+) وغطِّ الطرف'), tx('Refit positive first', 'أعد الموجب أولًا'), tx('Negative last', 'السالب أخيرًا')] },
+    { id: 'k-fan', at: 84, until: 104, side: 'start', kind: 'sign', sign: 'warning', pic: 'rotating',
+      text: tx('Electric cooling fans can start with the ignition off. Disconnect the battery before working near them.', 'مراوح التبريد الكهربائية قد تعمل والإشعال مطفأ. افصل البطارية قبل العمل قربها.') },
+  ],
+  stops: [
+    stop('q1', 55, tx('The engine has just been run. When can you open the coolant cap?', 'المحرك عمل للتو. متى تفتح غطاء سائل التبريد؟'),
+      tx('When it is cold, slowly, with a rag', 'عندما يبرد، ببطء وبقطعة قماش'),
+      [tx('Straight away, wearing gloves', 'فورًا مع ارتداء القفازات'), tx('With the engine running', 'والمحرك يعمل')],
+      tx('Hot coolant flashes to steam when the pressure is released.', 'السائل الساخن يتحول إلى بخار عند تحرير الضغط.')),
+    stop('q2', 81, tx('Which battery terminal comes off first?', 'أي طرف بطارية يُفصل أولًا؟'),
+      tx('Negative (−)', 'السالب (−)'),
+      [tx('Positive (+)', 'الموجب (+)'), tx('It does not matter', 'لا فرق')],
+      tx('With the negative off, a tool touching the body cannot short the battery.', 'مع فصل السالب لا يستطيع أي مفتاح يلمس الجسم أن يقصّر البطارية.'), [0, 1, 2]),
+  ],
+  hotspots: [
+    { id: 'h1', at: 56, until: 82, position: [2.2, -0.4, 0.6], title: tx('12 V battery', 'بطارية 12 فولت'),
+      body: tx('Low voltage, but 600 A on a short circuit: enough to melt a spanner or a ring.', 'جهد منخفض لكن 600 أمبير عند القصر: يكفي لصهر مفتاح أو خاتم.') },
+  ],
+};
+
+export const autoLessons = [engineSafety, fourStroke, startingCircuit];

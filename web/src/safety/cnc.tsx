@@ -85,7 +85,7 @@ export const cncSafety: Scenario = {
         {
           when: { notDone: ['remove-key'] },
           outcome: {
-            kind: 'incident', id: 'cnc-chuck-key', effect: 'projectile', object: 'key', at: [-0.9, 0.42, 0.1], toward: [0.2, 0.55, 0.78], severity: 2,
+            kind: 'incident', id: 'cnc-chuck-key', effect: 'projectile', object: 'key', at: [-1.0, 0.55, 0], toward: [0.2, 0.55, 0.78], severity: 2,
             title: tx('The chuck key was thrown out of the chuck', 'انطلق مفتاح الظرف من الظرف'),
             what: tx('The spindle started with the key still in it. The key flew out and smashed into the guard window, cracking it.', 'بدأ الدوران والمفتاح ما زال في الظرف. انطلق المفتاح وارتطم بزجاج الباب فشرخه.'),
             harm: tx('Without the guard, a chuck key leaves at 20 m/s or more: fractured skulls, lost eyes and broken arms are on record.', 'بدون الحماية، يخرج المفتاح بسرعة 20 م/ث أو أكثر: كسور في الجمجمة وفقدان عيون وكسور ذراع مسجلة.'),
@@ -189,7 +189,7 @@ export const cncSafety: Scenario = {
     {
       id: 'chuck-key', when: { done: ['tighten'], notDone: ['remove-key'] },
       render: (v) => v.fx === 'projectile' ? null : (
-        <group position={[-0.9, 0.42, 0.1]}>
+        <group position={[-1.0, 0.52, 0]}>
           <mesh castShadow><boxGeometry args={[0.03, 0.18, 0.03]} /><meshStandardMaterial color="#8e99a4" metalness={0.9} roughness={0.3} /></mesh>
           <mesh position={[0, 0.09, 0]} rotation={[0, 0, Math.PI / 2]} castShadow><cylinderGeometry args={[0.014, 0.014, 0.2, 10]} /><meshStandardMaterial color="#8e99a4" metalness={0.9} roughness={0.3} /></mesh>
         </group>
