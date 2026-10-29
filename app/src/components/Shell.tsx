@@ -1,5 +1,5 @@
 'use client';
-/** App chrome: VTC_LMS brand, the workspace's sections, alerts, language, full screen and the signed-in user. */
+/** App chrome: WABYS | VTC_LMS lock-up, the workspace's sections, alerts, language, full screen and the signed-in user. */
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
@@ -7,7 +7,7 @@ import type { Txt } from '@/lib/i18n';
 import { FullscreenIcon, useFullscreen } from './fullscreen';
 import { LangToggle } from './LangToggle';
 import { useL } from './LangProvider';
-import { LogoMark, Wordmark } from './Logo';
+import { LogoMark, OrgLogo, Wordmark } from './Logo';
 
 export interface Section { href: string; label: Txt; exact?: boolean }
 export interface ShellUser { name: string; nameAr: string | null; roleKey: string; roleLabel: Txt; initials: Txt }
@@ -29,6 +29,10 @@ export function Shell({ user, sections, workspaces, institution, alertsHref, chi
       <header className="topbar">
         <div className="topbar-inner">
           <Link href={workspaces.find((w) => w.active)?.href ?? '/'} className="brand" aria-label="VTC_LMS">
+            <span className="org" role="img" aria-label={L('WABYS for Training and Education', 'وابيز للتدريب والتعليم')}>
+              <OrgLogo />
+            </span>
+            <span className="brand-divider" aria-hidden="true" />
             <LogoMark />
             <div className="brand-text">
               <Wordmark />
@@ -77,7 +81,8 @@ export function Shell({ user, sections, workspaces, institution, alertsHref, chi
       </header>
       <main className="screen">{children}</main>
       <footer className="app-foot">
-        <span>VTC_LMS</span>
+        <OrgLogo height={24} />
+        <span>{L('VTC_LMS is a product of WABYS for Training and Education.', 'VTC_LMS منتج من وابيز للتدريب والتعليم.')}</span>
         <span className="muted">{L('Demo build · every name and number is illustrative', 'نسخة تجريبية · كل الأسماء والأرقام توضيحية')}</span>
       </footer>
     </div>

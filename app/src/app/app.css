@@ -39,10 +39,6 @@ button.danger { border-color: var(--bad); color: var(--bad); }
 .user-menu a:hover, .user-menu button:hover { background: var(--sunk); }
 .user-menu a[aria-current="page"] { font-weight: 700; color: var(--blue); }
 .user-menu form { border-top: 1px solid var(--rule); margin-top: 4px; padding-top: 4px; }
-.app-foot { max-width: 1360px; width: 100%; margin: 0 auto; display: flex; gap: 12px; flex-wrap: wrap; justify-content: space-between;
-  padding: 14px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); border-top: 1px solid var(--rule);
-  font-size: 13px; }
-.app-foot > span:first-child { font: 700 15px/1 var(--f-display); letter-spacing: .04em; }
 .app.is-full .app-foot { display: none; }
 
 @media (max-width: 1100px) {
@@ -56,6 +52,8 @@ button.danger { border-color: var(--bad); color: var(--bad); }
 .login-hero { display: grid; justify-items: center; gap: 10px; text-align: center; max-width: 640px; }
 .login-hero .wordmark { font-size: 56px; }
 .login-tag { font: 600 20px/1.3 var(--f-display); letter-spacing: .02em; }
+.login-org { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; margin: 0; font-size: 13px; color: var(--ink-2); text-align: center; }
+.login-org .org-logo { height: 28px; }
 :root[lang="ar"] .login-tag { font-size: 18px; line-height: 1.6; }
 .login-forms { width: 100%; max-width: 980px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 20px; align-items: start; }
 .login-card { display: grid; gap: 14px; }
@@ -185,3 +183,5 @@ button.danger { border-color: var(--bad); color: var(--bad); }
 .toast { z-index: 30; }
 .bad-text { color: var(--bad); font-weight: 600; }
 .demo-accounts .role-who { display: block; white-space: normal; }
+/* Phones: WABYS and the VTC_LMS mark carry the brand; the wordmark would crowd the tools. */
+@media (max-width: 640px) { .brand .brand-text { display: none; } .brand .org-logo { height: 28px; } .brand .logo-mark { width: 36px; height: 36px; } }
