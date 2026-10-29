@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { LangToggle } from '@/components/LangToggle';
-import { LogoMark, Wordmark } from '@/components/Logo';
+import { LogoMark, OrgLogo, Wordmark } from '@/components/Logo';
 import { getSession, homeFor } from '@/lib/auth';
 import { getI18n } from '@/lib/i18n-server';
 import { LoginForm } from './LoginForm';
@@ -22,6 +22,10 @@ export default async function LoginPage() {
           'الجدارات والمعامل الافتراضية وأرضية الورشة والتعلم في موقع العمل في سجل واحد.')}</p>
       </div>
       <LoginForm />
+      <p className="login-org">
+        <span className="org" role="img" aria-label={L('WABYS for Training and Education', 'وابيز للتدريب والتعليم')}><OrgLogo height={28} /></span>
+        <span>{L('VTC_LMS is a product of WABYS for Training and Education.', 'VTC_LMS منتج من وابيز للتدريب والتعليم.')}</span>
+      </p>
     </div>
   );
 }
