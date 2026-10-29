@@ -399,3 +399,27 @@ textarea { padding: 10px 12px; width: 100%; resize: vertical; }
 :root[dir="rtl"] .heat-legend i { background: linear-gradient(270deg, var(--sunk), var(--seq)); }
 .crit .gate { display: inline-block; white-space: nowrap; }
 .crit th + th { padding-inline-start: 8px; }
+
+/* ---------- Full screen ---------- */
+.fs-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border-radius: 10px; }
+.fs-icon { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.fs-btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+/* Whole app: real full screen, or the in-window fallback. Header compacts to give the screens the room. */
+.app.is-full { background: var(--paper); overflow-y: auto; }
+.app.is-max { position: fixed; inset: 0; z-index: 40; height: 100%; }
+.app.is-full .brand-sub, .app.is-full .chip.sample, .app.is-full .role-who { display: none; }
+.app.is-full .topbar-inner { padding-block: 6px; }
+.app.is-full .logo-mark { width: 36px; height: 36px; }
+.app.is-full .wordmark { font-size: 24px; }
+.app.is-full .roles button { min-height: 44px; }
+.app.is-full .screen { max-width: none; }
+/* 3D explorer */
+.explore-stage { position: relative; }
+.fs-float { position: absolute; z-index: 3; top: 14px; left: 50%; transform: translateX(-50%); background: #16212d; color: #e6edf5; border-color: #2a3a4d; }
+.fs-float:hover:not(:disabled) { border-color: #3aa0ff; }
+.fs-float[aria-pressed="true"] { background: #ff9f1c; color: #1a1205; border-color: #ff9f1c; }
+.explore-stage.is-full { background: #0f1720; }
+.explore-stage.is-max { position: fixed; inset: 0; z-index: 50; }
+.explore-stage.is-full .mx-root { height: 100% !important; border-radius: 0; }
+.explore-stage.is-full { height: 100vh; height: 100dvh; }
+@media (max-width: 640px) { .fs-text { display: none; } .fs-btn { padding: 0 10px; } .fs-float { top: auto; bottom: 76px; } }

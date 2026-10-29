@@ -1,6 +1,7 @@
-import { StrictMode } from 'react';
+import { StrictMode, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DirectorDashboard } from './DirectorDashboard';
+import { FullscreenIcon, useFullscreen } from './fullscreen';
 import { tx } from './i18n';
 import { LogoMark, Wordmark } from './Logo';
 import { StoreProvider, useL, useStore, type Role } from './store';
@@ -18,8 +19,10 @@ function Shell() {
   const { role, setRole, alerts, lang, setLang } = useStore();
   const { L, pick } = useL();
   const open = alerts.filter((a) => !a.resolution).length;
+  const appRef = useRef<HTMLDivElement>(null);
+  const fs = useFullscreen(appRef);
   return (
-    <div className="app">
+    <div ref={appRef} className={`app ${fs.isFull ? 'is-full' : ''} ${fs.isFallback ? 'is-max' : ''}`}>
       <header className="topbar">
         <div className="topbar-inner">
           <div className="brand">
@@ -52,6 +55,11 @@ function Shell() {
               <button type="button" role="radio" aria-checked={lang === 'en'} lang="en" onClick={() => setLang('en')}>EN</button>
               <button type="button" role="radio" aria-checked={lang === 'ar'} lang="ar" onClick={() => setLang('ar')}>عربي</button>
             </div>
+            <button type="button" className="fs-btn" aria-pressed={fs.isFull} onClick={() => void fs.toggle()}
+              title={fs.isFull ? L('Exit full screen (Esc)', 'الخروج من ملء الشاشة (Esc)') : L('Full screen', 'ملء الشاشة')}>
+              <FullscreenIcon exit={fs.isFull} />
+              <span className="fs-text">{fs.isFull ? L('Exit full screen', 'خروج من ملء الشاشة') : L('Full screen', 'ملء الشاشة')}</span>
+            </button>
           </div>
         </div>
       </header>
