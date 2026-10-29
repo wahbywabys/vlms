@@ -191,8 +191,8 @@ describe('workshop, OJT and assessment modules', { skip: !DB_URL && 'DATABASE_UR
     const pa = a.body.items.find((i: any) => i.type === 'parametric');
     const pb = b.body.items.find((i: any) => i.id === pa.id);
     assert.ok(pa && pb);
-    assert.notDeepEqual(pa.values, pb.values);
-    assert.ok(!('key' in pa) && !('answer' in pa));
+    assert.notEqual(pa.stem, pb.stem);
+    assert.ok(!('key' in pa) && !('answer' in pa) && !('values' in pa), 'no answer and no hidden draws go to the learner');
     const hs = a.body.items.find((i: any) => i.type === 'hotspot');
     assert.ok(hs.schematic.svg.includes('OL 95'));
     assert.ok(!('regions' in hs) && !JSON.stringify(hs).includes('OL-95-96'), 'hotspot regions stay on the server');

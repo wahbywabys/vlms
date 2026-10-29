@@ -21,12 +21,12 @@ export async function decide(form: FormData) {
   const client = await db.connect();
   try {
     await client.query('BEGIN');
-    const e = (await client.query<{ id: string; learner_id: string; work_date: Date; hours: string; task_summary: string; competency_ids: string[] }>(
-      `SELECT e.id, p.learner_id, e.work_date, e.hours, e.task_summary, e.competency_ids
+    const e = (await client.query<{ id: string; learner_id: string; work_date: Date; hours: string; task_summary: string; competency_ids: string[]; media: { sha256: string }[] }>(
+      `SELECT e.id, p.learner_id, e.work_date, e.hours, e.task_summary, e.competency_ids, e.media
          FROM wbl_logbook_entries e JOIN wbl_placements p ON p.id = e.placement_id
         WHERE e.id = $1 AND p.supervisor_id = $2 AND e.status = 'submitted' FOR UPDATE OF e`, [entryId, s.userId])).rows[0];
     if (!e) { await client.query('ROLLBACK'); return; }
-    const payload = JSON.stringify({ entry: e.id, date: e.work_date, hours: e.hours, task: e.task_summary, decision, rating, supervisor: s.userId });
+    const payload = JSON.stringify({ entry: e.id, date: e.work_date, hours: e.hours, task: e.task_summary, media: e.media.map((m) => m.sha256), decision, rating, supervisor: s.userId });
     const signature = createHash('sha256').update(payload).digest('hex');
     await client.query(
       `INSERT INTO wbl_signoffs (entry_id, supervisor_id, decision, rating, comment, signature_hash) VALUES ($1, $2, $3, $4, $5, $6)`,

@@ -1,0 +1,43 @@
+/* Tailwind (v4) for the module screens: floor rubric tablet, machine access,
+   apprentice logbook, heatmaps and assessments. Theme only + utilities, no
+   preflight, so the rest of the app keeps vtc.css. Colours map onto the
+   WABYS tokens in vtc.css, so dark mode and RTL come for free. */
+@layer theme;
+@import "tailwindcss/theme.css" layer(theme);
+/* Module controls opt out of the app's bare button/input rules; declared
+   before the utilities so a utility class always wins over the reset. */
+.tw-reset { min-height: 0; padding: 0; border: 0; background: none; border-radius: 0; }
+@tailwind utilities source(none);
+@source "../components/modules";
+@source "./(app)";
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-sheet: var(--sheet);
+  --color-sunk: var(--sunk);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-navy: var(--brand);
+  --color-blue: var(--blue);
+  --color-blue-soft: var(--blue-soft);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-amber: var(--amber);
+  --color-amber-fill: var(--amber-fill);
+  --color-amber-soft: var(--amber-soft);
+  --color-on-amber: var(--on-amber);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-on-brand: var(--on-brand);
+  --font-display: var(--f-display);
+  --font-body: var(--f-body);
+  --font-mono: var(--f-mono);
+  --shadow-card: var(--shadow);
+  --shadow-lift: var(--shadow-lg);
+}

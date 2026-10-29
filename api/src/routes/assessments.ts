@@ -69,7 +69,7 @@ export function assessmentsRouter(deps: { db: Db }) {
             AND ($2::text IS NULL OR NOT EXISTS (SELECT 1 FROM question_competencies qc WHERE qc.question_id = qn.id)
                  OR EXISTS (SELECT 1 FROM question_competencies qc JOIN competencies c ON c.id = qc.competency_id
                             JOIN competency_frameworks f ON f.id = c.framework_id WHERE qc.question_id = qn.id AND f.trade_id = $2))
-          ORDER BY qn.type = 'hotspot', (v.body ? 'answer_expr'), qn.bloom, qn.created_at
+          ORDER BY (qn.type = 'hotspot' OR v.body ? 'answer_expr') DESC, qn.type = 'hotspot', qn.bloom, qn.created_at
           LIMIT $3`, [p.institutionId, trade, body.limit]);
       const sess = await tx.query<{ id: string }>(
         `INSERT INTO assessment_sessions (learner_id, trade_id, question_ids) VALUES ($1, $2, $3) RETURNING id`,
@@ -88,7 +88,8 @@ export function assessmentsRouter(deps: { db: Db }) {
                                              answer_value, abs_tolerance, rel_tolerance)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
             [r.id, r.version, p.userId, assessmentId, seed, inst.values, inst.stem, inst.stemAr, inst.answer, inst.absTol, inst.relTol]);
-          items.push({ ...base, type: 'parametric', stem: inst.stem, stemAr: inst.stemAr, unit: inst.unit, decimals: b.answer_decimals ?? null, values: inst.values });
+          // Only the rendered stem goes out: hidden draws (an error term, a sign) would give the answer away.
+          items.push({ ...base, type: 'parametric', stem: inst.stem, stemAr: inst.stemAr, unit: inst.unit, decimals: b.answer_decimals ?? null });
         } else if (r.type === 'calculation') items.push({ ...base, type: 'calculation', unit: (r.body['unit'] as string) ?? null });
         else {
           const { spots, schematic } = await hotspotsFor(tx, r);
