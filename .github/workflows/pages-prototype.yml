@@ -1,0 +1,52 @@
+# Publishes the clickable VTC_LMS prototype (web/src/prototype, sample data only)
+# to GitHub Pages. The full app needs a server and database, so it is not deployed here.
+name: Deploy prototype to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'api/src/services/rubricEngine.ts'
+      - '.github/workflows/pages-prototype.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run build:prototype
+      # Pages serves index.html at the site root; the build emits prototype.html.
+      - run: cp dist-prototype/prototype.html dist-prototype/index.html && touch dist-prototype/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist-prototype
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
