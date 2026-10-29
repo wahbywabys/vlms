@@ -1,4 +1,4 @@
-# VLMS — Core UI/UX Blueprint
+# VTC_LMS — Core UI/UX Blueprint
 
 Three screens carry most of the system's daily value. Each is designed around the place it is used: a noisy workshop floor, a learner's laptop or tablet, and a director's office.
 

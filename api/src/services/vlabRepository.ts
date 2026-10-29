@@ -110,6 +110,13 @@ export async function loadEvaluation(tx: Tx, sessionId: string) {
   return rows[0] ?? null;
 }
 
+export interface EvaluationSubject {
+  type: 'vlab_session' | 'workshop_observation';
+  id: string;
+  learnerId: string;
+  rubricId: string;
+}
+
 /**
  * Persist an evaluation and propagate it to the learner's competency profile.
  * Levels only ever move up from a single piece of evidence (GREATEST on the
@@ -117,8 +124,7 @@ export async function loadEvaluation(tx: Tx, sessionId: string) {
  */
 export async function saveEvaluation(
   tx: Tx,
-  session: SessionRow,
-  submittedAt: Date,
+  subject: EvaluationSubject,
   result: EvaluationResult,
   levelFor: (score: number) => string,
   evaluatorId: string | null,
@@ -129,18 +135,12 @@ export async function saveEvaluation(
   await tx.query(
     `INSERT INTO rubric_evaluations
        (rubric_id, subject_type, subject_id, learner_id, evaluator_id, criterion_scores, total_score, passed, gate_failures)
-     VALUES ($1, 'vlab_session', $2, $3, $4, $5, $6, $7, $8)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      ON CONFLICT (subject_type, subject_id, rubric_id) DO UPDATE
        SET criterion_scores = EXCLUDED.criterion_scores, total_score = EXCLUDED.total_score,
            passed = EXCLUDED.passed, gate_failures = EXCLUDED.gate_failures,
            evaluator_id = EXCLUDED.evaluator_id, evaluated_at = now()`,
-    [session.rubric_id, session.id, session.learner_id, evaluatorId, criterionScores, result.totalScore, result.passed, result.gateFailures],
-  );
-  await tx.query(
-    `UPDATE virtual_lab_sessions
-        SET status = 'evaluated', submitted_at = COALESCE(submitted_at, $2), final_score = $3, passed = $4
-      WHERE id = $1`,
-    [session.id, submittedAt, result.totalScore, result.passed],
+    [subject.rubricId, subject.type, subject.id, subject.learnerId, evaluatorId, criterionScores, result.totalScore, result.passed, result.gateFailures],
   );
 
   for (const c of result.criteria) {
@@ -149,8 +149,8 @@ export async function saveEvaluation(
     const level = c.gateFailed ? 'not_yet' : levelFor(c.score);
     await tx.query(
       `INSERT INTO competency_evidence (learner_id, competency_id, source_type, source_id, score, level_awarded, assessor_id)
-       VALUES ($1, $2, 'vlab_session', $3, $4, $5, $6)`,
-      [session.learner_id, c.competencyId, session.id, c.score, level, evaluatorId],
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [subject.learnerId, c.competencyId, subject.type, subject.id, c.score, level, evaluatorId],
     );
     await tx.query(
       `INSERT INTO learner_competencies (learner_id, competency_id, level, score, evidence_count, last_assessed_at)
@@ -160,7 +160,31 @@ export async function saveEvaluation(
              score = EXCLUDED.score,
              evidence_count = learner_competencies.evidence_count + 1,
              last_assessed_at = now(), updated_at = now()`,
-      [session.learner_id, c.competencyId, level, c.score],
+      [subject.learnerId, c.competencyId, level, c.score],
     );
   }
+}
+
+export async function markSessionEvaluated(tx: Tx, sessionId: string, submittedAt: Date, result: EvaluationResult): Promise<void> {
+  await tx.query(
+    `UPDATE virtual_lab_sessions
+        SET status = 'evaluated', submitted_at = COALESCE(submitted_at, $2), final_score = $3, passed = $4
+      WHERE id = $1`,
+    [sessionId, submittedAt, result.totalScore, result.passed],
+  );
+}
+
+export interface AlertInput { institutionId: string; learnerId: string; source: 'vlab' | 'rfid' | 'observation'; sessionId?: string | null; criterionKey?: string; verb?: string; detail: string }
+
+export async function insertAlerts(tx: Tx, alerts: AlertInput[]): Promise<{ id: string; raised_at: Date }[]> {
+  const out: { id: string; raised_at: Date }[] = [];
+  for (const a of alerts) {
+    const { rows } = await tx.query<{ id: string; raised_at: Date }>(
+      `INSERT INTO safety_alerts (institution_id, learner_id, source, session_id, criterion_key, verb, detail)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, raised_at`,
+      [a.institutionId, a.learnerId, a.source, a.sessionId ?? null, a.criterionKey ?? null, a.verb ?? null, a.detail],
+    );
+    out.push(rows[0]!);
+  }
+  return out;
 }

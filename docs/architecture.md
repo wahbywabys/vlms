@@ -1,4 +1,4 @@
-# VLMS — High-Level System Architecture
+# VTC_LMS — High-Level System Architecture
 
 The platform is split into three domain engines (Pedagogical, Operational, Industrial Governance) behind one API gateway, sharing an identity service, an event bus and a single PostgreSQL system of record. Every learner-facing interaction, virtual or physical, becomes an xAPI statement that lands in the Learning Record Store and moves the learner's competency profile.
 

@@ -1,5 +1,7 @@
 /**
- * Rubric evaluation engine for V-Lab practical assessments.
+ * Rubric evaluation engine for V-Lab practical assessments and workshop
+ * floor observations (a trainer's tablet scoring becomes `observed` and
+ * `measured` events, so both evidence sources go through the same rules).
  *
  * Pure and deterministic: given the same telemetry stream, rubric and session
  * context it always produces the same result, which is what lets an IQA
@@ -41,6 +43,10 @@ export const ScoringRule = z.discriminatedUnion('rule', [
     per: z.number().positive(),
     ignoreFaultyComponents: z.boolean().default(true),
   }),
+  // Workshop floor observation: a checklist item the trainer ticked (e.g. PPE worn).
+  z.object({ rule: z.literal('check'), objectRef: z.string() }),
+  // Workshop floor observation: a 0..max rating the trainer gave a criterion.
+  z.object({ rule: z.literal('rating'), objectRef: z.string(), max: z.number().positive().default(4) }),
 ]).refine(
   (r) => r.rule !== 'measurement_tolerance' || r.absTol !== undefined || r.relTol !== undefined,
   'measurement_tolerance needs absTol or relTol',
@@ -232,6 +238,17 @@ function scoreRule(rule: ScoringRule, events: TelemetryEvent[], ctx: SessionCont
         evidenceSeqs: hits.map((h) => h.seq),
         detail: `${hits.length} penalised ${rule.verb}`,
       };
+    }
+    case 'check':
+    case 'rating': {
+      const o = [...events].reverse().find((e) => e.verb === 'observed' && e.objectRef === rule.objectRef);
+      if (!o) return { score: 0, evidenceSeqs: [], detail: `${rule.objectRef} not observed` };
+      if (rule.rule === 'check') {
+        const ok = o.value['ok'] === true;
+        return { score: ok ? 100 : 0, evidenceSeqs: [o.seq], detail: ok ? `${rule.objectRef} ok` : `${rule.objectRef} not met` };
+      }
+      const r = typeof o.value['rating'] === 'number' ? (o.value['rating'] as number) : 0;
+      return { score: (100 * r) / rule.max, evidenceSeqs: [o.seq], detail: `rated ${r}/${rule.max}` };
     }
     default:
       throw new Error(`unknown rule ${(rule as { rule: string }).rule}`);
