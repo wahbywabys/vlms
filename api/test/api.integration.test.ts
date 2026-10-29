@@ -4,7 +4,7 @@
  * Skipped when DATABASE_URL is not set.
  */
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import type { AddressInfo } from 'node:net';
 import { after, before, describe, it } from 'node:test';
 import { SignJWT } from 'jose';
@@ -47,6 +47,9 @@ describe('V-Lab telemetry + evaluation API', { skip: !DB_URL && 'DATABASE_URL no
     await db.query('DROP SCHEMA IF EXISTS vtc CASCADE');
     await db.query(readFileSync(new URL('../../db/schema.sql', import.meta.url), 'utf8'));
     await db.query(readFileSync(new URL('../../db/seed.sql', import.meta.url), 'utf8'));
+    for (const m of readdirSync(new URL('../../db/migrations', import.meta.url)).filter((f) => f.endsWith('.sql')).sort()) {
+      await db.query(readFileSync(new URL(`../../db/migrations/${m}`, import.meta.url), 'utf8'));
+    }
     const log = pino({ level: 'silent' });
     const realtime = createRealtime(process.env.REDIS_URL, log);
     const server = createApp({ db, realtime, log, jwtSecret: SECRET }).listen(0);
