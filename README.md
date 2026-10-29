@@ -36,6 +36,8 @@ Sign in with any demo account (password `demo1234`), or use the one-click button
 | Workplace supervisor | supervisor@vtc.example | Logbook sign-offs with signed, immutable decisions |
 | Director | director@vtc.example | Institution KPIs, attainment by unit, utilisation, compliance queue, IQA export |
 
+To put it online, follow [DEPLOY.md](DEPLOY.md) (Railway: app, API, Postgres and Redis, with the schema applied on every deploy). `npm run migrate` in `api/` applies the same migrations locally.
+
 Tests: `cd api && DATABASE_URL=postgres://…/vtc_lms_test npm test` (unit + integration against a real database).
 
 ## How the pieces connect
