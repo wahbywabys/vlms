@@ -1,0 +1,51 @@
+/* Tablet-first: 44px touch targets, high contrast for workshop lighting. */
+.mx-root { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 0; border-radius: 14px; overflow: hidden;
+  background: #0f1720; color: #e6edf5; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.mx-stage { position: relative; min-height: 0; }
+.mx-header { position: absolute; inset: 0 0 auto 0; display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 12px; padding: 14px 16px; pointer-events: none; }
+.mx-header > * { pointer-events: auto; }
+.mx-header h2 { margin: 0; font-size: 17px; font-weight: 650; }
+.mx-tag { font-size: 12px; color: #8fa3b8; }
+.mx-modes { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.mx-root button { min-height: 40px; padding: 0 14px; border-radius: 9px; border: 1px solid #2a3a4d; background: #16212d;
+  color: inherit; font: inherit; font-weight: 550; cursor: pointer; }
+.mx-root button:hover { border-color: #3aa0ff; }
+.mx-root button[aria-pressed="true"] { background: #ff9f1c; border-color: #ff9f1c; color: #1a1205; }
+.mx-root button:focus-visible { outline: 2px solid #3aa0ff; outline-offset: 2px; }
+.mx-controls { position: absolute; inset: auto 0 0 0; display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+  background: linear-gradient(transparent, rgba(8, 12, 18, .85)); }
+.mx-slider { flex: 1; display: grid; gap: 2px; font-size: 12px; color: #a9b9cb; }
+.mx-slider b { color: #fff; font-variant-numeric: tabular-nums; }
+.mx-slider input { width: 100%; height: 28px; accent-color: #ff9f1c; }
+.mx-pin { min-height: 0 !important; width: 28px; height: 28px; padding: 0 !important; border-radius: 50% !important;
+  background: #3aa0ff !important; border: 2px solid #fff !important; color: #fff; font-size: 13px; font-weight: 700;
+  box-shadow: 0 0 0 4px rgba(58, 160, 255, .25); transition: transform .15s; }
+.mx-pin:hover, .mx-pin.is-active { transform: scale(1.18); background: #ff9f1c !important; color: #1a1205 !important; }
+.mx-panel { background: #121c27; border-inline-start: 1px solid #1f2c3a; padding: 16px; overflow-y: auto; display: flex;
+  flex-direction: column; gap: 14px; }
+.mx-card h3 { margin: 2px 0 10px; font-size: 16px; }
+.mx-eyebrow { margin: 0; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #ff9f1c; }
+.mx-card dl { margin: 0; display: grid; gap: 6px; }
+.mx-card dl div { display: grid; grid-template-columns: 110px 1fr; gap: 8px; }
+.mx-card dt { color: #8fa3b8; }
+.mx-card dd { margin: 0; }
+.mx-safety { margin: 12px 0 0; padding: 8px 10px; border-radius: 8px; background: #3a2208; color: #ffc46b; font-size: 13px; }
+.mx-card a { display: inline-block; margin-top: 10px; color: #6cb8ff; }
+.mx-hint { margin: 0; color: #8fa3b8; }
+.mx-parts { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.mx-parts button { width: 100%; text-align: start; display: flex; align-items: center; gap: 10px; background: transparent;
+  border-color: transparent; }
+.mx-parts button[aria-current="true"] { border-color: #ff9f1c; background: #1e2a37; }
+.mx-num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #23344a;
+  font-size: 12px; font-weight: 700; flex: none; }
+@media (max-width: 760px) {
+  .mx-root { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; height: auto !important; }
+  .mx-header { flex-direction: column; }
+  .mx-header h2 { font-size: 15px; }
+  .mx-controls { gap: 8px; padding: 10px 12px; }
+  .mx-controls > button { padding: 0 10px; }
+  .mx-stage { height: 460px; }
+  .mx-panel { border-inline-start: 0; border-top: 1px solid #1f2c3a; }
+  .mx-modes button { padding: 0 10px; }
+}
