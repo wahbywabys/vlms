@@ -56,8 +56,20 @@ export interface ExplorerEvent {
   value?: Record<string, unknown>;
 }
 
+/** UI copy, so the explorer can be localised (e.g. Arabic, with dir="rtl" on an ancestor). */
+export interface ExplorerStrings {
+  digitalTwin: string; viewModes: string; xray: string; cutaway: string; run: string; stop: string;
+  assemble: string; explode: string; explodedView: string; component: string; datasheet: string; hint: string;
+}
+const EN: ExplorerStrings = {
+  digitalTwin: 'Digital twin', viewModes: 'View modes', xray: 'X-ray', cutaway: 'Cutaway', run: 'Run', stop: 'Stop',
+  assemble: 'Assemble', explode: 'Explode', explodedView: 'Exploded view', component: 'Component',
+  datasheet: 'Open datasheet →', hint: 'Tap a numbered pin or a part to see its specification.',
+};
+
 export interface MachineExplorerProps {
   title: string;
+  strings?: Partial<ExplorerStrings>;
   assetTag?: string;
   parts: PartSpec[];
   onEvent?: (e: ExplorerEvent) => void;
@@ -179,7 +191,8 @@ function FitToAspect() {
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
-export function MachineExplorer({ title, assetTag, parts, onEvent, height = 560 }: MachineExplorerProps) {
+export function MachineExplorer({ title, assetTag, parts, onEvent, height = 560, strings }: MachineExplorerProps) {
+  const t = { ...EN, ...strings };
   const [explode, setExplode] = useState(0);
   const [xray, setXray] = useState(false);
   const [cutaway, setCutaway] = useState(false);
@@ -249,35 +262,35 @@ export function MachineExplorer({ title, assetTag, parts, onEvent, height = 560 
         <header className="mx-header">
           <div>
             <h2>{title}</h2>
-            {assetTag && <span className="mx-tag">Digital twin · {assetTag}</span>}
+            {assetTag && <span className="mx-tag">{t.digitalTwin} · {assetTag}</span>}
           </div>
-          <div className="mx-modes" role="group" aria-label="View modes">
-            <button aria-pressed={xray} onClick={() => toggle('xray', !xray, setXray)}>X-ray</button>
-            <button aria-pressed={cutaway} onClick={() => toggle('cutaway', !cutaway, setCutaway)}>Cutaway</button>
+          <div className="mx-modes" role="group" aria-label={t.viewModes}>
+            <button aria-pressed={xray} onClick={() => toggle('xray', !xray, setXray)}>{t.xray}</button>
+            <button aria-pressed={cutaway} onClick={() => toggle('cutaway', !cutaway, setCutaway)}>{t.cutaway}</button>
             <button aria-pressed={running} onClick={() => toggle('kinetic', !running, setRunning)}>
-              {running ? 'Stop' : 'Run'}
+              {running ? t.stop : t.run}
             </button>
           </div>
         </header>
 
         <footer className="mx-controls">
-          <button onClick={() => animateTo(0)}>Assemble</button>
+          <button onClick={() => animateTo(0)}>{t.assemble}</button>
           <label className="mx-slider">
-            <span>Exploded view <b>{Math.round(explode * 100)}%</b></span>
+            <span>{t.explodedView} <b>{Math.round(explode * 100)}%</b></span>
             <input type="range" min={0} max={1} step={0.005} value={explode}
               onChange={(e) => {
                 if (animRef.current) cancelAnimationFrame(animRef.current);
                 setExplode(Number(e.target.value));
               }} />
           </label>
-          <button onClick={() => animateTo(1)}>Explode</button>
+          <button onClick={() => animateTo(1)}>{t.explode}</button>
         </footer>
       </div>
 
       <aside className="mx-panel" aria-live="polite">
         {selected?.hotspot ? (
           <div className="mx-card">
-            <p className="mx-eyebrow">Component {parts.indexOf(selected) + 1}</p>
+            <p className="mx-eyebrow">{t.component} {parts.indexOf(selected) + 1}</p>
             <h3>{selected.hotspot.title}</h3>
             <dl>
               {Object.entries(selected.hotspot.specs).map(([k, v]) => (
@@ -285,10 +298,10 @@ export function MachineExplorer({ title, assetTag, parts, onEvent, height = 560 
               ))}
             </dl>
             {selected.hotspot.safety && <p className="mx-safety">⚠ {selected.hotspot.safety}</p>}
-            {selected.hotspot.docUrl && <a href={selected.hotspot.docUrl} target="_blank" rel="noreferrer">Open datasheet →</a>}
+            {selected.hotspot.docUrl && <a href={selected.hotspot.docUrl} target="_blank" rel="noreferrer">{t.datasheet}</a>}
           </div>
         ) : (
-          <p className="mx-hint">Tap a numbered pin or a part to see its specification.</p>
+          <p className="mx-hint">{t.hint}</p>
         )}
         <ol className="mx-parts">
           {parts.map((p, i) => (
