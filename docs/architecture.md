@@ -76,6 +76,7 @@ flowchart TB
 | Shop-floor observation | Trainer tablet (offline) → local outbox with `client_mutation_id` → sync on reconnect → rubric evaluation → competency evidence | Same rubric engine as V-Labs |
 | Machine unlock | RFID tap → access service checks badge ⇒ user ⇒ `required_competency_id` ≥ autonomous & valid LOTO induction → relay unlock + `asset_checkouts` row | Fails closed when offline |
 | OJT attendance | Mobile GPS fix → `wbl_checkins` trigger computes haversine distance vs. site geofence server-side | Client never decides `inside_geofence` |
+| Machine unlock (QR) | Learner scans the machine's QR label → `GET /safety/scan/:code` lists blockers → pre-check drawn from `safety_prechecks` → pass writes a `safety_passports` row and a `machine_locks` row holding only the token's SHA-256 → controller hands the token back on `POST /machines/:tag/handshake` | One live lock per machine (partial unique index); e-stop or trainer Stop revokes |
 | Logbook sign-off | Apprentice uploads entry + media → supervisor approves on mobile → immutable `wbl_signoffs` row with signature hash | IQA audit trail |
 | Accreditation | Nightly ETL Postgres + LRS → warehouse → IQA dashboards, regional skill heatmaps | |
 

@@ -1,3 +1,4 @@
+import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
@@ -7,7 +8,8 @@ import { defineConfig } from 'vite';
 // The rubric engine is imported straight from ../api; point its `zod` import
 // at this package's copy so the api folder needs no node_modules.
 export default defineConfig({
-  plugins: [react()],
+  // Tailwind (theme + utilities only) for the module screens shared with the app.
+  plugins: [react(), tailwindcss()],
   base: './',
   resolve: { alias: { zod: fileURLToPath(new URL('./node_modules/zod', import.meta.url)) } },
   build: {
