@@ -3,9 +3,9 @@ import { getI18n } from '@/lib/i18n-server';
 import { cohortLearners } from '@/lib/queries';
 import { PageHead } from './ui';
 
-export async function LearnerList({ institutionId, base, eyebrow }: { institutionId: string; base: string; eyebrow: string }) {
+export async function LearnerList({ institutionId, trade, base, eyebrow }: { institutionId: string; trade: string | null; base: string; eyebrow: string }) {
   const { L, ar } = await getI18n();
-  const rows = await cohortLearners(institutionId);
+  const rows = await cohortLearners(institutionId, trade);
   return (
     <div className="page">
       <PageHead eyebrow={eyebrow} title={L('Learners', 'المتدربون')} sub={L(`${rows.length} learners`, `${rows.length} متدربًا`)} />

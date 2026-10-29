@@ -15,8 +15,8 @@ export interface FloorStation {
   score: number | null; passed: boolean | null; openAlerts: number;
 }
 export interface ObsCriterion {
-  key: string; label: string; weight: number; isGate: boolean;
-  scoring: { rule: string; objectRef?: string; expected?: number; absTol?: number };
+  key: string; label: string; labelAr: string | null; weight: number; isGate: boolean;
+  scoring: { rule: string; objectRef?: string; expected?: number; absTol?: number; unit?: string; measure?: Txt };
 }
 interface Alert {
   id: string; source: 'vlab' | 'rfid' | 'observation'; criterionKey: string | null; verb: string | null; detail: string;
@@ -27,10 +27,6 @@ type Marks = Record<string, string | number | undefined>;
 interface Outbound { clientMutationId: string; learnerId: string; rubricCode: string; assetTag?: string; taskRef: string;
   checks: Record<string, boolean>; ratings: Record<string, number>; measurements: Record<string, number>; note?: string }
 
-const AR_LABELS: Record<string, string> = {
-  ppe: 'ارتداء معدات الوقاية (نظارة، حذاء أمان، بلا أكمام فضفاضة)', safe_op: 'تشغيل آمن (الواقي مغلق، مفتاح الظرف مُزال)',
-  setup: 'ضبط الماكينة', dia: 'القطر Ø25 h7', finish: 'جودة السطح Ra 1.6', housekeeping: 'النظافة والترتيب',
-};
 const GLYPH: Record<StationStatus, string> = { done: '✓', working: '●', alert: '▲', idle: '○' };
 const STATUS_LABEL: Record<StationStatus, Txt> = {
   done: tx('Signed off', 'تم الاعتماد'), working: tx('Working', 'يعمل'), alert: tx('Alert', 'تنبيه'), idle: tx('Idle', 'متوقف'),
@@ -41,6 +37,9 @@ const GATE_LABEL: Record<string, Txt> = {
   loto: tx('Panel work before LOTO', 'عمل داخل اللوحة قبل تطبيق LOTO'),
   no_contact: tx('Touched live parts', 'لمس أجزاء حية'),
   safe_op: tx('Unsafe machine operation', 'تشغيل غير آمن للماكينة'),
+  secured: tx('Vehicle not secured', 'المركبة غير مؤمّنة'),
+  safe_iso: tx('Safe isolation not proved', 'لم يُثبت العزل الآمن'),
+  hot_work: tx('Hot-work controls missing', 'ضوابط الأعمال الساخنة غير مطبّقة'),
 };
 const SOURCE: Record<Alert['source'], Txt> = { vlab: tx('V-Lab exam', 'امتحان افتراضي'), rfid: tx('RFID interlock', 'قفل RFID'), observation: tx('Floor observation', 'ملاحظة الورشة') };
 const OUTBOX = 'vtc-outbox';
@@ -71,8 +70,11 @@ function preview(rubric: ObsCriterion[], m: Marks) {
   return { complete, gateFail, score, passed: !gateFail && score >= PASS };
 }
 
-export function Floor({ bay, stations, rubric, stock, toolsOut, liveExams, trainer }: {
+export function Floor({ bay, job, stations, rubric, stock, toolsOut, lab, liveExams, trainer }: {
   bay: { name: string; name_ar: string | null; cohort: string; cohort_ar: string | null };
+  /** The job card being observed: its rubric code, card number and task. */
+  job: { rubricCode: string; code: string; task: string; taskAr: string | null };
+  lab: { title: string; titleAr: string | null } | null;
   stations: FloorStation[]; rubric: ObsCriterion[];
   stock: { name: string; on_hand: number; reorder_point: number; unit: string }[];
   toolsOut: number; liveExams: number; trainer: { name: string; nameAr: string | null };
@@ -84,7 +86,7 @@ export function Floor({ bay, stations, rubric, stock, toolsOut, liveExams, train
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [noteOpen, setNoteOpen] = useState(false);
   const [toast, setToast] = useState<Txt | null>(null);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [allAlerts, setAlerts] = useState<Alert[]>([]);
   const [simOffline, setSimOffline] = useState(false);
   const [netOnline, setNetOnline] = useState(true);
   const [queued, setQueued] = useState(0);
@@ -123,6 +125,8 @@ export function Floor({ bay, stations, rubric, stock, toolsOut, liveExams, train
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); }, [toast]);
   useEffect(() => { setNoteOpen(false); }, [sel]);
 
+  // The rail shows this trade's learners only; the badge in the top bar counts every open alert.
+  const alerts = allAlerts.filter((a) => stations.some((s) => s.learnerId === a.learnerId));
   const alertByLearner = new Set(alerts.map((a) => a.learnerId));
   const statusOf = (s: FloorStation): StationStatus =>
     alertByLearner.has(s.learnerId) ? 'alert' : signed[s.learnerId] || s.score !== null ? 'done' : s.assetTag ? 'working' : 'idle';
@@ -142,7 +146,7 @@ export function Floor({ bay, stations, rubric, stock, toolsOut, liveExams, train
   const signOff = async () => {
     if (!station) return;
     const body: Outbound = {
-      clientMutationId: crypto.randomUUID(), learnerId: station.learnerId, rubricCode: 'RB-JC-118', taskRef: 'JC-118',
+      clientMutationId: crypto.randomUUID(), learnerId: station.learnerId, rubricCode: job.rubricCode, taskRef: job.code,
       ...(station.assetTag ? { assetTag: station.assetTag } : {}),
       checks: {}, ratings: {}, measurements: {}, ...(notes[sel] ? { note: notes[sel] } : {}),
     };
@@ -249,7 +253,7 @@ export function Floor({ bay, stations, rubric, stock, toolsOut, liveExams, train
             <div>
               <p className="eyebrow">{L('V-Lab · live', 'المعمل الافتراضي · مباشر')}</p>
               <strong>{L(`${liveExams} exam${liveExams === 1 ? '' : 's'} in progress`, `${liveExams} امتحان جارٍ`)}</strong>
-              <p className="muted">{L('Start a DOL starter fault exam for a learner and choose the injected fault.', 'ابدأ امتحان أعطال بادئ DOL لمتدرب واختر العطل المزروع.')}</p>
+              {lab && <p className="muted">{L(`Start a “${lab.title}” exam for a learner and choose the injected fault.`, `ابدأ امتحان «${ar(lab.title, lab.titleAr)}» لمتدرب واختر العطل المزروع.`)}</p>}
             </div>
             <Link className="button" href="/trainer/vlab">{L('Open V-Lab exams', 'افتح امتحانات المعمل')}</Link>
           </div>
@@ -258,17 +262,17 @@ export function Floor({ bay, stations, rubric, stock, toolsOut, liveExams, train
         {station ? (
           <section className="obs" aria-label={L('Observation', 'الملاحظة')}>
             <header className="obs-head">
-              <p className="eyebrow">{station.assetTag ? `${station.assetTag} · ` : ''}{L('Job card JC-118', 'بطاقة العمل JC-118')}</p>
+              <p className="eyebrow">{station.assetTag ? `${station.assetTag} · ` : ''}{L(`Job card ${job.code}`, `بطاقة العمل ${job.code}`)}</p>
               <h2>{ar(station.name, station.nameAr)}</h2>
-              <p className="muted">{L('Task', 'المهمة')}: {L('Turn Ø25 h7 shaft, Ra 1.6', 'خراطة عمود Ø25 h7، خشونة Ra 1.6')}
-                {station.denied && <><br /><span className="bad-text">{L(`Badge refused at the lathe today: ${station.denied}`, `رُفضت البطاقة عند المخرطة اليوم: ${station.denied}`)}</span></>}</p>
+              <p className="muted">{L('Task', 'المهمة')}: {ar(job.task, job.taskAr)}
+                {station.denied && <><br /><span className="bad-text">{L(`Badge refused at the station today: ${station.denied}`, `رُفضت البطاقة عند المحطة اليوم: ${station.denied}`)}</span></>}</p>
             </header>
 
             <div className="rubric">
               {rubric.map((c) => (
                 <div key={c.key} className={`row ${c.isGate ? 'row-gate' : ''}`}>
                   <div className="row-label">
-                    {L(c.label, AR_LABELS[c.key] ?? c.label)}
+                    {ar(c.label, c.labelAr)}
                     {c.isGate && <span className="gate">{L('Gate', 'شرط أمان')}</span>}
                   </div>
                   {c.scoring.rule === 'check' && (
@@ -294,7 +298,7 @@ export function Floor({ bay, stations, rubric, stock, toolsOut, liveExams, train
             </div>
             {noteOpen && (
               <textarea className="note" rows={2}
-                placeholder={L('e.g. Good tool-height setting; remind about chip hook', 'مثال: ضبط جيد لارتفاع العدة؛ ذكّره باستخدام خطاف الرايش')}
+                placeholder={L('e.g. Good method; remind about housekeeping', 'مثال: منهجية جيدة؛ ذكّره بالنظافة والترتيب')}
                 value={notes[sel] ?? ''} onChange={(e) => setNotes((n) => ({ ...n, [sel]: e.target.value }))} />
             )}
 
@@ -327,17 +331,19 @@ export function Floor({ bay, stations, rubric, stock, toolsOut, liveExams, train
 }
 
 function ToleranceInput({ c, value, onChange, id }: { c: ObsCriterion; value: string | number | undefined; onChange: (v: string) => void; id: string }) {
-  const { L } = useL();
+  const { L, pick } = useL();
   const v = value === undefined || value === '' ? null : Number(value);
   const s = v === null || Number.isNaN(v) ? null : tolScore(c, v);
   const e = c.scoring.expected ?? 0, t = c.scoring.absTol ?? 0;
+  const unit = c.scoring.unit ?? 'mm';
+  const digits = t < 0.05 ? 3 : 2;
   return (
     <div className="tol">
-      <label htmlFor={id} className="sr-only">{L('Measured diameter in mm', 'القطر المقاس بالمليمتر')}</label>
-      <input id={id} dir="ltr" inputMode="decimal" placeholder={(e + t).toFixed(3)} value={value ?? ''}
+      <label htmlFor={id} className="sr-only">{c.scoring.measure ? pick(c.scoring.measure) : L(`Measured value in ${unit}`, `القيمة المقاسة (${unit})`)}</label>
+      <input id={id} dir="ltr" inputMode="decimal" placeholder={(e + t).toFixed(digits)} value={value ?? ''}
         onChange={(ev) => onChange(ev.target.value.replace(',', '.').replace('٫', '.'))}
         className={s === null ? '' : s === 100 ? 'in' : s === 50 ? 'near' : 'out'} />
-      <span className="mono tol-band" dir="ltr">{(e - t).toFixed(3)}–{(e + t).toFixed(3)} mm</span>
+      <span className="mono tol-band" dir="ltr">{(e - t).toFixed(digits)}–{(e + t).toFixed(digits)} {unit}</span>
       {s !== null && <span className={`tol-flag ${s === 100 ? 'ok' : 'bad'}`}>
         {s === 100 ? `✓ ${L('In tolerance', 'ضمن التفاوت')}` : s === 50 ? `◐ ${L('Within 2×', 'ضمن ضعف التفاوت')}` : `✗ ${L('Out', 'خارج التفاوت')}`}
       </span>}

@@ -13,8 +13,8 @@ export interface Section { href: string; label: Txt; exact?: boolean }
 export interface ShellUser { name: string; nameAr: string | null; roleKey: string; roleLabel: Txt; initials: Txt }
 export interface WorkspaceLink { href: string; label: Txt; active: boolean }
 
-export function Shell({ user, sections, workspaces, institution, alertsHref, children }: {
-  user: ShellUser; sections: Section[]; workspaces: WorkspaceLink[]; institution: Txt; alertsHref?: string; children: ReactNode;
+export function Shell({ user, sections, workspaces, institution, alertsHref, tradeBar, children }: {
+  user: ShellUser; sections: Section[]; workspaces: WorkspaceLink[]; institution: Txt; alertsHref?: string; tradeBar?: ReactNode; children: ReactNode;
 }) {
   const { L, pick, ar } = useL();
   const path = usePathname();
@@ -79,6 +79,7 @@ export function Shell({ user, sections, workspaces, institution, alertsHref, chi
           </div>
         </div>
       </header>
+      {tradeBar}
       <main className="screen">{children}</main>
       <footer className="app-foot">
         <OrgLogo height={24} />

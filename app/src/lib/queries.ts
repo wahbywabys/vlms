@@ -21,7 +21,10 @@ export interface CompetencyRow {
   level: Level; score: number | null; evidence_count: number; last_assessed_at: Date | null; verified: boolean;
 }
 
-/** Every element of every framework, with the learner's level (not_yet when no evidence). */
+/**
+ * Every element of the learner's trade frameworks (all frameworks when they have
+ * no trade), plus any other element they hold evidence for, with their level.
+ */
 export async function competencyProfile(learnerId: string) {
   return q<CompetencyRow>(
     `SELECT u.code AS unit_code, u.title AS unit_title, u.title_ar AS unit_title_ar, f.code AS framework,
@@ -33,6 +36,8 @@ export async function competencyProfile(learnerId: string) {
        JOIN competency_frameworks f ON f.id = e.framework_id
        LEFT JOIN learner_competencies lc ON lc.competency_id = e.id AND lc.learner_id = $1
       WHERE e.kind = 'element'
+        AND (lc.learner_id IS NOT NULL OR NOT EXISTS (SELECT 1 FROM v_user_trades WHERE user_id = $1)
+             OR f.trade_id IN (SELECT trade_id FROM v_user_trades WHERE user_id = $1))
       ORDER BY f.code, u.code, e.code`, [learnerId]);
 }
 
@@ -76,16 +81,18 @@ export async function credentials(learnerId: string) {
       WHERE c.learner_id = $1 ORDER BY c.issued_at DESC`, [learnerId]);
 }
 
-export async function cohortLearners(institutionId: string) {
+/** Learners of the institution, of one trade unless `trade` is null. */
+export async function cohortLearners(institutionId: string, trade: string | null = null) {
   return q<LearnerRow & { cohort: string; cohort_ar: string | null; competent: number; elements: number; last_score: number | null; open_alerts: number }>(
     `SELECT u.id, u.full_name AS name, u.full_name_ar AS name_ar, u.email::text AS email, u.safety_badge_uid AS badge,
             c.name AS cohort, c.name_ar AS cohort_ar,
             (SELECT count(*)::int FROM learner_competencies lc WHERE lc.learner_id = u.id AND lc.level IN ('autonomous', 'master')) AS competent,
-            (SELECT count(*)::int FROM competencies WHERE kind = 'element') AS elements,
+            (SELECT count(*)::int FROM competencies k JOIN competency_frameworks f ON f.id = k.framework_id
+              WHERE k.kind = 'element' AND (c.trade_id IS NULL OR f.trade_id = c.trade_id)) AS elements,
             (SELECT e.total_score::float FROM rubric_evaluations e WHERE e.learner_id = u.id ORDER BY e.evaluated_at DESC LIMIT 1) AS last_score,
             (SELECT count(*)::int FROM safety_alerts a WHERE a.learner_id = u.id AND a.resolved_at IS NULL) AS open_alerts
        FROM users u JOIN user_roles r ON r.user_id = u.id AND r.role = 'student'
        JOIN cohort_members m ON m.user_id = u.id JOIN cohorts c ON c.id = m.cohort_id
-      WHERE u.institution_id = $1
-      ORDER BY u.full_name`, [institutionId]);
+      WHERE u.institution_id = $1 AND ($2::text IS NULL OR c.trade_id = $2)
+      ORDER BY u.full_name`, [institutionId, trade]);
 }

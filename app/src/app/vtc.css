@@ -626,3 +626,41 @@ button:hover:not(:disabled) { border-color: var(--blue); }
   .brand { gap: 8px; }
   .page-head h1 { font-size: 24px; }
 }
+
+/* ---------- Trade (specialisation) switcher ---------- */
+.tradebar { background: var(--sheet); border-bottom: 1px solid var(--rule); }
+.tradebar-inner { max-width: 1360px; margin: 0 auto; display: flex; align-items: center; gap: 14px;
+  padding-block: 8px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.tradebar-label { font: 600 12px/1 var(--f-display); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); flex: none; }
+.trade-tabs { display: flex; gap: 6px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.trade-tabs::-webkit-scrollbar { display: none; }
+.trade-tabs button { position: relative; flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px;
+  border-radius: 999px; border: 1px solid var(--rule); background: var(--sunk); color: var(--ink-2); font-weight: 600; white-space: nowrap; }
+.trade-tabs button:hover:not([aria-checked="true"]) { background: var(--sheet); color: var(--ink); }
+.trade-tabs button[aria-checked="true"] { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+.trade-tabs button[aria-checked="true"] .trade-icon { stroke: var(--accent); }
+.trade-icon { flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.trade-dot { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--bad); color: #fff; font-size: 12px; line-height: 20px; text-align: center; }
+.app.is-full .tradebar-inner { max-width: none; }
+@media (max-width: 640px) {
+  .tradebar-label { display: none; }
+  .trade-tabs button { padding: 0 12px; }
+}
+/* Director: trade overview cards. */
+.trade-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.trade-card { display: grid; gap: 10px; text-align: start; padding: 14px; border-radius: var(--radius); border: 1px solid var(--rule); background: var(--sheet); box-shadow: var(--shadow); }
+.trade-card:hover { border-color: var(--blue); }
+.trade-card-head { display: flex; align-items: center; gap: 10px; }
+.trade-card-head .trade-icon { width: 34px; height: 34px; padding: 6px; border-radius: 10px; background: var(--blue-soft); stroke: var(--blue); }
+.trade-card-head strong { display: block; font-size: 16px; }
+.trade-card-head small { color: var(--ink-3); font-size: 12px; }
+.trade-card dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.trade-card dl div { display: grid; gap: 2px; }
+.trade-card dt { font-size: 12px; color: var(--ink-3); }
+.trade-card dd { margin: 0; font: 600 20px/1.1 var(--f-display); }
+.stock { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.stock li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--sunk); }
+.stock li.low { background: var(--amber-soft); }
+.stock small { color: var(--ink-3); grid-column: 1 / -1; }
+.stock .qty { font-weight: 600; white-space: nowrap; }
+.stock li.low .qty { color: var(--amber); }

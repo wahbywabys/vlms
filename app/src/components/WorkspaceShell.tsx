@@ -2,13 +2,16 @@ import type { ReactNode } from 'react';
 import { requireRole, type Role, type Session } from '@/lib/auth';
 import { q1 } from '@/lib/db';
 import { tx, type Txt } from '@/lib/i18n';
+import { currentTrade, trades } from '@/lib/trade';
 import { Shell, type Section } from './Shell';
+import { TradeBar } from './TradeBar';
 
 export type WorkspaceKey = 'student' | 'trainer' | 'teacher' | 'supervisor' | 'director';
 
-export const WORKSPACE: Record<WorkspaceKey, { role: Role; label: Txt; home: string; sections: Section[]; alerts?: string }> = {
+/** `trades`: how the workspace uses the trade bar. 'pick' = one trade at a time, 'all' = also an all-trades view, 'own' = the learner's own trade, shown fixed. */
+export const WORKSPACE: Record<WorkspaceKey, { role: Role; label: Txt; home: string; sections: Section[]; alerts?: string; trades?: 'pick' | 'all' | 'own' }> = {
   student: {
-    role: 'student', label: tx('Student', 'الطالب'), home: '/student',
+    role: 'student', label: tx('Student', 'الطالب'), home: '/student', trades: 'own',
     sections: [
       { href: '/student', label: tx('My progress', 'تقدّمي'), exact: true },
       { href: '/student/lab', label: tx('V-Lab', 'المعمل الافتراضي') },
@@ -17,7 +20,7 @@ export const WORKSPACE: Record<WorkspaceKey, { role: Role; label: Txt; home: str
     ],
   },
   trainer: {
-    role: 'vocational_trainer', label: tx('Vocational trainer', 'المدرب المهني'), home: '/trainer', alerts: '/trainer',
+    role: 'vocational_trainer', label: tx('Vocational trainer', 'المدرب المهني'), home: '/trainer', alerts: '/trainer', trades: 'pick',
     sections: [
       { href: '/trainer', label: tx('Workshop floor', 'أرضية الورشة'), exact: true },
       { href: '/trainer/vlab', label: tx('V-Lab exams', 'امتحانات المعمل') },
@@ -25,7 +28,7 @@ export const WORKSPACE: Record<WorkspaceKey, { role: Role; label: Txt; home: str
     ],
   },
   teacher: {
-    role: 'academic_teacher', label: tx('Academic teacher', 'المعلم الأكاديمي'), home: '/teacher',
+    role: 'academic_teacher', label: tx('Academic teacher', 'المعلم الأكاديمي'), home: '/teacher', trades: 'pick',
     sections: [
       { href: '/teacher', label: tx('Question bank', 'بنك الأسئلة'), exact: true },
       { href: '/teacher/new', label: tx('New question', 'سؤال جديد') },
@@ -37,7 +40,7 @@ export const WORKSPACE: Record<WorkspaceKey, { role: Role; label: Txt; home: str
     sections: [{ href: '/supervisor', label: tx('Logbook sign-offs', 'اعتماد سجلات التدريب'), exact: true }],
   },
   director: {
-    role: 'director', label: tx('Director', 'المدير'), home: '/director', alerts: '/director',
+    role: 'director', label: tx('Director', 'المدير'), home: '/director', alerts: '/director', trades: 'all',
     sections: [
       { href: '/director', label: tx('Institution overview', 'نظرة عامة على المؤسسة'), exact: true },
       { href: '/director/learners', label: tx('Learners', 'المتدربون') },
@@ -54,6 +57,11 @@ export async function WorkspaceShell({ ws, children }: { ws: WorkspaceKey; child
   const w = WORKSPACE[ws];
   const s: Session = await requireRole(w.role);
   const inst = await q1<{ name: string; name_ar: string | null }>(`SELECT name, name_ar FROM institutions WHERE id = $1`, [s.institutionId]);
+  const tradeBar = w.trades && await (async () => {
+    const [all, current] = await Promise.all([trades(), currentTrade(s, w.trades)]);
+    return <TradeBar trades={all.map((t) => ({ id: t.id, code: t.code, icon: t.icon, name: { en: t.name, ar: t.name_ar ?? t.name } }))}
+      current={current} allowAll={w.trades === 'all'} fixed={w.trades === 'own'} />;
+  })();
   const mine = (Object.keys(WORKSPACE) as WorkspaceKey[]).filter((k) => s.roles.includes(WORKSPACE[k].role));
   return (
     <Shell
@@ -62,6 +70,7 @@ export async function WorkspaceShell({ ws, children }: { ws: WorkspaceKey; child
       workspaces={mine.map((k) => ({ href: WORKSPACE[k].home, label: WORKSPACE[k].label, active: k === ws }))}
       institution={{ en: inst?.name ?? '', ar: inst?.name_ar ?? inst?.name ?? '' }}
       alertsHref={w.alerts}
+      tradeBar={tradeBar}
     >
       {children}
     </Shell>

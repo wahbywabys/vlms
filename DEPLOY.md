@@ -78,8 +78,10 @@ Do not give the API a public domain. Only the app needs to reach it.
    ```
    applied schema.sql
    applied seed.sql
+   applied migrations/001_trades.sql
    applied demo.sql
-   VTC_LMS database up to date (3 applied).
+   applied demo_trades.sql
+   VTC_LMS database up to date (5 applied).
    ```
 
    The API is healthy when `/healthz` answers. Railway waits for that before switching traffic.
@@ -88,7 +90,10 @@ Do not give the API a public domain. Only the app needs to reach it.
 
 | Email | Role |
 |---|---|
-| student@vtc.example | Student |
+| student@vtc.example | Student (CNC machining) |
+| student.auto@vtc.example | Student (automotive) |
+| student.elec@vtc.example | Student (electrical) |
+| student.weld@vtc.example | Student (welding) |
 | trainer@vtc.example | Vocational trainer |
 | teacher@vtc.example | Academic teacher |
 | supervisor@vtc.example | Workplace supervisor |
@@ -101,8 +106,8 @@ The demo password is public, because it is written in this repository and shown 
 Before each API deploy, Railway runs `npx tsx src/migrate.ts` (`npm run migrate` in `api/`). It applies, once each and in this order:
 
 1. `db/schema.sql` and `db/seed.sql` (the base schema and reference data)
-2. every file in `db/migrations/` in name order, for example `db/migrations/001_add_attendance.sql`
-3. `db/demo.sql`, only when `SEED_DEMO=true`
+2. every file in `db/migrations/` in name order, for example `db/migrations/001_trades.sql`
+3. `db/demo.sql` and then `db/demo_trades.sql` (the automotive, electrical and welding cohorts), only when `SEED_DEMO=true`
 
 Each file runs in a transaction and is recorded in the table `public.vtc_migrations`. If a file fails, the deploy stops and the running version stays live. To change the schema later, add a new numbered file to `db/migrations/` and push. Do not edit `schema.sql` after the first deploy, because that file is never run again.
 

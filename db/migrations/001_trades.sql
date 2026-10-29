@@ -85,6 +85,10 @@ JOIN competencies c ON c.id = lc.competency_id AND c.kind = 'unit'
 JOIN competency_frameworks f ON f.id = c.framework_id
 GROUP BY i.region, c.code, c.title, f.trade_id;
 
+-- Arabic names for rubrics and their criteria (the floor tablet shows them in Arabic mode).
+ALTER TABLE rubrics ADD COLUMN title_ar text;
+ALTER TABLE rubric_criteria ADD COLUMN label_ar text;
+
 -- A learner's trade is their cohort's; staff can belong to several.
 CREATE VIEW v_user_trades AS
 SELECT DISTINCT m.user_id, c.trade_id

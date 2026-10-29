@@ -1,11 +1,18 @@
 'use client';
 import { useL } from '@/components/LangProvider';
-import { TEST_POINTS, type RigState, type TestPoint } from '@/lib/dol';
+import type { Diagram, PublicLab, RigState, TestPoint } from '@/lib/lab';
+
+type Props = { lab: PublicLab; rig: RigState; onMeasure: (tp: TestPoint) => void; active?: string };
+
+/** The lab's rig drawing: the hand-drawn DOL ladder, or a block drawing described as data. */
+export function Schematic(p: Props) {
+  return p.lab.diagram === 'dol' ? <DolLadder {...p} /> : <BlockDiagram {...p} d={p.lab.diagram} />;
+}
 
 /** Ladder drawing of the starter, always drawn left-to-right as on a real panel. Test points are the tappable circles. */
-export function Schematic({ rig, onMeasure, active }: { rig: RigState; onMeasure: (tp: TestPoint) => void; active?: string }) {
+function DolLadder({ lab, rig, onMeasure, active }: Props) {
   const { lang, L, pick } = useL();
-  const tp = (ref: string) => TEST_POINTS.find((t) => t.ref === ref)!;
+  const tp = (ref: string) => lab.testPoints.find((t) => t.ref === ref)!;
   // A render helper rather than a component, so points keep focus across renders.
   const pt = ({ r, x, y, label, dx = 0, dy = -16 }: { r: string; x: number; y: number; label: string; dx?: number; dy?: number }) => {
     const t = tp(r);
@@ -80,6 +87,52 @@ export function Schematic({ rig, onMeasure, active }: { rig: RigState; onMeasure
       {pt({ r: 'S2:start_pb', x: 259, y: 196, label: 'S2' })}
       {pt({ r: 'F2:95-96', x: 403, y: 200, label: '95–96' })}
       {pt({ r: 'KM1:A1-A2', x: 492, y: 188, label: 'A1–A2' })}
+    </svg>
+  );
+}
+
+/** Block drawing for rigs described as data (api/src/labs). Same test-point behaviour as the DOL ladder. */
+function BlockDiagram({ lab, d, rig, onMeasure, active }: Props & { d: Diagram }) {
+  const { lang, L, pick } = useL();
+  const pt = (p: Diagram['points'][number]) => {
+    const t = lab.testPoints.find((x) => x.ref === p.ref)!;
+    const reachable = !t.inside || rig.panelOpen;
+    return (
+      <g key={p.ref} className={`tp ${active === p.ref ? 'tp-active' : ''} ${reachable ? '' : 'tp-blocked'}`} role="button" tabIndex={0}
+        aria-label={L(`Measure ${t.label.en}`, `قِس ${t.label.ar}`)} data-tp={p.ref} onClick={() => onMeasure(t)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onMeasure(t); } }}>
+        <title>{pick(t.label)}</title>
+        <circle cx={p.x} cy={p.y} r={18} className="tp-hit" />
+        <circle cx={p.x} cy={p.y} r={7} className="tp-dot" />
+        <text x={p.x + (p.dx ?? 0)} y={p.y + (p.dy ?? -16)} textAnchor="middle" className="tp-label">{pick(p.label)}</text>
+      </g>
+    );
+  };
+  return (
+    <svg className="schematic" viewBox="0 0 640 330" role="group" aria-label={L(`${lab.rigTitle.en} with test points`, `${lab.rigTitle.ar} مع نقاط القياس`)}>
+      {d.captions.map((c) => (
+        <text key={c.text.en} x={lang === 'ar' ? 320 : c.x} y={c.y} textAnchor={lang === 'ar' ? 'middle' : 'start'} className="sch-cap">{pick(c.text)}</text>
+      ))}
+      <path d={d.wires} className="sch-wire" fill="none" />
+      {d.boxes.map((b) => (
+        <g key={b.label + b.x}>
+          <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={b.round ? Math.min(b.w, b.h) / 2 : 4}
+            className={`sch-box ${b.isolator && rig.locked ? 'sch-locked' : ''}`} />
+          <text x={b.x + b.w / 2} y={b.y + b.h / 2 + (b.sub ? -2 : 5)} textAnchor="middle" className="sch-txt">{b.label}</text>
+          {b.sub && <text x={b.x + b.w / 2} y={b.y + b.h / 2 + 14} textAnchor="middle" className="sch-small">{b.sub}</text>}
+          {b.isolator && rig.locked && (
+            <g><rect x={b.x + b.w / 2 - 24} y={b.y + b.h + 4} width="48" height="22" rx="3" className="tag" />
+              <text x={b.x + b.w / 2} y={b.y + b.h + 19} textAnchor="middle" className="tag-txt">{L('LOCKED', 'مقفول')}</text></g>
+          )}
+        </g>
+      ))}
+      {!rig.panelOpen && (
+        <g className="door">
+          <rect x={d.cover.x} y={d.cover.y} width={d.cover.w} height={d.cover.h} rx="8" />
+          <text x={d.cover.x + d.cover.w / 2} y={d.cover.y + d.cover.h / 2 + 6} textAnchor="middle">{pick(d.cover.text)}</text>
+        </g>
+      )}
+      {d.points.map(pt)}
     </svg>
   );
 }

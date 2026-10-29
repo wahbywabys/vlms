@@ -213,6 +213,36 @@ UPDATE workshops SET observation_rubric_id = '00000000-0000-0000-0000-0000000002
 UPDATE workshops SET observation_rubric_id = '00000000-0000-0000-0000-0000000003e3' WHERE id = '00000000-0000-0000-0000-0000000000d6';
 UPDATE workshops SET observation_rubric_id = '00000000-0000-0000-0000-0000000004e3' WHERE id = '00000000-0000-0000-0000-0000000004d5';
 
+-- Arabic titles and labels; measured criteria also carry the unit and the input prompt.
+UPDATE rubrics SET title = 'JC-118 Turn Ø25 h7 shaft, Ra 1.6', title_ar = 'JC-118 خراطة عمود Ø25 h7، خشونة Ra 1.6' WHERE code = 'RB-JC-118';
+UPDATE rubric_criteria SET label_ar = 'ارتداء معدات الوقاية (نظارة، حذاء أمان، بلا أكمام فضفاضة)' WHERE key = 'ppe' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-118');
+UPDATE rubric_criteria SET label_ar = 'تشغيل آمن (الواقي مغلق، مفتاح الظرف مُزال)' WHERE key = 'safe_op' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-118');
+UPDATE rubric_criteria SET label_ar = 'ضبط الماكينة' WHERE key = 'setup' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-118');
+UPDATE rubric_criteria SET label_ar = 'القطر Ø25 h7', scoring = scoring || '{"unit":"mm","measure":{"en":"Measured diameter in mm","ar":"القطر المقاس بالمليمتر"}}'::jsonb WHERE key = 'dia' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-118');
+UPDATE rubric_criteria SET label_ar = 'جودة السطح Ra 1.6' WHERE key = 'finish' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-118');
+UPDATE rubric_criteria SET label_ar = 'النظافة والترتيب' WHERE key = 'housekeeping' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-118');
+UPDATE rubrics SET title = 'JC-A211 Front pads & disc runout check', title_ar = 'JC-A211 تغيير تيل الفرامل الأمامي وفحص انحراف الطنبورة' WHERE code = 'RB-JC-A211';
+UPDATE rubric_criteria SET label_ar = 'ارتداء معدات الوقاية (نظارة، قفازات، حذاء أمان)' WHERE key = 'ppe' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-A211');
+UPDATE rubric_criteria SET label_ar = 'تأمين المركبة (أقفال الرافعة أو حوامل المحاور، تثبيت العجلات)' WHERE key = 'secured' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-A211');
+UPDATE rubric_criteria SET label_ar = 'منهجية التشخيص' WHERE key = 'method' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-A211');
+UPDATE rubric_criteria SET label_ar = 'انحراف الطنبورة ≤ 0.05 مم', scoring = scoring || '{"unit":"mm","measure":{"en":"Measured runout in mm","ar":"الانحراف المقاس بالمليمتر"}}'::jsonb WHERE key = 'runout' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-A211');
+UPDATE rubric_criteria SET label_ar = 'ربط المسامير بالعزم المحدد' WHERE key = 'torque' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-A211');
+UPDATE rubric_criteria SET label_ar = 'النظافة وانسكاب السوائل' WHERE key = 'housekeeping' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-A211');
+UPDATE rubrics SET title = 'JC-E140 Wire a DOL starter to drawing E-07', title_ar = 'JC-E140 توصيل بادئ DOL حسب المخطط E-07' WHERE code = 'RB-JC-E140';
+UPDATE rubric_criteria SET label_ar = 'ارتداء معدات الوقاية (قفازات معزولة، نظارة، حذاء أمان)' WHERE key = 'ppe' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-E140');
+UPDATE rubric_criteria SET label_ar = 'إثبات العزل الآمن (قفل، بطاقة، اختبار انعدام الجهد)' WHERE key = 'safe_iso' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-E140');
+UPDATE rubric_criteria SET label_ar = 'التنفيذ مطابق للمخطط' WHERE key = 'layout' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-E140');
+UPDATE rubric_criteria SET label_ar = 'استمرارية الأرضي R1+R2 ≤ 0.50 Ω', scoring = scoring || '{"unit":"Ω","measure":{"en":"Measured R1+R2 in ohms","ar":"قيمة R1+R2 المقاسة بالأوم"}}'::jsonb WHERE key = 'r1r2' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-E140');
+UPDATE rubric_criteria SET label_ar = 'أطراف محكمة بلا نحاس مكشوف' WHERE key = 'termination' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-E140');
+UPDATE rubric_criteria SET label_ar = 'النظافة والترتيب' WHERE key = 'housekeeping' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-E140');
+UPDATE rubrics SET title = 'JC-W305 Fillet weld 10 mm plate, PB (2F), MAG', title_ar = 'JC-W305 لحام زاوية لوح 10 مم، وضع PB ‏(2F)، MAG' WHERE code = 'RB-JC-W305';
+UPDATE rubric_criteria SET label_ar = 'ارتداء معدات الوقاية (خوذة درجة تعتيم 11، قفازات جلدية، سترة مقاومة للهب)' WHERE key = 'ppe' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-W305');
+UPDATE rubric_criteria SET label_ar = 'شفط الأبخرة يعمل، الستائر مغلقة، لا مواد قابلة للاشتعال' WHERE key = 'hot_work' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-W305');
+UPDATE rubric_criteria SET label_ar = 'تجهيز الوصلة والتركيب' WHERE key = 'prep' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-W305');
+UPDATE rubric_criteria SET label_ar = 'طول ساق لحام الزاوية 6 مم', scoring = scoring || '{"unit":"mm","measure":{"en":"Measured leg length in mm","ar":"طول الساق المقاس بالمليمتر"}}'::jsonb WHERE key = 'leg' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-W305');
+UPDATE rubric_criteria SET label_ar = 'الفحص البصري: لا تآكل حواف ولا مسامية ولا شروخ' WHERE key = 'visual' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-W305');
+UPDATE rubric_criteria SET label_ar = 'النظافة وتخزين الأسطوانات' WHERE key = 'housekeeping' AND rubric_id = (SELECT id FROM rubrics WHERE code = 'RB-JC-W305');
+
 -- ---------------------------------------------------------------------------
 -- V-Labs for CNC, automotive and welding (the DOL starter is in seed.sql)
 -- ---------------------------------------------------------------------------
@@ -401,9 +431,11 @@ INSERT INTO safety_alerts (institution_id, learner_id, source, criterion_key, de
    'Arc struck in WELD3-B06 with the fume extraction off', now() - interval '15 minutes');
 
 -- ---------------------------------------------------------------------------
--- Question bank: two approved items per new trade
+-- Question bank: two approved items per trade (the DOL items in demo.sql are electrical)
 -- ---------------------------------------------------------------------------
 INSERT INTO questions (id, institution_id, type, bloom, status, author_id, ai_generated) VALUES
+  ('00000000-0000-0000-0000-0000000001f1', '00000000-0000-0000-0000-0000000000a1', 'mcq', 'apply', 'approved', '00000000-0000-0000-0000-0000000000b2', false),
+  ('00000000-0000-0000-0000-0000000001f2', '00000000-0000-0000-0000-0000000000a1', 'calculation', 'apply', 'approved', '00000000-0000-0000-0000-0000000000b2', false),
   ('00000000-0000-0000-0000-0000000002f1', '00000000-0000-0000-0000-0000000000a1', 'mcq', 'apply', 'approved', '00000000-0000-0000-0000-0000000002b2', false),
   ('00000000-0000-0000-0000-0000000002f2', '00000000-0000-0000-0000-0000000000a1', 'calculation', 'apply', 'approved', '00000000-0000-0000-0000-0000000002b2', false),
   ('00000000-0000-0000-0000-0000000003f1', '00000000-0000-0000-0000-0000000000a1', 'mcq', 'understand', 'approved', '00000000-0000-0000-0000-0000000003b2', false),
@@ -411,6 +443,16 @@ INSERT INTO questions (id, institution_id, type, bloom, status, author_id, ai_ge
   ('00000000-0000-0000-0000-0000000004f1', '00000000-0000-0000-0000-0000000000a1', 'mcq', 'analyze', 'approved', '00000000-0000-0000-0000-0000000004b2', false),
   ('00000000-0000-0000-0000-0000000004f2', '00000000-0000-0000-0000-0000000000a1', 'mcq', 'understand', 'approved', '00000000-0000-0000-0000-0000000004b2', false);
 INSERT INTO question_versions (question_id, version, stem, body, answer_key, abs_tolerance, max_points) VALUES
+  ('00000000-0000-0000-0000-0000000001f1', 1,
+   'Before opening the lathe guard to measure the part, you must first:',
+   '{"stem_ar":"قبل فتح واقي المخرطة لقياس القطعة يجب عليك أولًا:","options":[
+     {"id":"a","en":"Stop the spindle and wait until it has stopped turning","ar":"إيقاف عمود الدوران والانتظار حتى يتوقف تمامًا"},
+     {"id":"b","en":"Reduce the feed rate","ar":"تقليل معدل التغذية"},
+     {"id":"c","en":"Switch the coolant off only","ar":"إيقاف سائل التبريد فقط"},
+     {"id":"d","en":"Put the machine in single-block mode","ar":"وضع الماكينة في وضع الكتلة المفردة"}]}', '{"correct":"a"}', NULL, 1),
+  ('00000000-0000-0000-0000-0000000001f2', 1,
+   'A turned part measures 0.06 mm oversize on diameter. By how many mm do you change the X wear offset (enter a negative number to reduce)?',
+   '{"stem_ar":"قطعة مخروطة أكبر بمقدار 0.06 مم في القطر. بكم مليمترًا تعدّل إزاحة تآكل X (أدخل رقمًا سالبًا للتقليل)؟","unit":"mm"}', '{"value":-0.06}', 0.001, 2),
   ('00000000-0000-0000-0000-0000000002f1', 1,
    'The dash lights dim heavily and the starter clicks rapidly. Battery reads 12.6 V at rest. What do you test first?',
    '{"stem_ar":"تخفت لمبات التابلوه بشدة ويطقطق البادئ بسرعة. البطارية تقرأ 12.6 فولت في السكون. ما الذي تختبره أولًا؟","options":[
@@ -420,7 +462,7 @@ INSERT INTO question_versions (question_id, version, stem, body, answer_key, abs
      {"id":"d","en":"The immobiliser key","ar":"مفتاح منع التشغيل"}]}', '{"correct":"a"}', NULL, 1),
   ('00000000-0000-0000-0000-0000000002f2', 1,
    'A disc reads 0.02 mm and 0.09 mm runout at two points on one revolution. What is the total runout in mm?',
-   '{"stem_ar":"قرص يقرأ انحرافًا 0.02 مم و0.09 مم عند نقطتين في دورة واحدة. ما مقدار الانحراف الكلي بالمليمتر؟"}', '{"value":0.07}', 0.005, 2),
+   '{"stem_ar":"قرص يقرأ انحرافًا 0.02 مم و0.09 مم عند نقطتين في دورة واحدة. ما مقدار الانحراف الكلي بالمليمتر؟","unit":"mm"}', '{"value":0.07}', 0.005, 2),
   ('00000000-0000-0000-0000-0000000003f1', 1,
    'Why is an RCD fitted on socket-outlet circuits?',
    '{"stem_ar":"لماذا يُركَّب قاطع التيار المتبقي RCD على دوائر المقابس؟","options":[
@@ -430,7 +472,7 @@ INSERT INTO question_versions (question_id, version, stem, body, answer_key, abs
      {"id":"d","en":"To replace the circuit breaker","ar":"ليحل محل القاطع"}]}', '{"correct":"a"}', NULL, 1),
   ('00000000-0000-0000-0000-0000000003f2', 1,
    'A radial circuit has R1 = 0.18 Ω and R2 = 0.29 Ω. What is R1+R2 in ohms?',
-   '{"stem_ar":"دائرة شعاعية فيها R1 = 0.18 أوم وR2 = 0.29 أوم. ما قيمة R1+R2 بالأوم؟"}', '{"value":0.47}', 0.01, 2),
+   '{"stem_ar":"دائرة شعاعية فيها R1 = 0.18 أوم وR2 = 0.29 أوم. ما قيمة R1+R2 بالأوم؟","unit":"Ω"}', '{"value":0.47}', 0.01, 2),
   ('00000000-0000-0000-0000-0000000004f1', 1,
    'A MIG weld shows surface porosity along the whole run. What is the most likely cause?',
    '{"stem_ar":"لحام MIG تظهر فيه مسامية سطحية على طول الخط. ما السبب الأرجح؟","options":[
@@ -446,6 +488,8 @@ INSERT INTO question_versions (question_id, version, stem, body, answer_key, abs
      {"id":"c","en":"Shade 3","ar":"الدرجة 3"},
      {"id":"d","en":"Clear safety glasses","ar":"نظارة أمان شفافة"}]}', '{"correct":"a"}', NULL, 1);
 INSERT INTO question_competencies (question_id, competency_id) VALUES
+  ('00000000-0000-0000-0000-0000000001f1', md5('vtc-comp-CNC-L3-U06-E1')::uuid),
+  ('00000000-0000-0000-0000-0000000001f2', md5('vtc-comp-CNC-L3-U06-E2')::uuid),
   ('00000000-0000-0000-0000-0000000002f1', md5('vtc-comp-AUTO-L3-U04-E2')::uuid),
   ('00000000-0000-0000-0000-0000000002f2', md5('vtc-comp-AUTO-L3-U03-E2')::uuid),
   ('00000000-0000-0000-0000-0000000003f1', md5('vtc-comp-ELEC-L3-U05-E2')::uuid),

@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { tx } from '@/lib/i18n';
 import { getI18n } from '@/lib/i18n-server';
+import { currentTrade } from '@/lib/trade';
 import { setQuestionStatus } from './actions';
 
 export const metadata = { title: 'Question bank' };
@@ -20,6 +21,7 @@ export default async function QuestionBank({ searchParams }: { searchParams: Pro
   const s = await requireRole('academic_teacher');
   const { L, pick, date } = await getI18n();
   const sp = await searchParams;
+  const trade = await currentTrade(s);
   const filter = sp.status && sp.status in STATUS ? sp.status : null;
   const rows = await q<{ id: string; type: string; bloom: string; status: keyof typeof STATUS; ai_generated: boolean; stem: string; stem_ar: string | null;
     codes: string[]; author: string; reviewer: string | null; updated_at: Date; attempts: number; p: number | null }>(
@@ -31,10 +33,16 @@ export default async function QuestionBank({ searchParams }: { searchParams: Pro
        FROM questions qn JOIN question_versions v ON v.question_id = qn.id AND v.version = qn.current_version
        JOIN users a ON a.id = qn.author_id LEFT JOIN users r ON r.id = qn.reviewed_by
       WHERE qn.institution_id = $1 AND ($2::text IS NULL OR qn.status::text = $2)
+        AND (NOT EXISTS (SELECT 1 FROM question_competencies qc WHERE qc.question_id = qn.id)
+             OR EXISTS (SELECT 1 FROM question_competencies qc JOIN competencies c ON c.id = qc.competency_id
+                        JOIN competency_frameworks f ON f.id = c.framework_id WHERE qc.question_id = qn.id AND f.trade_id = $3))
       ORDER BY array_position(ARRAY['in_review','draft','approved','retired'], qn.status::text), qn.updated_at DESC`,
-    [s.institutionId, filter]);
+    [s.institutionId, filter, trade]);
   const counts = await q<{ status: string; n: number }>(
-    `SELECT status::text, count(*)::int AS n FROM questions WHERE institution_id = $1 GROUP BY 1`, [s.institutionId]);
+    `SELECT qn.status::text, count(*)::int AS n FROM questions qn WHERE qn.institution_id = $1
+        AND (NOT EXISTS (SELECT 1 FROM question_competencies qc WHERE qc.question_id = qn.id)
+             OR EXISTS (SELECT 1 FROM question_competencies qc JOIN competencies c ON c.id = qc.competency_id
+                        JOIN competency_frameworks f ON f.id = c.framework_id WHERE qc.question_id = qn.id AND f.trade_id = $2)) GROUP BY 1`, [s.institutionId, trade]);
   const n = (k: string) => counts.find((c) => c.status === k)?.n ?? 0;
 
   return (

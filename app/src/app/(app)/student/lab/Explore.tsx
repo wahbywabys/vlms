@@ -1,15 +1,16 @@
 'use client';
 import { useCallback, useRef, useState } from 'react';
 import { useL } from '@/components/LangProvider';
+import type { Txt } from '@/lib/i18n';
 import { MachineExplorer, type ExplorerEvent } from '@/components/MachineExplorer';
 import { FullscreenIcon, useFullscreen } from '@/components/fullscreen';
 import { inductionMotorParts } from '@/models/inductionMotor';
 import { explorerStringsAr, inductionMotorPartsAr } from '@/models/motorAr';
 import { TelemetryStrip } from './TelemetryStrip';
 
-/** 3D explorer of the motor the starter drives. Loaded only in the browser (WebGL). */
-export default function Explore() {
-  const { lang, L } = useL();
+/** 3D explorer of the lab's motor (DOL starter load, CNC spindle). Loaded only in the browser (WebGL). */
+export default function Explore({ title, assetTag }: { title: Txt; assetTag: string }) {
+  const { lang, L, pick } = useL();
   const [log, setLog] = useState<(ExplorerEvent & { seq: number })[]>([]);
   const onEvent = useCallback((e: ExplorerEvent) => setLog((l) => [{ ...e, seq: (l[0]?.seq ?? 0) + 1 }, ...l].slice(0, 5)), []);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -22,7 +23,7 @@ export default function Explore() {
           <FullscreenIcon exit={fs.isFull} />
           <span className="fs-text">{fs.isFull ? L('Exit', 'خروج') : L('Full screen', 'ملء الشاشة')}</span>
         </button>
-        <MachineExplorer title={L('3-Phase Induction Motor · IEC 132M', 'محرك حثي ثلاثي الأطوار · IEC 132M')} assetTag="WS-ELEC-07 / MTR-0132"
+        <MachineExplorer title={pick(title)} assetTag={assetTag}
           parts={lang === 'ar' ? inductionMotorPartsAr : inductionMotorParts} strings={lang === 'ar' ? explorerStringsAr : undefined}
           onEvent={onEvent} height="min(620px, 72vh)" />
       </div>
