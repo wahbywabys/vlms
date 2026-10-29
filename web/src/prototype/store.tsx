@@ -6,7 +6,6 @@
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { SEED_EVALS, STATIONS, type EvalRow, type Station } from './data';
-import { makeL, tx, type Lang, type Txt } from './i18n';
 
 export type Role = 'trainer' | 'student' | 'director';
 
@@ -14,18 +13,16 @@ export interface Alert {
   id: string;
   at: string;
   stationNo?: number;
-  learner: Txt;
+  learner: string;
   source: 'RFID' | 'V-Lab';
-  text: Txt;
+  text: string;
   /** How the trainer resolved it; unresolved alerts stay on top. */
   resolution?: string;
 }
 
-export interface VlabLive { learner: Txt; mode: 'Guided' | 'Exam'; events: number; status: 'idle' | 'in progress' | 'submitted' }
+export interface VlabLive { learner: string; mode: 'Guided' | 'Exam'; events: number; status: 'idle' | 'in progress' | 'submitted' }
 
 interface Store {
-  lang: Lang;
-  setLang: (l: Lang) => void;
   role: Role;
   setRole: (r: Role) => void;
   online: boolean;
@@ -47,18 +44,11 @@ interface Store {
 
 const Ctx = createContext<Store | null>(null);
 export const useStore = () => useContext(Ctx)!;
-/** `L('English', 'عربي')` and `pick(txt)` for the current language. */
-export const useL = () => makeL(useStore().lang);
 
-export const clock = () => new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+const clock = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 let nextId = 1;
 
-function savedLang(): Lang {
-  try { return localStorage.getItem('vlms-lang') === 'ar' ? 'ar' : 'en'; } catch { return 'en'; }
-}
-
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [lang, setLang] = useState<Lang>(savedLang);
   const [role, setRole] = useState<Role>(() => {
     const h = location.hash.slice(1);
     return h === 'student' || h === 'director' ? h : 'trainer';
@@ -67,19 +57,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [queued, setQueued] = useState(0);
   const [stations, setStations] = useState(STATIONS);
   const [alerts, setAlerts] = useState<Alert[]>([
-    { id: 'a0', at: '09:37', stationNo: 5, learner: tx('Karim Fathy', 'كريم فتحي'), source: 'RFID',
-      text: tx('Guard open while spindle running', 'الواقي مفتوح أثناء دوران عمود الدوران') },
+    { id: 'a0', at: '09:37', stationNo: 5, learner: 'Karim Fathy', source: 'RFID', text: 'Guard open while spindle running' },
   ]);
   const [faultCode, setFaultCode] = useState('F-OL-OPEN');
   const [evals, setEvals] = useState(SEED_EVALS);
-  const [vlab, setVlabState] = useState<VlabLive>({ learner: tx('Omar Lotfy', 'عمر لطفي'), mode: 'Guided', events: 0, status: 'idle' });
-
-  // Arabic flips the whole document to right-to-left.
-  useEffect(() => {
-    document.documentElement.lang = lang;
-    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-    try { localStorage.setItem('vlms-lang', lang); } catch { /* storage unavailable: language just isn't remembered */ }
-  }, [lang]);
+  const [vlab, setVlabState] = useState<VlabLive>({ learner: 'Omar Lotfy', mode: 'Guided', events: 0, status: 'idle' });
 
   // Hash routing so a role can be linked directly (#trainer, #student, #director).
   useEffect(() => {
@@ -109,14 +91,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const resolveAlert = useCallback((id: string, resolution: string) =>
     setAlerts((l) => l.map((a) => (a.id === id ? { ...a, resolution } : a))), []);
   const addEval = useCallback((e: Omit<EvalRow, 'id' | 'at' | 'live'>) =>
-    setEvals((l) => [{ ...e, id: `e${nextId++}`, at: tx(`Today ${clock()}`, `اليوم ${clock()}`), live: true }, ...l]), []);
+    setEvals((l) => [{ ...e, id: `e${nextId++}`, at: `Today ${clock()}`, live: true }, ...l]), []);
   const setVlab = useCallback((v: Partial<VlabLive>) => setVlabState((s) => ({ ...s, ...v })), []);
 
   const value = useMemo<Store>(() => ({
-    lang, setLang, role, setRole, online, toggleOnline: () => setOnline((o) => !o), queued, queueWrite,
+    role, setRole, online, toggleOnline: () => setOnline((o) => !o), queued, queueWrite,
     stations, updateStation, alerts, raiseAlert, resolveAlert, faultCode, setFaultCode,
     evals, addEval, vlab, setVlab,
-  }), [lang, role, online, queued, queueWrite, stations, updateStation, alerts, raiseAlert, resolveAlert, faultCode, evals, addEval, vlab, setVlab]);
+  }), [role, online, queued, queueWrite, stations, updateStation, alerts, raiseAlert, resolveAlert, faultCode, evals, addEval, vlab, setVlab]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

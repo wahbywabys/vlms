@@ -1,55 +1,46 @@
-# VTC_LMS — Vocational Training Centre Learning Management System
-
-A working full-stack LMS for vocational training centres: competency-based
-records, a virtual lab with live safety guardrails, a trainer's workshop-floor
-tablet view, theory quizzes, work-based-learning logbooks with supervisor
-sign-off, and a director's dashboard. English and Arabic (full right-to-left).
+# VLMS — Vocational Learning Management System (reference scaffold)
 
 | Path | What it is |
 |---|---|
-| `app/` | **Next.js 16 web app** (App Router): sign-in, five role workspaces, EN/AR RTL, full-screen mode |
-| `api/` | Express/TypeScript API: V-Lab sessions, telemetry, server-side multimeter, rubric engine, alerts, floor observations (tested) |
-| `db/schema.sql` | PostgreSQL schema (schema `vtc`): users and roles, competencies, question bank, V-Labs, workshop assets, WBL logbooks |
-| `db/seed.sql` | Reference data used by the API tests |
-| `db/demo.sql` | Demo institution: five sign-in accounts, a cohort of 12, three weeks of history |
-| `docs/` | Architecture and UI blueprint |
-| `web/` | The clickable prototype and the 3D `MachineExplorer` it shares with the app |
+| `docs/architecture.md` | High-level architecture (Mermaid) and key flows |
+| `docs/ui-blueprint.md` | UI/UX blueprint: Trainer Tablet Floor View, Student 3D Lab Explorer, Executive Dashboard |
+| `db/schema.sql` | PostgreSQL schema: Users, Competencies, QuestionBank, VirtualLabSessions, WorkshopAssets, WBLLogbooks |
+| `db/seed.sql` | Demo data: one school, a learner, a trainer, a DOL motor-starter V-Lab with an injected fault |
+| `web/` | React Three Fiber `MachineExplorer` (exploded view, hotspots, X-ray, cutaway, kinetic) + demo motor model |
+| `web/src/prototype/` | Clickable prototype: role switcher over the Trainer Floor View, Student 3D Lab + V-Lab fault test, and Director dashboard, on sample data |
+| `api/` | Node.js/TypeScript V-Lab telemetry ingestion + rubric evaluation API, with tests |
 
 ## Run it
 
-Prerequisites: Node 20+, PostgreSQL 15+, Redis 7 (optional; alerts are also stored in Postgres).
+Prerequisites: Node 20+, PostgreSQL 15+, Redis 7 (optional).
 
 ```bash
-createdb vtc_lms
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/vtc_lms ./db/reset.sh   # schema + seed + demo data
-(cd api && npm install) && (cd app && npm install)
-./scripts/dev.sh            # API on :4000, app on http://localhost:3000
+# Database
+createdb vlms
+psql -d vlms -f db/schema.sql -f db/seed.sql
+
+# API (port 4000)
+cd api && npm install
+cp .env.example .env          # set DATABASE_URL, REDIS_URL, JWT_SECRET
+npm run dev
+DATABASE_URL=postgres://localhost/vlms_test npm test   # unit + integration tests
+
+# 3D explorer demo (port 5173)
+cd web && npm install && npm run dev
+
+# Clickable prototype (three screens + role switcher)
+cd web && npm run dev:prototype        # open /prototype.html#trainer, #student or #director
+npm run build:prototype                # static build in web/dist-prototype/
 ```
 
-Sign in with any demo account (password `demo1234`), or use the one-click buttons on the sign-in page:
-
-| Role | Email | Workspace |
-|---|---|---|
-| Student | student@vtc.example | Progress, V-Lab fault test + 3D motor, theory quiz, logbook with GPS check-in |
-| Vocational trainer | trainer@vtc.example | Workshop floor (alerts, one-tap rubric, offline outbox), V-Lab exams, learner records |
-| Academic teacher | teacher@vtc.example | Question bank (draft → review → approved), new bilingual items, competency matrix |
-| Workplace supervisor | supervisor@vtc.example | Logbook sign-offs with signed, immutable decisions |
-| Director | director@vtc.example | Institution KPIs, attainment by unit, utilisation, compliance queue, IQA export |
-
-Tests: `cd api && DATABASE_URL=postgres://…/vtc_lms_test npm test` (unit + integration against a real database).
-
-## How the pieces connect
-
-- **Auth.** Email + password checked against a bcrypt hash in Postgres (`pgcrypto crypt()`); the app keeps an httpOnly signed session cookie. When the browser calls the API it goes through `app/src/app/api/v1/[...path]`, which mints a 5-minute bearer token with the claims the API already verifies.
-- **V-Lab.** The student's client sends every action as telemetry. Meter readings come from `POST /probe`, computed on the server from the hidden injected fault and the rig state derived from the stored stream. In guided mode the server blocks unsafe actions (they are never stored); in exam mode it stores them and raises a persisted alert on the trainer's rail. Scoring is the API's rubric engine.
-- **Floor observations.** The trainer's tablet scoring becomes `observed`/`measured` events graded by the same rubric engine (`check` and `rating` rules), so physical and virtual evidence land on the competency profile the same way. Offline sign-offs queue in the browser and replay idempotently on `clientMutationId`.
-- **Competencies.** Virtual evidence caps at *autonomous*; a supervisor's approval of a logbook entry verifies the competency and can lift an autonomous learner to *master*.
-- **Logbooks.** GPS check-ins are judged inside/outside the site geofence by a database trigger. Each supervisor decision is its own row with a SHA-256 signature hash.
+The prototype needs no API or database. The V-Lab fault test scores attempts with
+`api/src/services/rubricEngine.ts` itself (imported directly, rubric copied from
+`RB-DOL-FAULT` in `db/seed.sql`), and the trainer tolerance field uses the same
+`withinTolerance` helper, so scores match what the server would compute. Screens
+share in-memory state: an exam-mode safety violation appears on the trainer's
+alert rail, and every scored attempt appears on the director's evaluation list.
 
 ## API
-
-Also: `POST /v1/vlab/sessions` (start; learners get guided/sandbox with a random fault, trainers start exams with a chosen fault), `GET /v1/vlab/sessions/:id` (state; fault hidden from the learner until scored), `POST /v1/vlab/sessions/:id/probe` (meter reading), `GET /v1/alerts`, `POST /v1/alerts/:id/resolve`, `POST /v1/workshop/observations`.
-
 
 `POST /v1/vlab/sessions/:sessionId/telemetry` (learner's client, bearer JWT)
 
@@ -75,4 +66,4 @@ Also: `POST /v1/vlab/sessions` (start; learners get guided/sandbox with a random
 - Writes `rubric_evaluations`, appends `competency_evidence`, and raises `learner_competencies` (never lowers; failed gates give no credit; virtual evidence caps at *autonomous*).
 - Idempotent: a second call returns the stored result.
 
-Rubric rule types (`rubric_criteria.scoring`): `precedes`, `absent`, `fault_diagnosed`, `isolation_steps`, `measurement_tolerance`, `time`, `penalty_per`, and for floor observations `check` and `rating`.
+Rubric rule types (`rubric_criteria.scoring`): `precedes`, `absent`, `fault_diagnosed`, `isolation_steps`, `measurement_tolerance`, `time`, `penalty_per`.

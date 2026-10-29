@@ -5,8 +5,6 @@ import { requireAuth } from './lib/auth.js';
 import type { Db } from './lib/db.js';
 import { HttpError } from './lib/errors.js';
 import type { Realtime } from './lib/redis.js';
-import { alertsRouter } from './routes/alerts.js';
-import { observationsRouter } from './routes/observations.js';
 import { vlabSessionsRouter } from './routes/vlabSessions.js';
 
 export function createApp(deps: { db: Db; realtime: Realtime; log: Logger; jwtSecret: string }) {
@@ -21,8 +19,6 @@ export function createApp(deps: { db: Db; realtime: Realtime; log: Logger; jwtSe
 
   app.use(requireAuth(deps.jwtSecret));
   app.use(vlabSessionsRouter(deps));
-  app.use(alertsRouter(deps));
-  app.use(observationsRouter(deps));
 
   const onError: ErrorRequestHandler = (err, req, res, _next) => {
     if (err instanceof ZodError) {

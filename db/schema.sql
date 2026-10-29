@@ -1,5 +1,5 @@
 -- =============================================================================
--- VTC_LMS — Vocational Training Centre Learning Management System
+-- VLMS — Vocational Learning Management System
 -- Core relational schema (PostgreSQL 15+)
 --
 -- Domains covered:
@@ -22,8 +22,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;   -- gen_random_uuid()
 CREATE EXTENSION IF NOT EXISTS btree_gist; -- exclusion constraints on bookings
 CREATE EXTENSION IF NOT EXISTS citext;     -- case-insensitive emails
 
-CREATE SCHEMA IF NOT EXISTS vtc;
-SET search_path = vtc, public;
+CREATE SCHEMA IF NOT EXISTS vlms;
+SET search_path = vlms, public;
 
 -- -----------------------------------------------------------------------------
 -- Shared helpers
@@ -65,7 +65,6 @@ CREATE TYPE signoff_status   AS ENUM ('draft', 'submitted', 'approved', 'rejecte
 CREATE TABLE institutions (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name            text NOT NULL,
-  name_ar         text,
   code            text NOT NULL UNIQUE,              -- e.g. 'ATS-CAI-01'
   region          text,                              -- drives regional skill heatmaps
   timezone        text NOT NULL DEFAULT 'UTC',
@@ -77,8 +76,6 @@ CREATE TABLE users (
   institution_id  uuid NOT NULL REFERENCES institutions(id),
   email           citext NOT NULL,
   full_name       text NOT NULL,
-  full_name_ar    text,                              -- Arabic display name (UI is bilingual)
-  password_hash   text,                              -- bcrypt via pgcrypto crypt(); NULL = SSO-only account
   locale          text NOT NULL DEFAULT 'en',
   external_ids    jsonb NOT NULL DEFAULT '{}'::jsonb, -- LTI 1.3 sub, national learner no., SSO ids
   safety_badge_uid text UNIQUE,                       -- RFID/NFC badge for machine access
@@ -101,7 +98,6 @@ CREATE TABLE cohorts (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   institution_id  uuid NOT NULL REFERENCES institutions(id),
   name            text NOT NULL,                     -- 'Mechatronics Y2 — Group B'
-  name_ar         text,
   trade           text NOT NULL,
   starts_on       date NOT NULL,
   ends_on         date,
@@ -134,7 +130,6 @@ CREATE TABLE competencies (
   parent_id       uuid REFERENCES competencies(id),  -- unit → element → criterion tree
   code            text NOT NULL,                     -- 'ELEC-L3-U04-E2-PC3'
   title           text NOT NULL,
-  title_ar        text,
   description     text,
   kind            text NOT NULL CHECK (kind IN ('unit', 'element', 'criterion')),
   is_safety_critical boolean NOT NULL DEFAULT false, -- failing = automatic not-yet-competent
@@ -294,7 +289,6 @@ CREATE TABLE virtual_labs (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   code            text NOT NULL UNIQUE,              -- 'VLAB-PLC-MOTOR-STARTER'
   title           text NOT NULL,
-  title_ar        text,
   domain          lab_domain NOT NULL,
   model_uri       text NOT NULL,                     -- glTF digital twin
   sim_version     text NOT NULL,
@@ -324,9 +318,6 @@ CREATE TABLE rubrics (
   UNIQUE (code, version)
 );
 
--- The rubric a lab's sessions are scored against unless the trainer picks another.
-ALTER TABLE virtual_labs ADD COLUMN default_rubric_id uuid REFERENCES rubrics(id);
-
 CREATE TABLE rubric_criteria (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   rubric_id       uuid NOT NULL REFERENCES rubrics(id) ON DELETE CASCADE,
@@ -354,9 +345,8 @@ CREATE TABLE virtual_lab_sessions (
   time_limit_s    integer,
   last_seq        bigint NOT NULL DEFAULT 0,         -- highest telemetry seq accepted
   final_score     numeric(5,2),
-  passed          boolean
-  -- Assessment faults are injected by a trainer; guided and sandbox practice
-  -- sessions draw one from the lab's fault library when they start.
+  passed          boolean,
+  CHECK (mode = 'assessment' OR cardinality(injected_fault_ids) = 0)
 );
 CREATE INDEX idx_vlab_sessions_learner ON virtual_lab_sessions(learner_id, started_at DESC);
 CREATE INDEX idx_vlab_sessions_open    ON virtual_lab_sessions(status) WHERE status = 'in_progress';
@@ -394,25 +384,6 @@ CREATE TABLE rubric_evaluations (
   UNIQUE (subject_type, subject_id, rubric_id)
 );
 
--- Safety incidents raised live (V-Lab gate violations, RFID interlocks,
--- floor observations). Persisted so the trainer's alert rail survives a
--- Redis outage and the HSE log has a record of how each was resolved.
-CREATE TABLE safety_alerts (
-  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  institution_id  uuid NOT NULL REFERENCES institutions(id),
-  learner_id      uuid NOT NULL REFERENCES users(id),
-  source          text NOT NULL CHECK (source IN ('vlab', 'rfid', 'observation')),
-  session_id      uuid,                              -- V-Lab session, if any
-  criterion_key   text,
-  verb            text,
-  detail          text NOT NULL,
-  raised_at       timestamptz NOT NULL DEFAULT now(),
-  resolved_by     uuid REFERENCES users(id),
-  resolved_at     timestamptz,
-  resolution      text
-);
-CREATE INDEX idx_safety_alerts_open ON safety_alerts(institution_id, raised_at DESC) WHERE resolved_at IS NULL;
-
 -- =============================================================================
 -- 5. WORKSHOP ASSETS & INVENTORY
 -- =============================================================================
@@ -420,7 +391,6 @@ CREATE TABLE workshops (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   institution_id  uuid NOT NULL REFERENCES institutions(id),
   name            text NOT NULL,                     -- 'CNC Bay 2'
-  name_ar         text,
   capacity        integer NOT NULL CHECK (capacity > 0)
 );
 

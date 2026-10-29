@@ -1,6 +1,6 @@
 /**
  * End-to-end test against real Postgres (+ optional Redis).
- *   DATABASE_URL=postgres://postgres@localhost/vtc_lms_test npm test
+ *   DATABASE_URL=postgres://postgres@localhost/vlms_test npm test
  * Skipped when DATABASE_URL is not set.
  */
 import assert from 'node:assert/strict';
@@ -44,7 +44,7 @@ describe('V-Lab telemetry + evaluation API', { skip: !DB_URL && 'DATABASE_URL no
 
   before(async () => {
     db = createPool(DB_URL);
-    await db.query('DROP SCHEMA IF EXISTS vtc CASCADE');
+    await db.query('DROP SCHEMA IF EXISTS vlms CASCADE');
     await db.query(readFileSync(new URL('../../db/schema.sql', import.meta.url), 'utf8'));
     await db.query(readFileSync(new URL('../../db/seed.sql', import.meta.url), 'utf8'));
     const log = pino({ level: 'silent' });
@@ -120,86 +120,5 @@ describe('V-Lab telemetry + evaluation API', { skip: !DB_URL && 'DATABASE_URL no
 
     const closed = await post(`/v1/vlab/sessions/${SESSION}/telemetry`, { events: [e('measured')] }, jwt);
     assert.equal(closed.status, 409);
-  });
-
-  it('starts a guided practice session, reads the meter server-side and blocks unsafe actions', async () => {
-    const jwt = await token(LEARNER, ['student']);
-    const get = async (path: string) => {
-      const r = await fetch(base + path, { headers: { authorization: `Bearer ${jwt}` } });
-      return { status: r.status, body: (await r.json()) as any };
-    };
-    const denied = await post('/v1/vlab/sessions', { labCode: 'VLAB-DOL-STARTER', mode: 'assessment' }, jwt);
-    assert.equal(denied.status, 403); // learners cannot start their own exam
-
-    const created = await post('/v1/vlab/sessions', { labCode: 'VLAB-DOL-STARTER', mode: 'guided' }, jwt);
-    assert.equal(created.status, 201);
-    const id = created.body.sessionId;
-    const at = () => new Date().toISOString();
-
-    const state = await get(`/v1/vlab/sessions/${id}`);
-    assert.equal(state.body.mode, 'guided');
-    assert.deepEqual(state.body.faults, []); // fault stays hidden from the learner
-
-    // Opening the panel before LOTO breaks a gate: guided mode blocks it and stores nothing.
-    const blocked = await post(`/v1/vlab/sessions/${id}/telemetry`, { events: [{ seq: 1, occurredAt: at(), verb: 'panel_opened' }] }, jwt);
-    assert.equal(blocked.body.guardrail, 'block');
-    assert.equal(blocked.body.accepted, 0);
-    assert.deepEqual(blocked.body.rejected, [{ seq: 1, reason: 'blocked_by_guardrail' }]);
-
-    const closed = await post(`/v1/vlab/sessions/${id}/probe`, { seq: 2, occurredAt: at(), testPoint: 'F2:95-96' }, jwt);
-    assert.equal(closed.status, 409); // inside the panel, door shut
-
-    // Measuring before PPE is on is blocked too.
-    const noPpe = await post(`/v1/vlab/sessions/${id}/probe`, { seq: 3, occurredAt: at(), testPoint: 'X1:L1-L2' }, jwt);
-    assert.equal(noPpe.body.meter, null);
-    assert.equal(noPpe.body.guardrail, 'block');
-
-    await post(`/v1/vlab/sessions/${id}/telemetry`, { events: [{ seq: 4, occurredAt: at(), verb: 'ppe_donned' }] }, jwt);
-    const supply = await post(`/v1/vlab/sessions/${id}/probe`, { seq: 5, occurredAt: at(), testPoint: 'X1:L1-L2' }, jwt);
-    assert.equal(supply.body.meter.display, '401.2 V');
-
-    await post(`/v1/vlab/sessions/${id}/telemetry`, { events: [
-      { seq: 6, occurredAt: at(), verb: 'loto_applied', objectRef: 'Q1' },
-      { seq: 7, occurredAt: at(), verb: 'panel_opened', objectRef: 'panel' },
-    ] }, jwt);
-    const after = await get(`/v1/vlab/sessions/${id}`);
-    assert.deepEqual(after.body.rig, { ppe: true, locked: true, panelOpen: true, replaced: [] });
-    assert.equal(after.body.events.length, 4);
-
-    const done = await post(`/v1/vlab/sessions/${id}/evaluate`, {}, jwt);
-    assert.equal(done.status, 200);
-    const revealed = await get(`/v1/vlab/sessions/${id}`);
-    assert.equal(revealed.body.faults.length, 1); // revealed once scored
-  });
-
-  it('scores a floor observation with the same engine and raises a gate alert', async () => {
-    await db.query(`INSERT INTO rubrics (id, code, title) VALUES ('00000000-0000-0000-0000-0000000000e2', 'RB-OBS-TEST', 'Obs')`);
-    await db.query(`INSERT INTO rubric_criteria (rubric_id, key, label, weight, is_gate, scoring) VALUES
-      ('00000000-0000-0000-0000-0000000000e2', 'ppe', 'PPE worn', 5, true, '{"rule":"check","objectRef":"ppe"}'),
-      ('00000000-0000-0000-0000-0000000000e2', 'setup', 'Setup', 20, false, '{"rule":"rating","objectRef":"setup"}'),
-      ('00000000-0000-0000-0000-0000000000e2', 'dia', 'Diameter', 35, false, '{"rule":"measurement_tolerance","objectRef":"dia","expected":24.9895,"absTol":0.0105}')`);
-    const jwt = await token(TRAINER, ['vocational_trainer']);
-    const body = { clientMutationId: '00000000-0000-4000-8000-000000000001', learnerId: LEARNER, rubricCode: 'RB-OBS-TEST',
-      checks: { ppe: false }, ratings: { setup: 3 }, measurements: { dia: 24.99 } };
-    const r = await post('/v1/workshop/observations', body, jwt);
-    assert.equal(r.status, 201);
-    assert.deepEqual(r.body.gateFailures, ['ppe']);
-    assert.equal(r.body.passed, false);
-    assert.equal(r.body.criteria.dia.score, 100);
-    assert.equal(r.body.criteria.setup.score, 75);
-
-    const replay = await post('/v1/workshop/observations', body, jwt);
-    assert.equal(replay.status, 200);
-    assert.equal(replay.body.replayed, true);
-
-    const learnerTry = await post('/v1/workshop/observations', { ...body, clientMutationId: '00000000-0000-4000-8000-000000000002' },
-      await token(LEARNER, ['student']));
-    assert.equal(learnerTry.status, 403);
-
-    const list = await fetch(`${base}/v1/alerts`, { headers: { authorization: `Bearer ${jwt}` } }).then((x) => x.json()) as any;
-    const sources = list.alerts.map((a: any) => a.source).sort();
-    assert.deepEqual(sources, ['observation', 'vlab']); // the exam LOTO alert + this PPE gate
-    const res = await post(`/v1/alerts/${list.alerts[0].id}/resolve`, { resolution: 'Stopped the machine, briefed the learner' }, jwt);
-    assert.equal(res.status, 200);
   });
 });

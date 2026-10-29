@@ -1,7 +1,7 @@
 -- Demo data: one ATS, a learner + trainer, an electrical framework, and an
 -- assessment-mode V-Lab session on a DOL motor starter with an injected fault.
 -- Fixed UUIDs so the API integration test and the docs can reference them.
-SET search_path = vtc, public;
+SET search_path = vlms, public;
 
 INSERT INTO institutions (id, name, code, region) VALUES
   ('00000000-0000-0000-0000-0000000000a1', 'Applied Technology School — Cairo East', 'ATS-CAI-01', 'Cairo');
@@ -25,7 +25,7 @@ INSERT INTO competencies (id, framework_id, parent_id, code, title, kind, is_saf
 
 INSERT INTO virtual_labs (id, code, title, domain, model_uri, sim_version) VALUES
   ('00000000-0000-0000-0000-0000000000d1', 'VLAB-DOL-STARTER', 'DOL Motor Starter Fault Finding',
-   'electrical_automation', 's3://vtc-twins/dol-starter-v3.glb', '3.2.0');
+   'electrical_automation', 's3://vlms-twins/dol-starter-v3.glb', '3.2.0');
 
 INSERT INTO lab_faults (id, lab_id, code, description, component_ref, correct_isolation_steps) VALUES
   ('00000000-0000-0000-0000-0000000000d2', '00000000-0000-0000-0000-0000000000d1', 'F-OL-OPEN',
@@ -34,7 +34,6 @@ INSERT INTO lab_faults (id, lab_id, code, description, component_ref, correct_is
 
 INSERT INTO rubrics (id, code, title, pass_threshold) VALUES
   ('00000000-0000-0000-0000-0000000000e1', 'RB-DOL-FAULT', 'DOL starter fault test', 70);
-UPDATE virtual_labs SET default_rubric_id = '00000000-0000-0000-0000-0000000000e1' WHERE id = '00000000-0000-0000-0000-0000000000d1';
 INSERT INTO rubric_criteria (rubric_id, key, label, weight, is_gate, competency_id, scoring) VALUES
   ('00000000-0000-0000-0000-0000000000e1', 'ppe',        'PPE donned before work',        5,  true,  NULL,
    '{"rule":"precedes","first":"ppe_donned","then":["panel_opened","measured","component_replaced"]}'),
@@ -57,12 +56,3 @@ INSERT INTO virtual_lab_sessions (id, lab_id, learner_id, mode, rubric_id, injec
   ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000b1',
    'assessment', '00000000-0000-0000-0000-0000000000e1', ARRAY['00000000-0000-0000-0000-0000000000d2']::uuid[],
    '00000000-0000-0000-0000-0000000000b2', 'tablet', 1800, now() - interval '10 minutes');
-
--- The rest of the DOL starter fault library (practice sessions draw from it).
-INSERT INTO lab_faults (lab_id, code, description, component_ref, correct_isolation_steps) VALUES
-  ('00000000-0000-0000-0000-0000000000d1', 'F-S1-OPEN', 'Stop push-button NC contact open', 'S1_stop',
-   ARRAY['X1:L1-L2', 'Q1:control_supply', 'S1:stop_pb']),
-  ('00000000-0000-0000-0000-0000000000d1', 'F-KM-COIL', 'Contactor coil A1-A2 open-circuit', 'KM1_coil',
-   ARRAY['X1:L1-L2', 'Q1:control_supply', 'S1:stop_pb', 'F2:95-96', 'KM1:A1-A2']),
-  ('00000000-0000-0000-0000-0000000000d1', 'F-F1-BLOWN', 'Control fuse F1 blown', 'F1_fuse',
-   ARRAY['X1:L1-L2', 'Q1:control_supply']);
