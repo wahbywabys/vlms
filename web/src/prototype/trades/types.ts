@@ -11,6 +11,7 @@ import type { LabDef } from '../../../../api/src/labs/types';
 import type { Txt } from '../i18n';
 import type { Lesson } from '../../components/LessonPlayer';
 import type { ModelDef } from '../../models/kit';
+import type { Scenario } from '../../safety/types';
 
 export type TradeId = string;
 
@@ -74,4 +75,6 @@ export interface Trade {
   models: ModelDef[];
   /** Interactive video lessons (at least two per trade). */
   lessons: Lesson[];
+  /** Safety simulator jobs: learn the rules by trial and error at the machine. */
+  safety: Scenario[];
 }

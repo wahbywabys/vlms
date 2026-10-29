@@ -20,8 +20,9 @@ import { TelemetryStrip } from './TelemetryStrip';
 
 const Explore = dynamic(() => import('./Explore'), { ssr: false, loading: () => <p className="muted">Loading 3D…</p> });
 const Lessons = dynamic(() => import('./Lessons'), { ssr: false, loading: () => <p className="muted">Loading lessons…</p> });
+const Safety = dynamic(() => import('./Safety'), { ssr: false, loading: () => <p className="muted">Loading the safety simulator…</p> });
 
-type Tab = '3d' | 'lessons' | 'vlab';
+type Tab = '3d' | 'lessons' | 'safety' | 'vlab';
 
 type Mode = 'guided' | 'sandbox' | 'assessment';
 const MODE_LABEL: Record<Mode, Txt> = { guided: tx('Guided', 'موجّه'), sandbox: tx('Sandbox', 'تجريبي حر'), assessment: tx('Exam', 'امتحان') };
@@ -63,11 +64,13 @@ export function VLab({ lab, trade, initialSessionId, examFromTrainer, recent }: 
   const TABS: { id: Tab; label: Txt; n?: number }[] = learn ? [
     { id: '3d', label: tx('3D & VR', 'ثلاثي الأبعاد والواقع الافتراضي'), n: learn.models },
     { id: 'lessons', label: tx('Video lessons', 'دروس الفيديو'), n: learn.lessons },
+    { id: 'safety', label: tx('Safety simulator', 'محاكي السلامة'), n: learn.safety },
     { id: 'vlab', label: tx('V-Lab fault test', 'اختبار الأعطال الافتراضي') },
   ] : [];
   const heading: Record<Tab, string> = {
     '3d': L('3D digital twins', 'التوائم الرقمية ثلاثية الأبعاد'),
     lessons: L('Video lessons', 'دروس الفيديو'),
+    safety: L('Safety simulator', 'محاكي السلامة'),
     vlab: `${pick(lab.rigTitle)} · ${pick(lab.title)}`,
   };
   return (
@@ -89,6 +92,7 @@ export function VLab({ lab, trade, initialSessionId, examFromTrainer, recent }: 
       </div>
       {seen.includes('3d') && learn && <div hidden={tab !== '3d'}><Explore trade={trade} active={tab === '3d'} /></div>}
       {seen.includes('lessons') && learn && <div hidden={tab !== 'lessons'}><Lessons trade={trade} active={tab === 'lessons'} /></div>}
+      {seen.includes('safety') && learn && <div hidden={tab !== 'safety'}><Safety trade={trade} active={tab === 'safety'} /></div>}
       <div hidden={tab !== 'vlab'}>
         {sessionId
           ? <FaultTest key={sessionId} lab={lab} sessionId={sessionId} onNew={() => setSessionId(null)} />

@@ -9,6 +9,13 @@
  * filmed lesson exists, set `video.src` and the same chapters, hotspots,
  * stops and scoring play over the MP4 instead.
  *
+ * Lessons are produced like workshop videos: the WABYS student walks to the
+ * machine and does the job, callouts with leader lines name the parts,
+ * dimension lines and flow arrows show sizes and what moves where, and
+ * infographic cards (do / don't, key numbers, steps, safety signs, formulas)
+ * slide in beside the action. Chapter title cards, a lower third and spoken
+ * narration (the browser's own voices, English or Arabic) complete it.
+ *
  * Learner controls: play/pause, ±10 s, scrub bar with chapter and checkpoint
  * markers, speed 0.5–2×, zoom (buttons, slider, mouse wheel), drag to look
  * around while paused, captions, chapters list, full screen and keyboard
@@ -24,6 +31,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import * as THREE from 'three';
 import type { OrbitControls as OrbitImpl } from 'three-stdlib';
 import { ModelScene, type Vec3 } from './MachineExplorer';
+import { CardStack, type LessonCard } from './Infographics';
+import { Callouts, Dims, Flows, LessonStudent, type LessonCallout, type LessonDim, type LessonFlow, type ShotStudent } from './LessonFx';
+import { toSection, type SectionSpec } from './section';
+import { newStudent, tradePpe, type PPE, type StudentState } from '../models/avatar';
 import { modelParts, type ModelDef, type Txt } from '../models/kit';
 import './LessonPlayer.css';
 
@@ -39,7 +50,8 @@ export interface LessonShot {
   move?: number;
   explode?: number;
   xray?: boolean;
-  cutaway?: boolean;
+  /** Section view: `true` for lengthwise, or a mode with plane position and angle. */
+  cutaway?: boolean | SectionSpec;
   /** Machine running (spindle, pistons, wire feed). */
   running?: boolean;
   rate?: number;
@@ -48,6 +60,8 @@ export interface LessonShot {
   params?: Record<string, number>;
   /** Params that sweep across the shot, from → to. */
   sweep?: Record<string, [number, number]>;
+  /** The WABYS student in this shot (carries on until changed). */
+  avatar?: ShotStudent;
   caption: Txt;
 }
 export interface LessonChapter { at: number; title: Txt }
@@ -71,7 +85,14 @@ export interface Lesson {
   hotspots: LessonHotspot[];
   /** A filmed version. When set the player plays this and overlays the same interactions. */
   video?: { src: string; poster?: string };
+  /** What the student wears (default: the trade's usual PPE); false leaves the student out. */
+  student?: PPE | false;
+  callouts?: LessonCallout[];
+  dims?: LessonDim[];
+  flows?: LessonFlow[];
+  cards?: LessonCard[];
 }
+export type { LessonCallout, LessonDim, LessonFlow, LessonCard, ShotStudent };
 
 export interface LessonEvent {
   verb: 'lesson_started' | 'chapter_reached' | 'checkpoint_answered' | 'hotspot_opened' | 'lesson_completed' | 'seeked' | 'speed_changed' | 'zoomed';
@@ -90,7 +111,8 @@ const S = {
     pausedLook: 'Paused: drag to look around, scroll or use the slider to zoom.', complete: 'Lesson complete', score: 'Checkpoint score',
     firstTry: 'right first time', replay: 'Watch again', review: 'Review', min: 'min', stopsN: 'checkpoints', chaptersN: 'chapters',
     hotspotsN: 'hotspots', rendered: 'Rendered lesson on the 3D digital twin', filmed: 'Filmed lesson', locked: 'Answer the checkpoint first',
-    answered: 'answered', pending: 'to do', time: 'Time', of: 'of', keys: 'Keys: Space play/pause · ←/→ 10 s · +/− zoom · C captions · F full screen',
+    answered: 'answered', pending: 'to do', time: 'Time', of: 'of', keys: 'Keys: Space play/pause · ←/→ 10 s · +/− zoom · C captions · N narration · F full screen',
+    chapter: 'Chapter', narration: 'Narration', narrationOff: 'Narration off', brand: 'WABYS Technical Training', student: 'WABYS student',
   },
   ar: {
     start: 'ابدأ الدرس', resume: 'استئناف', play: 'تشغيل', pause: 'إيقاف مؤقت', back10: 'رجوع 10 ث', fwd10: 'تقديم 10 ث',
@@ -101,7 +123,8 @@ const S = {
     pausedLook: 'متوقف مؤقتًا: اسحب للنظر حولك، ومرّر العجلة أو استخدم الشريط للتكبير.', complete: 'اكتمل الدرس', score: 'درجة نقاط التحقق',
     firstTry: 'صحيحة من أول مرة', replay: 'شاهد مرة أخرى', review: 'مراجعة', min: 'دقيقة', stopsN: 'نقاط تحقق', chaptersN: 'فصول',
     hotspotsN: 'نقاط معلومات', rendered: 'درس مُصيَّر على التوأم الرقمي ثلاثي الأبعاد', filmed: 'درس مصوَّر', locked: 'أجب عن نقطة التحقق أولًا',
-    answered: 'تمت الإجابة', pending: 'متبقية', time: 'الوقت', of: 'من', keys: 'المفاتيح: المسافة تشغيل/إيقاف · ←/→ ‏10 ث · +/− تكبير · C الترجمة · F ملء الشاشة',
+    answered: 'تمت الإجابة', pending: 'متبقية', time: 'الوقت', of: 'من', keys: 'المفاتيح: المسافة تشغيل/إيقاف · ←/→ ‏10 ث · +/− تكبير · C الترجمة · N التعليق الصوتي · F ملء الشاشة',
+    chapter: 'الفصل', narration: 'التعليق الصوتي', narrationOff: 'إيقاف التعليق الصوتي', brand: 'WABYS للتدريب التقني', student: 'متدرب WABYS',
   },
 };
 type Strings = typeof S.en;
@@ -134,7 +157,7 @@ function shotParams(lesson: Lesson, i: number, u: number): Record<string, number
 }
 
 export interface Frame {
-  camera: Vec3; target: Vec3; explode: number; xray: boolean; cutaway: boolean; running: boolean; rate: number;
+  camera: Vec3; target: Vec3; explode: number; xray: boolean; cutaway: SectionSpec; running: boolean; rate: number;
   highlight: string | null; params: Record<string, number>; caption: Txt; shot: number;
 }
 
@@ -154,7 +177,7 @@ export function frameAt(lesson: Lesson, t: number): Frame {
     camera: p ? lerp3(p.camera, s.camera, k) : s.camera,
     target: p ? lerp3(p.target, s.target, k) : s.target,
     explode: p ? (p.explode ?? 0) + ((s.explode ?? 0) - (p.explode ?? 0)) * k : s.explode ?? 0,
-    xray: !!s.xray, cutaway: !!s.cutaway, running: !!s.running, rate: s.rate ?? 1,
+    xray: !!s.xray, cutaway: toSection(s.cutaway), running: !!s.running, rate: s.rate ?? 1,
     highlight: s.highlight ?? null, params, caption: s.caption, shot: i,
   };
 }
@@ -246,6 +269,20 @@ function useFull(ref: React.RefObject<HTMLElement | null>) {
   return { full: native || css, css, toggle, exitCss: () => setCss(false) };
 }
 
+/** The browser's speech voices (they load asynchronously). */
+function useVoices() {
+  const [v, setV] = useState<SpeechSynthesisVoice[]>([]);
+  useEffect(() => {
+    const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
+    if (!synth) return;
+    const load = () => setV(synth.getVoices());
+    load();
+    synth.addEventListener?.('voiceschanged', load);
+    return () => synth.removeEventListener?.('voiceschanged', load);
+  }, []);
+  return v;
+}
+
 // ---------------------------------------------------------------------------
 // Player
 // ---------------------------------------------------------------------------
@@ -291,6 +328,14 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
   const chapterRef = useRef(-1);
   const uiAcc = useRef(0);
   const filmed = !!lesson.video?.src;
+  const env = lesson.model.env;
+  const withStudent = !!env && lesson.student !== false;
+  const ppe = useMemo<PPE>(() => (lesson.student ? lesson.student : tradePpe(env?.bay)), [lesson, env]);
+  const studentRef = useRef<StudentState | null>(null);
+  if (withStudent && !studentRef.current) studentRef.current = newStudent(env, ppe);
+  const [voice, setVoice] = useState(true);
+  const voices = useVoices();
+  const canSpeak = voices.some((v) => v.lang.toLowerCase().startsWith(lang));
   useEffect(() => { if (!active) setPlaying(false); }, [active]);
 
   // Reset when the lesson changes.
@@ -421,11 +466,30 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
     else if (k === '+' || k === '=') setZ(zoom + 0.25);
     else if (k === '-') setZ(zoom - 0.25);
     else if (k === 'c' || k === 'C') setCc((c) => !c);
+    else if (k === 'n' || k === 'N') setVoice((v) => !v);
     else if (k === 'f' || k === 'F') void fs.toggle();
     else if (k === 'Escape' && fs.css) fs.exitCss();
   };
 
   const frame = frameAt(lesson, time);
+  const shotNo = frame.shot;
+  // Spoken narration of each shot's caption, in the lesson language, while playing.
+  useEffect(() => {
+    const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
+    if (!synth) return;
+    if (!voice || !playing || !started || filmed || !active || !canSpeak) { synth.cancel(); return; }
+    const text = lesson.shots[shotNo]?.caption[lang];
+    if (!text) return;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang === 'ar' ? 'ar-SA' : 'en-GB';
+    const v = voices.find((x) => x.lang.toLowerCase().startsWith(lang) && /natural|google|microsoft|premium|enhanced/i.test(x.name))
+      ?? voices.find((x) => x.lang.toLowerCase().startsWith(lang));
+    if (v) u.voice = v;
+    u.rate = Math.min(1.8, 1.05 * speed);
+    synth.speak(u);
+  }, [shotNo, playing, voice, lang, started, filmed, active, canSpeak]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => { if (typeof window !== 'undefined') window.speechSynthesis?.cancel(); }, []);
   const chapter = chapterAt(lesson, time);
   const hotspot = lesson.hotspots.find((h) => h.id === hot) ?? null;
   const total = lesson.stops.length;
@@ -433,6 +497,8 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
   const nextStop = lesson.stops.find((s) => !answers[s.id]?.correct);
   const pct = (x: number) => `${(x / lesson.duration) * 100}%`;
   const stopAns = stop ? answers[stop.id] : undefined;
+  const sinceChapter = time - lesson.chapters[chapter]!.at;
+  const bumper = started && !ended && chapter > 0 && sinceChapter >= 0 && sinceChapter < 2.8;
 
   return (
     <div ref={rootRef} className={`lp-root${fs.full ? ' is-full' : ''}${fs.css ? ' is-max' : ''}`} style={{ height: fs.full ? undefined : height }}
@@ -448,9 +514,15 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
               ))}
             </div>
           ) : (
-            <Canvas shadows camera={{ position: lesson.shots[0]!.camera, fov: 40 }} dpr={[1, 2]} frameloop={active ? 'always' : 'never'}>
+            <Canvas shadows="soft" camera={{ position: lesson.shots[0]!.camera, fov: 40, near: 0.05, far: 400 }} dpr={[1, 2]} frameloop={active ? 'always' : 'never'}>
               <ModelScene parts={parts} explode={frame.explode} xray={frame.xray} cutaway={frame.cutaway}
-                running={frame.running && playing} rate={frame.rate * speed} selectedId={frame.highlight} pins={false} params={params} />
+                running={frame.running && playing} rate={frame.rate * speed} selectedId={frame.highlight} pins={false} params={params}
+                env={env} lang={lang} student={withStudent ? studentRef : undefined}>
+                {withStudent && <LessonStudent state={studentRef} shots={lesson.shots} timeRef={timeRef} ppe={ppe} />}
+                {lesson.callouts && <Callouts items={lesson.callouts} time={started ? time : -1} lang={lang} />}
+                {lesson.dims && <Dims items={lesson.dims} time={started ? time : -1} />}
+                {lesson.flows && <Flows items={lesson.flows} time={started ? time : -1} lang={lang} />}
+              </ModelScene>
               <HotspotPins lesson={lesson} time={time} lang={lang} opened={opened} onOpen={openHot} />
               <CameraRig lesson={lesson} timeRef={timeRef} follow={follow} zoom={zoom} params={params} />
               <Ticker playing={playing} speed={speed} onTick={onTick} />
@@ -464,6 +536,19 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
             <span className="lp-chapter">{chapter + 1}. {p(lesson.chapters[chapter]!.title)}</span>
           </div>
 
+          {started && !ended && !stop && <CardStack cards={lesson.cards ?? []} t={time} lang={lang} />}
+          {started && !ended && time < 6 && (
+            <div className="lp-lower" key={lesson.id}>
+              <span className="lp-lower-mark" aria-hidden="true" />
+              <div><b>{t.brand}</b><small>{p(lesson.model.title)}{withStudent ? ` · ${t.student}` : ''}</small></div>
+            </div>
+          )}
+          {bumper && (
+            <div className="lp-bumper" key={chapter} aria-hidden="true">
+              <small>{t.chapter} {chapter + 1}</small>
+              <b>{p(lesson.chapters[chapter]!.title)}</b>
+            </div>
+          )}
           {cc && started && !ended && <p className="lp-caption" aria-live="polite">{p(frame.caption)}</p>}
           {started && !playing && !stop && !ended && !hot && !filmed && <p className="lp-paused">{t.pausedLook}</p>}
 
@@ -582,6 +667,11 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
               </select>
             </label>
             <button type="button" aria-pressed={cc} onClick={() => setCc(!cc)} title={t.captions}>CC</button>
+            {!filmed && canSpeak && (
+              <button type="button" aria-pressed={voice} onClick={() => setVoice(!voice)} title={voice ? t.narrationOff : t.narration} aria-label={t.narration}>
+                {voice ? '🔊' : '🔇'}
+              </button>
+            )}
             <button type="button" aria-pressed={fs.full} onClick={() => void fs.toggle()} title={fs.full ? t.exitFull : t.fullscreen} aria-label={fs.full ? t.exitFull : t.fullscreen}>⛶</button>
           </div>
         </div>

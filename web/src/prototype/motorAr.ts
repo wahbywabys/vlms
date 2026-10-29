@@ -50,6 +50,14 @@ export const motorModel: ModelDef = {
   id: 'induction-motor',
   title: tx('3-phase induction motor · IEC 132M', 'محرك حثي ثلاثي الأطوار · IEC 132M'),
   assetTag: 'WS-ELEC-07 · MTR-0132',
+  env: {
+    unitsPerM: 4, stand: 'skid', bay: 'elec',
+    stations: [
+      { id: 'front', label: tx('Terminal box', 'صندوق الأطراف'), pos: [0.2, 3.6], face: Math.PI, pose: 'inspect', reach: [0.15, 1.2, 0.4] },
+      { id: 'de', label: tx('Drive end', 'جهة الإدارة'), pos: [4.2, 1.2], face: -Math.PI / 2 - 0.3, pose: 'inspect', reach: [1.8, 0.1, 0.2] },
+      { id: 'ppe', label: tx('PPE station', 'محطة الوقاية'), pos: [-6.5, 5.5], face: -Math.PI / 2, pose: 'idle' },
+    ],
+  },
   parts: [],
   specs: (lang) => (lang === 'ar' ? inductionMotorPartsAr : inductionMotorParts),
 };

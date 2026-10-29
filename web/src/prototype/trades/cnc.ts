@@ -8,6 +8,7 @@ import { heatmap } from './shared';
 import { cncLathe } from '../../models/cncLathe';
 import { cncLessons } from '../../lessons/cnc';
 import { motorModel } from '../motorAr';
+import { cncSafety } from '../../safety/cnc';
 import type { Trade } from './types';
 import { cncLab } from '../../../../api/src/labs/cnc';
 
@@ -96,4 +97,5 @@ export const cnc: Trade = {
   accent: '#2f8fd8',
   models: [cncLathe, motorModel],
   lessons: cncLessons,
+  safety: [cncSafety],
 };

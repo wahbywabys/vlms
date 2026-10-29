@@ -7,6 +7,7 @@ import { tx } from '../i18n';
 import { heatmap } from './shared';
 import { migWelder } from '../../models/migWelder';
 import { weldLessons } from '../../lessons/weld';
+import { weldSafety } from '../../safety/weld';
 import type { Trade } from './types';
 import { migLab } from '../../../../api/src/labs/mig';
 
@@ -90,4 +91,5 @@ export const weld: Trade = {
   accent: '#f06721',
   models: [migWelder],
   lessons: weldLessons,
+  safety: [weldSafety],
 };

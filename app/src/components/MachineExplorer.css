@@ -52,7 +52,36 @@
 .mx-root .mx-switch button { border: 0; border-radius: 0; background: #16212d; }
 .mx-root .mx-switch button + button { border-inline-start: 1px solid #2a3a4d; }
 .mx-root .mx-switch button[aria-checked="true"] { background: #e6edf5; color: #0f1720; }
+/* Camera, setting and student dock (under the header) */
+.mx-dock { position: absolute; inset: 70px 16px auto auto; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; z-index: 4; }
+[dir="rtl"] .mx-dock { inset: 70px auto auto 16px; align-items: flex-start; }
+.mx-seg { display: inline-flex; align-items: center; background: rgba(15, 23, 32, .82); border: 1px solid #2a3a4d; border-radius: 10px;
+  overflow: hidden; backdrop-filter: blur(4px); }
+.mx-root .mx-seg button { min-height: 32px; padding: 0 10px; border: 0; border-radius: 0; background: transparent; font-size: 12.5px; }
+.mx-root .mx-seg button + button { border-inline-start: 1px solid #2a3a4d; }
+.mx-root .mx-seg button[aria-checked="true"] { background: #e6edf5; color: #0f1720; }
+.mx-seg-label { padding: 0 10px; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #f06721; font-weight: 700; }
+.mx-cutbar { position: absolute; inset: auto auto 78px 16px; z-index: 4; display: grid; gap: 8px; width: min(360px, calc(100% - 32px));
+  padding: 10px 12px; border-radius: 12px; background: rgba(15, 23, 32, .88); border: 1px solid #3b2b14; border-inline-start: 4px solid #ff9f1c; }
+[dir="rtl"] .mx-cutbar { inset: auto 16px 78px auto; }
+.mx-cutbar label { display: grid; gap: 2px; font-size: 12px; color: #a9b9cb; }
+.mx-cutbar input { width: 100%; accent-color: #ff9f1c; }
+.mx-cutbar small { color: #8fa3b8; font-size: 11.5px; }
+.mx-walk { position: absolute; inset: auto 16px 78px auto; z-index: 4; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end;
+  max-width: min(520px, calc(100% - 32px)); padding: 8px 10px; border-radius: 12px; background: rgba(15, 23, 32, .85); border: 1px solid #2a3a4d; }
+[dir="rtl"] .mx-walk { inset: auto auto 78px 16px; justify-content: flex-start; }
+.mx-walk > span { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #f06721; font-weight: 700; }
+.mx-root .mx-walk button { min-height: 32px; padding: 0 10px; font-size: 12.5px; }
+.mx-walk small { flex-basis: 100%; text-align: end; color: #8fa3b8; font-size: 11.5px; }
+.mx-pad { position: absolute; inset: auto auto 150px 18px; z-index: 4; display: grid; grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(2, 40px); gap: 4px; }
+.mx-root .mx-pad button { min-height: 40px; padding: 0; border-radius: 10px; background: rgba(15, 23, 32, .75); touch-action: none; user-select: none; }
+.mx-pad .up { grid-column: 2; grid-row: 1; } .mx-pad .lt { grid-column: 1; grid-row: 2; } .mx-pad .dn { grid-column: 2; grid-row: 2; } .mx-pad .rt { grid-column: 3; grid-row: 2; }
+@media (hover: hover) and (pointer: fine) { .mx-pad { display: none; } }
+.mx-cutbar ~ .mx-pad { display: none; }
+
 @media (max-width: 760px) {
+  .mx-dock { inset: auto 10px 70px auto; }
+  .mx-cutbar, .mx-walk { inset: auto 10px 120px 10px; width: auto; max-width: none; }
   .mx-root { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; height: auto !important; }
   .mx-header { flex-direction: column; }
   .mx-header h2 { font-size: 15px; }
