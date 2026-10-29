@@ -4,5 +4,8 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 : "${DATABASE_URL:?set DATABASE_URL}"
-psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -c 'DROP SCHEMA IF EXISTS vtc CASCADE' -f schema.sql -f seed.sql -f demo.sql
+migrations=()
+for f in migrations/*.sql; do [ -e "$f" ] && migrations+=(-f "$f"); done
+psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -c 'DROP SCHEMA IF EXISTS vtc CASCADE' -c 'DROP TABLE IF EXISTS public.vtc_migrations' \
+  -f schema.sql -f seed.sql "${migrations[@]}" -f demo.sql -f demo_trades.sql
 echo "VTC_LMS demo database ready."

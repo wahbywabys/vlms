@@ -6,6 +6,8 @@
  *   db/migrations/NNN_*.sql      later changes, applied once each in name order
  *   db/demo.sql                  demo institution and accounts, only with --demo
  *                                or SEED_DEMO=true, and only once
+ *   db/demo_trades.sql           demo cohorts for automotive, electrical and
+ *                                welding (after demo.sql, same rule)
  *
  * Applied files are recorded in public.vtc_migrations. A database built earlier
  * with db/reset.sh (schema present, no record) is adopted as already migrated.
@@ -31,7 +33,7 @@ async function main() {
 
     const extra = (await readdir(join(dbDir, 'migrations')).catch(() => [] as string[]))
       .filter((f) => f.endsWith('.sql')).sort().map((f) => `migrations/${f}`);
-    const plan = ['schema.sql', 'seed.sql', ...extra, ...(withDemo ? ['demo.sql'] : [])];
+    const plan = ['schema.sql', 'seed.sql', ...extra, ...(withDemo ? ['demo.sql', 'demo_trades.sql'] : [])];
 
     let ran = 0;
     for (const name of plan) {
@@ -57,13 +59,16 @@ async function main() {
 
 /** A schema built by db/reset.sh has no record; mark what it contains as applied. */
 async function adoptExisting(client: pg.Client, applied: Set<string>) {
-  const { rows } = await client.query<{ has_schema: boolean; has_demo: boolean }>(
+  const { rows } = await client.query<{ has_schema: boolean; has_demo: boolean; has_trades: boolean; has_trade_demo: boolean }>(
     `SELECT to_regclass('vtc.users') IS NOT NULL AS has_schema,
-            to_regclass('vtc.users') IS NOT NULL AND EXISTS (SELECT 1 FROM vtc.users WHERE email = 'director@vtc.example') AS has_demo`)
-    .catch(() => ({ rows: [{ has_schema: false, has_demo: false }] }));
+            to_regclass('vtc.users') IS NOT NULL AND EXISTS (SELECT 1 FROM vtc.users WHERE email = 'director@vtc.example') AS has_demo,
+            to_regclass('vtc.trades') IS NOT NULL AS has_trades,
+            to_regclass('vtc.users') IS NOT NULL AND EXISTS (SELECT 1 FROM vtc.users WHERE email = 'trainer.weld@vtc.example') AS has_trade_demo`)
+    .catch(() => ({ rows: [{ has_schema: false, has_demo: false, has_trades: false, has_trade_demo: false }] }));
   const found = rows[0]!;
   if (!found.has_schema) return;
-  const names = ['schema.sql', 'seed.sql', ...(found.has_demo ? ['demo.sql'] : [])];
+  const names = ['schema.sql', 'seed.sql', ...(found.has_trades ? ['migrations/001_trades.sql'] : []),
+    ...(found.has_demo ? ['demo.sql'] : []), ...(found.has_trade_demo ? ['demo_trades.sql'] : [])];
   for (const n of names) {
     await client.query('INSERT INTO public.vtc_migrations (name) VALUES ($1) ON CONFLICT DO NOTHING', [n]);
     applied.add(n);
