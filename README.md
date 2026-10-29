@@ -7,7 +7,8 @@
 | `db/schema.sql` | PostgreSQL schema: Users, Competencies, QuestionBank, VirtualLabSessions, WorkshopAssets, WBLLogbooks |
 | `db/seed.sql` | Demo data: one school, a learner, a trainer, a DOL motor-starter V-Lab with an injected fault |
 | `web/` | React Three Fiber `MachineExplorer` (exploded view, hotspots, X-ray, cutaway, kinetic) + demo motor model |
-| `web/src/prototype/` | Clickable prototype, English and Arabic (RTL): role switcher over the Trainer Floor View, Student 3D Lab + V-Lab fault test, and Director dashboard, on sample data |
+| `web/src/prototype/` | VTC_LMS clickable prototype, English and Arabic (RTL): role switcher over the Trainer Floor View, Student 3D Lab + V-Lab fault test, and Director dashboard, on sample data |
+| `web/src/prototype/assets/` | VTC_LMS logo as SVG: `vtc-lms-mark.svg`, `vtc-lms-logo.svg` (light), `vtc-lms-logo-dark.svg` |
 | `api/` | Node.js/TypeScript V-Lab telemetry ingestion + rubric evaluation API, with tests |
 
 ## Run it

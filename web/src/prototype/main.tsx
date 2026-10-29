@@ -2,15 +2,16 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DirectorDashboard } from './DirectorDashboard';
 import { tx } from './i18n';
+import { LogoMark, Wordmark } from './Logo';
 import { StoreProvider, useL, useStore, type Role } from './store';
 import { StudentLab } from './StudentLab';
 import { TrainerFloor } from './TrainerFloor';
 import './prototype.css';
 
 const ROLES = [
-  { id: 'trainer' as Role, label: tx('Trainer', 'المدرب'), who: tx('Eng. Huda Kamal · tablet', 'م. هدى كمال · جهاز لوحي') },
-  { id: 'student' as Role, label: tx('Student', 'الطالب'), who: tx('Omar Lotfy · laptop', 'عمر لطفي · حاسوب محمول') },
-  { id: 'director' as Role, label: tx('Director', 'المدير'), who: tx('Dr. Samia Rashad · desktop', 'د. سامية رشاد · حاسوب مكتبي') },
+  { id: 'trainer' as Role, initials: tx('HK', 'ه'), label: tx('Trainer', 'المدرب'), who: tx('Eng. Huda Kamal', 'م. هدى كمال'), device: tx('Tablet', 'جهاز لوحي') },
+  { id: 'student' as Role, initials: tx('OL', 'ع'), label: tx('Student', 'الطالب'), who: tx('Omar Lotfy', 'عمر لطفي'), device: tx('Laptop', 'حاسوب محمول') },
+  { id: 'director' as Role, initials: tx('SR', 'س'), label: tx('Director', 'المدير'), who: tx('Dr. Samia Rashad', 'د. سامية رشاد'), device: tx('Desktop', 'حاسوب مكتبي') },
 ];
 
 function Shell() {
@@ -20,30 +21,37 @@ function Shell() {
   return (
     <div className="app">
       <header className="topbar">
-        <div className="brand">
-          <span className="logo" aria-hidden="true">V</span>
-          <div>
-            <strong>VLMS</strong>
-            <span className="muted"> · {L('Applied Technology School, Cairo East', 'مدرسة التكنولوجيا التطبيقية، شرق القاهرة')}</span>
+        <div className="topbar-inner">
+          <div className="brand">
+            <LogoMark />
+            <div className="brand-text">
+              <Wordmark />
+              <span className="brand-sub">{L('Vocational Training Centre · ATS Cairo East', 'مركز التدريب المهني · مدرسة شرق القاهرة التطبيقية')}</span>
+            </div>
           </div>
-          <span className="chip sample" title={L('Every name and number in this prototype is illustrative', 'كل الأسماء والأرقام في هذا النموذج توضيحية')}>
-            {L('Sample data', 'بيانات تجريبية')}
-          </span>
-        </div>
-        <div className="topbar-end">
+
           <nav className="roles" aria-label={L('View as', 'العرض بصفة')}>
-            <span className="roles-label">{L('View as', 'العرض بصفة')}</span>
             {ROLES.map((r) => (
-              <button key={r.id} type="button" aria-pressed={role === r.id} onClick={() => setRole(r.id)}>
-                <span>{pick(r.label)}</span>
+              <button key={r.id} type="button" aria-pressed={role === r.id} onClick={() => setRole(r.id)}
+                title={`${pick(r.who)} · ${pick(r.device)}`}>
+                <span className={`avatar av-${r.id}`} aria-hidden="true">{pick(r.initials)}</span>
+                <span className="role-text">
+                  <span className="role-label">{pick(r.label)}</span>
+                  <span className="role-who">{pick(r.who)}</span>
+                </span>
                 {r.id === 'trainer' && open > 0 && <span className="badge" aria-label={L(`${open} open alerts`, `${open} تنبيهات مفتوحة`)}>{open}</span>}
-                <small>{pick(r.who)}</small>
               </button>
             ))}
           </nav>
-          <div className="lang" role="radiogroup" aria-label="Language · اللغة">
-            <button type="button" role="radio" aria-checked={lang === 'en'} lang="en" onClick={() => setLang('en')}>EN</button>
-            <button type="button" role="radio" aria-checked={lang === 'ar'} lang="ar" onClick={() => setLang('ar')}>عربي</button>
+
+          <div className="tools">
+            <span className="chip sample" title={L('Every name and number in this prototype is illustrative', 'كل الأسماء والأرقام في هذا النموذج توضيحية')}>
+              {L('Sample data', 'بيانات تجريبية')}
+            </span>
+            <div className="lang" role="radiogroup" aria-label="Language · اللغة">
+              <button type="button" role="radio" aria-checked={lang === 'en'} lang="en" onClick={() => setLang('en')}>EN</button>
+              <button type="button" role="radio" aria-checked={lang === 'ar'} lang="ar" onClick={() => setLang('ar')}>عربي</button>
+            </div>
           </div>
         </div>
       </header>
