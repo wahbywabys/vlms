@@ -39,6 +39,19 @@
 .mx-parts button[aria-current="true"] { border-color: #ff9f1c; background: #1e2a37; }
 .mx-num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #23344a;
   font-size: 12px; font-weight: 700; flex: none; }
+/* VR */
+.mx-root .mx-vr { display: inline-flex; align-items: center; gap: 6px; background: #2b3f8f; border-color: #4a63c9; }
+.mx-root .mx-vr[aria-pressed="true"] { background: #6c8cff; border-color: #6c8cff; color: #0b1230; }
+.mx-vr-note { position: absolute; inset: auto 12px 72px 12px; margin: 0; padding: 8px 12px; border-radius: 9px; z-index: 5;
+  background: rgba(8, 12, 18, .82); color: #c9d6e4; font-size: 12.5px; text-align: center; pointer-events: none; }
+.mx-root.is-stereo .mx-pin { display: none; }
+.mx-root.is-stereo .mx-controls { opacity: .35; }
+.mx-root.is-stereo .mx-controls:hover { opacity: 1; }
+/* Model switcher in the header */
+.mx-switch { display: inline-flex; border: 1px solid #2a3a4d; border-radius: 10px; overflow: hidden; }
+.mx-root .mx-switch button { border: 0; border-radius: 0; background: #16212d; }
+.mx-root .mx-switch button + button { border-inline-start: 1px solid #2a3a4d; }
+.mx-root .mx-switch button[aria-checked="true"] { background: #e6edf5; color: #0f1720; }
 @media (max-width: 760px) {
   .mx-root { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; height: auto !important; }
   .mx-header { flex-direction: column; }

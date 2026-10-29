@@ -5,6 +5,9 @@
  */
 import { tx } from '../i18n';
 import { heatmap } from './shared';
+import { starterPanel } from '../../models/starterPanel';
+import { elecLessons } from '../../lessons/elec';
+import { motorModel } from '../motorAr';
 import type { Trade } from './types';
 import { dolLab } from '../../../../api/src/labs/dol';
 
@@ -87,4 +90,7 @@ export const elec: Trade = {
     { learner: tx('Islam Badr', 'إسلام بدر'), mode: 'Exam', score: 61, passed: false, gateFailures: ['loto'], at: tx('Today 07:55', 'اليوم 07:55') },
   ],
   lab: dolLab,
+  accent: '#e8a70a',
+  models: [starterPanel, motorModel],
+  lessons: elecLessons,
 };

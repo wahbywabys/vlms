@@ -13,11 +13,15 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useL } from '@/components/LangProvider';
 import { tx, type Txt } from '@/lib/i18n';
+import { LEARNING_META } from '@/lib/learningMeta';
 import { stepDone, type PublicLab, type RigState, type TestPoint } from '@/lib/lab';
 import { Schematic } from './Schematic';
 import { TelemetryStrip } from './TelemetryStrip';
 
 const Explore = dynamic(() => import('./Explore'), { ssr: false, loading: () => <p className="muted">Loading 3D…</p> });
+const Lessons = dynamic(() => import('./Lessons'), { ssr: false, loading: () => <p className="muted">Loading lessons…</p> });
+
+type Tab = '3d' | 'lessons' | 'vlab';
 
 type Mode = 'guided' | 'sandbox' | 'assessment';
 const MODE_LABEL: Record<Mode, Txt> = { guided: tx('Guided', 'موجّه'), sandbox: tx('Sandbox', 'تجريبي حر'), assessment: tx('Exam', 'امتحان') };
@@ -48,27 +52,43 @@ async function api<T>(path: string, body?: unknown): Promise<{ ok: boolean; stat
 
 export interface RecentAttempt { id: string; mode: Mode; score: number | null; passed: boolean | null; at: string }
 
-export function VLab({ lab, initialSessionId, examFromTrainer, recent }: { lab: PublicLab; initialSessionId: string | null; examFromTrainer: boolean; recent: RecentAttempt[] }) {
+export function VLab({ lab, trade, initialSessionId, examFromTrainer, recent }: { lab: PublicLab; trade: string; initialSessionId: string | null; examFromTrainer: boolean; recent: RecentAttempt[] }) {
   const { L, pick } = useL();
-  const [tab, setTab] = useState<'explore' | 'vlab'>('vlab');
-  const [seenExplore, setSeenExplore] = useState(false);
+  const learn = LEARNING_META[trade];
+  const [tab, setTab] = useState<Tab>(learn ? '3d' : 'vlab');
+  // The 3D and lesson panes mount on first visit and then stay mounted: unmounting drei's <Html> pins mid-session throws.
+  const [seen, setSeen] = useState<Tab[]>([tab]);
+  const open = (t: Tab) => { setTab(t); setSeen((s) => (s.includes(t) ? s : [...s, t])); };
   const [sessionId, setSessionId] = useState(initialSessionId);
+  const TABS: { id: Tab; label: Txt; n?: number }[] = learn ? [
+    { id: '3d', label: tx('3D & VR', 'ثلاثي الأبعاد والواقع الافتراضي'), n: learn.models },
+    { id: 'lessons', label: tx('Video lessons', 'دروس الفيديو'), n: learn.lessons },
+    { id: 'vlab', label: tx('V-Lab fault test', 'اختبار الأعطال الافتراضي') },
+  ] : [];
+  const heading: Record<Tab, string> = {
+    '3d': L('3D digital twins', 'التوائم الرقمية ثلاثية الأبعاد'),
+    lessons: L('Video lessons', 'دروس الفيديو'),
+    vlab: `${pick(lab.rigTitle)} · ${pick(lab.title)}`,
+  };
   return (
-    <div className="lab">
+    <div className="lab" style={learn ? { ['--trade-accent' as string]: learn.accent } : undefined}>
       <div className="lab-head">
         <div>
           <p className="eyebrow">{L('Student', 'الطالب')} · {L('Unit', 'الوحدة')} {lab.unit.code} · {pick(lab.unit.title)}</p>
-          <h1>{tab === 'explore' && lab.explore ? pick(lab.explore.title) : `${pick(lab.rigTitle)} · ${pick(lab.title)}`}</h1>
+          <h1>{heading[tab]}</h1>
         </div>
-        {lab.explore && (
-          <div className="tabs" role="tablist" aria-label={L('Lab activity', 'نشاط المعمل')}>
-            <button type="button" role="tab" aria-selected={tab === 'explore'} onClick={() => { setTab('explore'); setSeenExplore(true); }}>{L('Explore in 3D', 'استكشف ثلاثي الأبعاد')}</button>
-            <button type="button" role="tab" aria-selected={tab === 'vlab'} onClick={() => setTab('vlab')}>{L('V-Lab fault test', 'اختبار الأعطال الافتراضي')}</button>
+        {TABS.length > 0 && (
+          <div className="tabs lab-tabs" role="tablist" aria-label={L('Lab activity', 'نشاط المعمل')}>
+            {TABS.map((x, i) => (
+              <button key={x.id} type="button" role="tab" aria-selected={tab === x.id} onClick={() => open(x.id)}>
+                {i + 1} · {pick(x.label)}{x.n ? <span className="tab-n">{x.n}</span> : null}
+              </button>
+            ))}
           </div>
         )}
       </div>
-      {/* The 3D explorer stays mounted once opened: unmounting drei's <Html> pins mid-session throws. */}
-      {seenExplore && lab.explore && <div hidden={tab !== 'explore'}><Explore title={lab.explore.title} assetTag={lab.explore.assetTag} /></div>}
+      {seen.includes('3d') && learn && <div hidden={tab !== '3d'}><Explore trade={trade} active={tab === '3d'} /></div>}
+      {seen.includes('lessons') && learn && <div hidden={tab !== 'lessons'}><Lessons trade={trade} active={tab === 'lessons'} /></div>}
       <div hidden={tab !== 'vlab'}>
         {sessionId
           ? <FaultTest key={sessionId} lab={lab} sessionId={sessionId} onNew={() => setSessionId(null)} />

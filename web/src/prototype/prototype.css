@@ -273,8 +273,13 @@ textarea { padding: 10px 12px; width: 100%; resize: vertical; }
 .sch-cap { fill: var(--ink-3); font: 600 12px var(--f-display); letter-spacing: .12em; }
 .tag { fill: var(--amber-fill); stroke: var(--on-amber); stroke-width: 1; }
 .tag-txt { fill: var(--on-amber); font: 700 10px var(--f-display); letter-spacing: .08em; }
-.door rect { fill: var(--ink-3); fill-opacity: .82; }
-.door text { fill: var(--paper); font: 600 15px var(--f-body); }
+.door { pointer-events: none; }
+.door-fill { fill: var(--sunk); fill-opacity: .42; }
+.door-hatch { stroke: var(--ink-3); stroke-opacity: .28; stroke-width: 1.4; }
+.door-edge { fill: none; stroke: var(--ink-3); stroke-width: 1.5; stroke-dasharray: 7 5; }
+.door-pill { fill: var(--ink); fill-opacity: .9; }
+.door-lock { fill: none; stroke: var(--paper); stroke-width: 1.4; }
+.door text { fill: var(--paper); font: 600 12.5px var(--f-body); }
 .tp { cursor: pointer; }
 .tp-hit { fill: transparent; }
 .tp-dot { fill: var(--blue); stroke: var(--sheet); stroke-width: 2.5; }
@@ -284,7 +289,7 @@ textarea { padding: 10px 12px; width: 100%; resize: vertical; }
 .tp:focus-visible .tp-hit { stroke: var(--amber-fill); stroke-width: 2; }
 .tp-active .tp-dot { fill: var(--amber-fill); stroke: var(--on-amber); }
 .tp-blocked .tp-dot { fill: var(--ink-3); }
-.tp-blocked .tp-label { fill: var(--paper); stroke: none; }
+.tp-blocked .tp-label { fill: var(--ink-3); }
 
 .side { display: grid; gap: 12px; min-width: 0; }
 .meter { background: var(--lcd); color: var(--lcd-fg); border-radius: 12px; padding: 14px 16px; display: grid; gap: 4px; border: 3px solid var(--ink); }
@@ -425,14 +430,14 @@ textarea { padding: 10px 12px; width: 100%; resize: vertical; }
 .app.is-full .screen { max-width: none; }
 /* 3D explorer */
 .explore-stage { position: relative; }
-.fs-float { position: absolute; z-index: 3; top: 14px; left: 50%; transform: translateX(-50%); background: #16212d; color: #e6edf5; border-color: #2a3a4d; }
+.fs-float { position: absolute; z-index: 3; bottom: 78px; inset-inline-start: 16px; background: #16212d; color: #e6edf5; border-color: #2a3a4d; }
 .fs-float:hover:not(:disabled) { border-color: #3aa0ff; }
 .fs-float[aria-pressed="true"] { background: #ff9f1c; color: #1a1205; border-color: #ff9f1c; }
 .explore-stage.is-full { background: #0f1720; }
 .explore-stage.is-max { position: fixed; inset: 0; z-index: 50; }
 .explore-stage.is-full .mx-root { height: 100% !important; border-radius: 0; }
 .explore-stage.is-full { height: 100vh; height: 100dvh; }
-@media (max-width: 640px) { .fs-text { display: none; } .fs-btn { padding: 0 10px; } .fs-float { top: auto; bottom: 76px; } }
+@media (max-width: 640px) { .fs-text { display: none; } .fs-btn { padding: 0 10px; } .fs-float { bottom: 76px; } }
 
 /* ================= Layout system v2 =================
    One anatomy on every screen: breadcrumb + title, a summary strip, then cards
@@ -664,3 +669,41 @@ button:hover:not(:disabled) { border-color: var(--blue); }
 .stock small { color: var(--ink-3); grid-column: 1 / -1; }
 .stock .qty { font-weight: 600; white-space: nowrap; }
 .stock li.low .qty { color: var(--amber); }
+
+/* Student lab hub: one trade, three ways to learn */
+.lab { --trade-accent: var(--accent); }
+.lab-title { display: inline-flex; align-items: center; gap: 10px; }
+.lab-title .trade-icon { stroke: var(--trade-accent); padding: 4px; border-radius: 9px; background: color-mix(in srgb, var(--trade-accent) 14%, transparent); width: 36px; height: 36px; }
+.lab .page-head { border-top: 4px solid var(--trade-accent); padding-top: 12px; }
+.lab-tabs button { display: inline-flex; align-items: center; gap: 6px; }
+.lab-tabs button[aria-selected="true"] { box-shadow: inset 0 -3px 0 var(--trade-accent); }
+.tab-n { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; font-size: 11.5px;
+  font-weight: 700; background: var(--trade-accent); color: #1a1205; }
+.lab-panes { display: contents; }
+.explore-model[hidden] { display: none; }
+.explore-foot { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.vr-card ul { margin: 0; padding-inline-start: 18px; display: grid; gap: 6px; color: var(--ink-2); }
+.vr-card b { color: var(--ink); margin-inline-end: 4px; }
+.lessons { display: grid; gap: 12px; }
+.lessons .lp-root { --trade-accent: inherit; }
+.lesson-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.lesson-list button { width: 100%; display: flex; align-items: center; gap: 12px; text-align: start; padding: 10px 12px; min-height: 64px;
+  background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--radius); box-shadow: var(--shadow); }
+.lesson-list button[aria-current="true"] { border-color: var(--trade-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--trade-accent) 35%, transparent); }
+.lesson-no { flex: none; display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: var(--trade-accent);
+  color: #1a1205; font-weight: 800; }
+.lesson-body { flex: 1; display: grid; gap: 2px; min-width: 0; }
+.lesson-body b { font-weight: 650; line-height: 1.3; }
+.lesson-body small { color: var(--ink-3); font-size: 12.5px; }
+.lesson-state { flex: none; font-size: 12.5px; font-weight: 700; padding: 3px 9px; border-radius: 99px; background: var(--sunk); color: var(--ink-2); }
+.lesson-state.done { background: var(--ok-soft); color: var(--ok); }
+.lesson-note { margin: 0; font-size: 13px; }
+@media (max-width: 760px) {
+  .explore-foot { grid-template-columns: minmax(0, 1fr); }
+  .lab-title .trade-icon { width: 30px; height: 30px; }
+}
+.model-switch { display: flex; gap: 8px; flex-wrap: wrap; }
+.model-switch button { display: grid; gap: 1px; text-align: start; padding: 8px 14px; min-height: 52px; background: var(--sheet); border: 1px solid var(--rule);
+  border-radius: 10px; box-shadow: var(--shadow); }
+.model-switch button small { color: var(--ink-3); font-size: 12px; font-family: var(--f-mono); }
+.model-switch button[aria-checked="true"] { border-color: var(--trade-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--trade-accent) 35%, transparent); }

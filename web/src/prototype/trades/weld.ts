@@ -5,6 +5,8 @@
  */
 import { tx } from '../i18n';
 import { heatmap } from './shared';
+import { migWelder } from '../../models/migWelder';
+import { weldLessons } from '../../lessons/weld';
 import type { Trade } from './types';
 import { migLab } from '../../../../api/src/labs/mig';
 
@@ -85,4 +87,7 @@ export const weld: Trade = {
     { learner: tx('Ibrahim Said', 'إبراهيم سعيد'), mode: 'Exam', score: 54, passed: false, gateFailures: ['loto'], at: tx('Yesterday 14:05', 'أمس 14:05') },
   ],
   lab: migLab,
+  accent: '#f06721',
+  models: [migWelder],
+  lessons: weldLessons,
 };

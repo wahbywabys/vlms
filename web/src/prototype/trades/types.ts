@@ -9,6 +9,8 @@
  */
 import type { LabDef } from '../../../../api/src/labs/types';
 import type { Txt } from '../i18n';
+import type { Lesson } from '../../components/LessonPlayer';
+import type { ModelDef } from '../../models/kit';
 
 export type TradeId = string;
 
@@ -66,4 +68,10 @@ export interface Trade {
   overview: { learners: number; attainment: number; utilisation: number; wbl: number };
   lab: LabDef;
   seedEvals: SeedEval[];
+  /** Colour that marks this trade's screens. */
+  accent: string;
+  /** 3D digital twins for the "3D & VR" tab; the first opens by default. */
+  models: ModelDef[];
+  /** Interactive video lessons (at least two per trade). */
+  lessons: Lesson[];
 }

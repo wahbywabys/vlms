@@ -1,13 +1,15 @@
 /** Screen 2 — Student 3D Lab Explorer + V-Lab fault test (docs/ui-blueprint.md §2). */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { FullscreenIcon, useFullscreen } from './fullscreen';
 import { MachineExplorer, type ExplorerEvent } from '../components/MachineExplorer';
-import { inductionMotorParts } from '../models/inductionMotor';
+import { LessonPlayer, type LessonEvent } from '../components/LessonPlayer';
+import { modelParts } from '../models/kit';
+import { TradeIcon } from './TradeBar';
 import { tx, type Txt } from './i18n';
 import { TRADES, type Trade } from './trades';
 import type { Diagram, Fault, Lab, RigState, TestPoint } from './trades/types';
 import { detectGateViolations, evaluate, levelForScore, stepDone, toEvent, type EvaluationResult, type TelemetryEvent } from './vlab';
-import { explorerStringsAr, inductionMotorPartsAr } from './motorAr';
+import { explorerStringsAr } from './motorAr';
 import { useL, useStore } from './store';
 import { CardHead, PageHeader } from './ui';
 
@@ -15,63 +17,152 @@ type Mode = 'Guided' | 'Sandbox' | 'Exam';
 const MODE_LABEL: Record<Mode, Txt> = { Guided: tx('Guided', 'موجّه'), Sandbox: tx('Sandbox', 'تجريبي حر'), Exam: tx('Exam', 'امتحان') };
 const TIME_LIMIT_S = 1800;
 
+type Tab = '3d' | 'lessons' | 'vlab';
+
 export function StudentLab() {
   const { L, pick } = useL();
   const { trade } = useStore();
   const { lab } = trade;
-  const [tabPick, setTab] = useState<'explore' | 'vlab'>('vlab');
-  const tab = lab.explore ? tabPick : 'vlab';
-  const [seenExplore, setSeenExplore] = useState(false);
-  // Each trade's attempt stays mounted once opened, so switching trade and back keeps it.
-  const [visited, setVisited] = useState<string[]>([trade.id]);
-  useEffect(() => { setVisited((v) => (v.includes(trade.id) ? v : [...v, trade.id])); }, [trade.id]);
+  // Tab per trade, so switching trade and back keeps where you were.
+  const [tabs, setTabs] = useState<Record<string, Tab>>({});
+  const tab = tabs[trade.id] ?? '3d';
+  const setTab = (t: Tab) => setTabs((m) => ({ ...m, [trade.id]: t }));
+  // Each trade's panes mount on first visit and then stay mounted (hidden), so an
+  // attempt or a lesson in progress survives switching. drei's <Html> pins also
+  // throw a removeChild error if they unmount mid-session.
+  const key = `${trade.id}:${tab}`;
+  const [seen, setSeen] = useState<string[]>([key]);
+  useEffect(() => { setSeen((v) => (v.includes(key) ? v : [...v, key])); }, [key]);
+  const shown = (t: Trade, k: Tab) => seen.includes(`${t.id}:${k}`);
+  const on = (t: Trade, k: Tab) => t.id === trade.id && tab === k;
+
+  const TABS: { id: Tab; label: Txt; n?: number }[] = [
+    { id: '3d', label: tx('3D & VR', 'ثلاثي الأبعاد والواقع الافتراضي'), n: trade.models.length },
+    { id: 'lessons', label: tx('Video lessons', 'دروس الفيديو'), n: trade.lessons.length },
+    { id: 'vlab', label: tx('V-Lab fault test', 'اختبار الأعطال الافتراضي') },
+  ];
+  const head: Record<Tab, { title: string; meta: string }> = {
+    '3d': { title: L(`${trade.name.en}: 3D digital twins`, `${trade.name.ar}: التوائم الرقمية ثلاثية الأبعاد`),
+      meta: L('Take the machine apart, X-ray it, run it, and open any part\'s specification. Enter VR to stand next to it.',
+        'فكّك الماكينة، واعرضها بالأشعة، وشغّلها، وافتح مواصفات أي قطعة. ادخل الواقع الافتراضي لتقف بجوارها.') },
+    lessons: { title: L(`${trade.name.en}: video lessons`, `${trade.name.ar}: دروس الفيديو`),
+      meta: L('Each lesson stops at checkpoints for you to answer. Zoom in, change speed, open hotspots and jump between chapters.',
+        'كل درس يتوقف عند نقاط تحقق لتجيب عنها. كبّر الصورة، وغيّر السرعة، وافتح نقاط المعلومات، وتنقّل بين الفصول.') },
+    vlab: { title: pick(lab.intro), meta: L('Find and fix the fault safely. Your actions are scored against the unit rubric.', 'حدّد العطل وأصلحه بأمان. تُقيَّم إجراءاتك وفق معايير الوحدة.') },
+  };
   return (
-    <div className="lab">
+    <div className="lab" style={{ ['--trade-accent' as string]: trade.accent }}>
       <PageHeader
         crumbs={[L('My learning', 'تعلّمي'), pick(trade.name), lab.unit.code, pick(lab.unit.title)]}
-        title={tab === 'vlab' || !lab.explore ? pick(lab.intro) : pick(lab.explore.title)}
-        meta={tab === 'vlab'
-          ? L('Find and fix the fault safely. Your actions are scored against the unit rubric.', 'حدّد العطل وأصلحه بأمان. تُقيَّم إجراءاتك وفق معايير الوحدة.')
-          : L('Take the motor apart, inspect each part and read its specification.', 'فكّك المحرك وافحص كل قطعة واقرأ مواصفاتها.')}
+        title={<span className="lab-title"><TradeIcon trade={trade} size={28} />{head[tab].title}</span>}
+        meta={head[tab].meta}
         actions={
-          lab.explore ? (
-            <div className="tabs" role="tablist" aria-label={L('Lab activity', 'نشاط المعمل')}>
-              <button type="button" role="tab" aria-selected={tab === 'explore'} onClick={() => { setTab('explore'); setSeenExplore(true); }}>{L('1 · Explore the motor', '1 · استكشف المحرك')}</button>
-              <button type="button" role="tab" aria-selected={tab === 'vlab'} onClick={() => setTab('vlab')}>{L('2 · V-Lab fault test', '2 · اختبار الأعطال الافتراضي')}</button>
-            </div>
-          ) : undefined
+          <div className="tabs lab-tabs" role="tablist" aria-label={L('Lab activity', 'نشاط المعمل')}>
+            {TABS.map((x, i) => (
+              <button key={x.id} type="button" role="tab" aria-selected={tab === x.id} onClick={() => setTab(x.id)}>
+                {i + 1} · {pick(x.label)}{x.n ? <span className="tab-n">{x.n}</span> : null}
+              </button>
+            ))}
+          </div>
         } />
-      {/* The 3D explorer mounts on first visit and then stays mounted: unmounting
-          drei's <Html> pins mid-session throws a removeChild error. */}
-      {seenExplore && <div hidden={tab !== 'explore'}><Explore title={lab.explore?.title} assetTag={lab.explore?.assetTag} /></div>}
-      {TRADES.filter((t) => visited.includes(t.id)).map((t) => (
-        <div key={t.id} hidden={tab !== 'vlab' || t.id !== trade.id}><FaultTest trade={t} /></div>
+      {TRADES.map((t) => (
+        <div key={t.id} className="lab-panes">
+          {shown(t, '3d') && <div hidden={!on(t, '3d')}><Explore trade={t} active={on(t, '3d')} /></div>}
+          {shown(t, 'lessons') && <div hidden={!on(t, 'lessons')}><Lessons trade={t} active={on(t, 'lessons')} /></div>}
+          {shown(t, 'vlab') && <div hidden={!on(t, 'vlab')}><FaultTest trade={t} /></div>}
+        </div>
       ))}
     </div>
   );
 }
 
-function Explore({ title, assetTag }: { title?: Txt; assetTag?: string }) {
+function Explore({ trade, active }: { trade: Trade; active: boolean }) {
   const { lang, L, pick } = useL();
   const [log, setLog] = useState<(ExplorerEvent & { seq: number })[]>([]);
   const onEvent = useCallback((e: ExplorerEvent) => setLog((l) => [{ ...e, seq: (l[0]?.seq ?? 0) + 1 }, ...l].slice(0, 5)), []);
+  const [modelId, setModelId] = useState(trade.models[0]!.id);
+  const [opened, setOpened] = useState<string[]>([modelId]);
+  const choose = (id: string) => { setModelId(id); setOpened((o) => (o.includes(id) ? o : [...o, id])); onEvent({ verb: 'part_selected', objectRef: `model:${id}` }); };
   const stageRef = useRef<HTMLDivElement>(null);
   const fs = useFullscreen(stageRef);
   return (
     <div className="explore">
+      {trade.models.length > 1 && (
+        <div className="model-switch" role="radiogroup" aria-label={L('Choose a machine', 'اختر الماكينة')}>
+          {trade.models.map((m) => (
+            <button key={m.id} type="button" role="radio" aria-checked={m.id === modelId} onClick={() => choose(m.id)}>
+              <b>{pick(m.title).split(' · ')[0]}</b><small>{m.assetTag}</small>
+            </button>
+          ))}
+        </div>
+      )}
       <div ref={stageRef} className={`explore-stage ${fs.isFull ? 'is-full' : ''} ${fs.isFallback ? 'is-max' : ''}`}>
-      <button type="button" className="fs-btn fs-float" aria-pressed={fs.isFull} onClick={() => void fs.toggle()}
-        title={fs.isFull ? L('Exit full screen (Esc)', 'الخروج من ملء الشاشة (Esc)') : L('Full-screen 3D view', 'عرض ثلاثي الأبعاد بملء الشاشة')}>
-        <FullscreenIcon exit={fs.isFull} />
-        <span className="fs-text">{fs.isFull ? L('Exit', 'خروج') : L('Full screen', 'ملء الشاشة')}</span>
-      </button>
-      <MachineExplorer title={title ? pick(title) : L('3-Phase Induction Motor · IEC 132M', 'محرك حثي ثلاثي الأطوار · IEC 132M')} assetTag={assetTag ?? 'WS-ELEC-07 / MTR-0132'}
-        parts={lang === 'ar' ? inductionMotorPartsAr : inductionMotorParts} strings={lang === 'ar' ? explorerStringsAr : undefined}
-        onEvent={onEvent} height="min(620px, 72vh)" />
+        <button type="button" className="fs-btn fs-float" aria-pressed={fs.isFull} onClick={() => void fs.toggle()}
+          title={fs.isFull ? L('Exit full screen (Esc)', 'الخروج من ملء الشاشة (Esc)') : L('Full-screen 3D view', 'عرض ثلاثي الأبعاد بملء الشاشة')}>
+          <FullscreenIcon exit={fs.isFull} />
+          <span className="fs-text">{fs.isFull ? L('Exit', 'خروج') : L('Full screen', 'ملء الشاشة')}</span>
+        </button>
+        {trade.models.filter((m) => opened.includes(m.id)).map((m) => (
+          <div key={m.id} hidden={m.id !== modelId} className="explore-model">
+            <MachineExplorer title={pick(m.title)} assetTag={m.assetTag} parts={modelParts(m, lang)} view={m.view}
+              params={m.params} runParams={m.runParams} active={active && m.id === modelId}
+              strings={lang === 'ar' ? explorerStringsAr : undefined}
+              onEvent={onEvent} height="min(620px, 72vh)" />
+          </div>
+        ))}
       </div>
-      <TelemetryStrip items={log.map((e) => ({ seq: e.seq, verb: e.verb, objectRef: e.objectRef }))}
-        empty={L('Drag the explode slider, tap a numbered pin or switch view mode to see the events this sends.',
-          'حرّك شريط التفكيك أو اضغط دبوسًا مرقّمًا أو غيّر وضع العرض لترى الأحداث المرسلة.')} />
+      <div className="explore-foot">
+        <section className="card vr-card">
+          <CardHead title={L('Virtual reality', 'الواقع الافتراضي')} sub={L('Press Enter VR in the 3D view', 'اضغط «دخول الواقع الافتراضي» في العرض ثلاثي الأبعاد')} />
+          <ul>
+            <li><b>{L('Headset', 'نظارة VR')}</b> {L('Meta Quest, Pico or a PC headset: open this page in the headset browser and the machine stands on the workshop floor in front of you, at real scale.', 'Meta Quest أو Pico أو نظارة حاسوب: افتح الصفحة في متصفح النظارة فتظهر الماكينة على أرض الورشة أمامك بحجمها الحقيقي.')}</li>
+            <li><b>{L('Phone', 'الهاتف')}</b> {L('Without a headset you get a side-by-side stereo view for a Cardboard-style viewer. Turn the phone sideways.', 'دون نظارة يظهر عرض مجسم مزدوج لنظارة من نوع Cardboard. أدر الهاتف أفقيًا.')}</li>
+          </ul>
+        </section>
+        <TelemetryStrip items={log.map((e) => ({ seq: e.seq, verb: e.verb, objectRef: e.objectRef }))}
+          empty={L('Drag the explode slider, tap a numbered pin or switch view mode to see the events this sends.',
+            'حرّك شريط التفكيك أو اضغط دبوسًا مرقّمًا أو غيّر وضع العرض لترى الأحداث المرسلة.')} />
+      </div>
+    </div>
+  );
+}
+
+function Lessons({ trade, active }: { trade: Trade; active: boolean }) {
+  const { lang, L, pick } = useL();
+  const [current, setCurrent] = useState(trade.lessons[0]!.id);
+  const [opened, setOpened] = useState<string[]>([current]);
+  const [scores, setScores] = useState<Record<string, number>>({});
+  const [log, setLog] = useState<{ seq: number; verb: string; objectRef?: string; note?: string }[]>([]);
+  const onEvent = useCallback((e: LessonEvent) => setLog((l) => [{ seq: (l[0]?.seq ?? 0) + 1, verb: e.verb, objectRef: e.objectRef,
+    note: e.value && 'correct' in e.value ? (e.value.correct ? 'correct' : 'wrong') : e.value && 'score' in e.value ? `${e.value.score}%` : undefined }, ...l].slice(0, 6)), []);
+  const choose = (id: string) => { setCurrent(id); setOpened((o) => (o.includes(id) ? o : [...o, id])); };
+  return (
+    <div className="lessons">
+      <ol className="lesson-list">
+        {trade.lessons.map((ls, i) => (
+          <li key={ls.id}>
+            <button type="button" aria-current={ls.id === current} onClick={() => choose(ls.id)}>
+              <span className="lesson-no">{i + 1}</span>
+              <span className="lesson-body">
+                <b>{pick(ls.title)}</b>
+                <small>{Math.round(ls.duration / 60)} {L('min', 'دقيقة')} · {ls.chapters.length} {L('chapters', 'فصول')} · {ls.stops.length} {L('checkpoints', 'نقاط تحقق')} · {pick(ls.model.title).split(' · ')[0]}</small>
+              </span>
+              <span className={`lesson-state ${scores[ls.id] !== undefined ? 'done' : ''}`}>
+                {scores[ls.id] !== undefined ? `${scores[ls.id]}%` : ls.id === current ? L('Now', 'الآن') : L('Start', 'ابدأ')}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ol>
+      {trade.lessons.filter((ls) => opened.includes(ls.id)).map((ls) => (
+        <div key={ls.id} hidden={ls.id !== current}>
+          <LessonPlayer lesson={ls} lang={lang} active={active && ls.id === current} onEvent={onEvent}
+            onComplete={(r) => setScores((m) => ({ ...m, [ls.id]: r.score }))} />
+        </div>
+      ))}
+      <p className="lesson-note muted">{L('These lessons are rendered live on the 3D digital twin, so you can pause and look around any frame. Filmed workshop video can be dropped in later and keeps the same checkpoints, hotspots and scoring.',
+        'هذه الدروس تُعرض مباشرة على التوأم الرقمي ثلاثي الأبعاد، فيمكنك الإيقاف والنظر حول أي لقطة. ويمكن لاحقًا إضافة فيديو مصوّر من الورشة مع الاحتفاظ بنفس نقاط التحقق والمعلومات والتقييم.')}</p>
+      <TelemetryStrip items={log} empty={L('Start a lesson: checkpoint answers, hotspots and chapters are sent as telemetry.', 'ابدأ درسًا: إجابات نقاط التحقق والمعلومات والفصول تُرسل كأحداث قياس.')} />
     </div>
   );
 }
@@ -415,10 +506,7 @@ function Schematic({ lab, rig, onMeasure, active }: { lab: Lab; rig: RigState; o
       <text x="606" y="116" className="sch-small">N</text>
 
       {!rig.panelOpen && (
-        <g className="door">
-          <rect x="30" y="132" width="596" height="194" rx="8" />
-          <text x="328" y="236" textAnchor="middle">{L('Panel door closed · open it to reach the control circuit', 'باب اللوحة مغلق · افتحه للوصول إلى دائرة التحكم')}</text>
-        </g>
+        <Cover x={30} y={132} w={596} h={194} text={L('Panel door closed · open it to reach the control circuit', 'باب اللوحة مغلق · افتحه للوصول إلى دائرة التحكم')} />
       )}
 
       {pt({ r: 'X1:L1-L2', x: 102, y: 64, label: 'X1 L1–L2', dy: 30 })}
@@ -429,6 +517,35 @@ function Schematic({ lab, rig, onMeasure, active }: { lab: Lab; rig: RigState; o
       {pt({ r: 'F2:95-96', x: 403, y: 200, label: '95–96' })}
       {pt({ r: 'KM1:A1-A2', x: 492, y: 188, label: 'A1–A2' })}
     </svg>
+  );
+}
+
+/**
+ * A closed cover over part of a drawing. Light hatching and a dashed edge keep
+ * the parts underneath readable; the pill says what to do.
+ */
+function Cover({ x, y, w, h, text }: { x: number; y: number; w: number; h: number; text: string }) {
+  const id = useId().replace(/:/g, '');
+  // Short label on the top edge, at the end corner where drawings keep fewest test points; the full text is the tooltip.
+  const label = text.split(' · ')[0]!;
+  const pill = Math.min(w - 16, label.length * 7 + 40);
+  return (
+    <g className="door">
+      <title>{text}</title>
+      <defs>
+        <pattern id={`hatch${id}`} width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line x1="0" y1="0" x2="0" y2="9" className="door-hatch" />
+        </pattern>
+      </defs>
+      <rect x={x} y={y} width={w} height={h} rx="8" className="door-fill" />
+      <rect x={x} y={y} width={w} height={h} rx="8" fill={`url(#hatch${id})`} />
+      <rect x={x} y={y} width={w} height={h} rx="8" className="door-edge" />
+      <g transform={`translate(${x + w - pill / 2 - 12} ${y})`}>
+        <rect x={-pill / 2} y={-13} width={pill} height={26} rx={13} className="door-pill" />
+        <path d={`M${-pill / 2 + 14} -4h8v8h-8z M${-pill / 2 + 15.5} -4v-2.5a2.5 2.5 0 0 1 5 0v2.5`} className="door-lock" />
+        <text x={10} y={4.5} textAnchor="middle">{label}</text>
+      </g>
+    </g>
   );
 }
 
@@ -468,10 +585,7 @@ function BlockDiagram({ lab, d, rig, onMeasure, active }: { lab: Lab; d: Diagram
         </g>
       ))}
       {!rig.panelOpen && (
-        <g className="door">
-          <rect x={d.cover.x} y={d.cover.y} width={d.cover.w} height={d.cover.h} rx="8" />
-          <text x={d.cover.x + d.cover.w / 2} y={d.cover.y + d.cover.h / 2 + 6} textAnchor="middle">{pick(d.cover.text)}</text>
-        </g>
+        <Cover x={d.cover.x} y={d.cover.y} w={d.cover.w} h={d.cover.h} text={pick(d.cover.text)} />
       )}
       {d.points.map(pt)}
     </svg>

@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "dev:prototype": "vite --config vite.prototype.config.ts",
-    "build:prototype": "tsc --noEmit && vite build --config vite.prototype.config.ts"
+    "build:prototype": "tsc --noEmit && vite build --config vite.prototype.config.ts",
+    "build:offline": "tsc --noEmit && vite build --config vite.offline.config.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",

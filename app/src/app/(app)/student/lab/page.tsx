@@ -10,7 +10,8 @@ export const metadata = { title: 'V-Lab' };
 export default async function LabPage() {
   const s = await requireRole('student');
   const { L } = await getI18n();
-  const lab = await labForTrade(s, await currentTrade(s, 'own'));
+  const trade = await currentTrade(s, 'own');
+  const lab = await labForTrade(s, trade);
   if (!lab?.catalogue) {
     return <div className="lab"><p className="notice notice-danger">{lab
       ? L('The V-Lab service is not reachable right now. Try again in a minute.', 'خدمة المعمل الافتراضي غير متاحة الآن. حاول بعد دقيقة.')
@@ -26,6 +27,6 @@ export default async function LabPage() {
        FROM virtual_lab_sessions s JOIN virtual_labs l ON l.id = s.lab_id
       WHERE s.learner_id = $1 AND l.code = $2 AND s.status IN ('evaluated', 'aborted')
       ORDER BY s.started_at DESC LIMIT 6`, [s.userId, lab.code]);
-  return <VLab lab={lab.catalogue} initialSessionId={open?.id ?? null} examFromTrainer={open?.mode === 'assessment'}
+  return <VLab lab={lab.catalogue} trade={trade} initialSessionId={open?.id ?? null} examFromTrainer={open?.mode === 'assessment'}
     recent={recent.map((r) => ({ ...r, at: new Date(r.at).toISOString() }))} />;
 }

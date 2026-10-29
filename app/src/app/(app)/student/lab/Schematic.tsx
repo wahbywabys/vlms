@@ -1,4 +1,5 @@
 'use client';
+import { useId } from 'react';
 import { useL } from '@/components/LangProvider';
 import type { Diagram, PublicLab, RigState, TestPoint } from '@/lib/lab';
 
@@ -7,6 +8,35 @@ type Props = { lab: PublicLab; rig: RigState; onMeasure: (tp: TestPoint) => void
 /** The lab's rig drawing: the hand-drawn DOL ladder, or a block drawing described as data. */
 export function Schematic(p: Props) {
   return p.lab.diagram === 'dol' ? <DolLadder {...p} /> : <BlockDiagram {...p} d={p.lab.diagram} />;
+}
+
+/**
+ * A closed cover over part of a drawing. Light hatching and a dashed edge keep
+ * the parts underneath readable; the pill says what to do.
+ */
+function Cover({ x, y, w, h, text }: { x: number; y: number; w: number; h: number; text: string }) {
+  const id = useId().replace(/:/g, '');
+  // Short label on the top edge, at the end corner where drawings keep fewest test points; the full text is the tooltip.
+  const label = text.split(' · ')[0]!;
+  const pill = Math.min(w - 16, label.length * 7 + 40);
+  return (
+    <g className="door">
+      <title>{text}</title>
+      <defs>
+        <pattern id={`hatch${id}`} width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line x1="0" y1="0" x2="0" y2="9" className="door-hatch" />
+        </pattern>
+      </defs>
+      <rect x={x} y={y} width={w} height={h} rx="8" className="door-fill" />
+      <rect x={x} y={y} width={w} height={h} rx="8" fill={`url(#hatch${id})`} />
+      <rect x={x} y={y} width={w} height={h} rx="8" className="door-edge" />
+      <g transform={`translate(${x + w - pill / 2 - 12} ${y})`}>
+        <rect x={-pill / 2} y={-13} width={pill} height={26} rx={13} className="door-pill" />
+        <path d={`M${-pill / 2 + 14} -4h8v8h-8z M${-pill / 2 + 15.5} -4v-2.5a2.5 2.5 0 0 1 5 0v2.5`} className="door-lock" />
+        <text x={10} y={4.5} textAnchor="middle">{label}</text>
+      </g>
+    </g>
+  );
 }
 
 /** Ladder drawing of the starter, always drawn left-to-right as on a real panel. Test points are the tappable circles. */
@@ -74,10 +104,7 @@ function DolLadder({ lab, rig, onMeasure, active }: Props) {
       <text x="606" y="116" className="sch-small">N</text>
 
       {!rig.panelOpen && (
-        <g className="door">
-          <rect x="30" y="132" width="596" height="194" rx="8" />
-          <text x="328" y="236" textAnchor="middle">{L('Panel door closed · open it to reach the control circuit', 'باب اللوحة مغلق · افتحه للوصول إلى دائرة التحكم')}</text>
-        </g>
+        <Cover x={30} y={132} w={596} h={194} text={L('Panel door closed · open it to reach the control circuit', 'باب اللوحة مغلق · افتحه للوصول إلى دائرة التحكم')} />
       )}
 
       {pt({ r: 'X1:L1-L2', x: 102, y: 64, label: 'X1 L1–L2', dy: 30 })}
@@ -127,10 +154,7 @@ function BlockDiagram({ lab, d, rig, onMeasure, active }: Props & { d: Diagram }
         </g>
       ))}
       {!rig.panelOpen && (
-        <g className="door">
-          <rect x={d.cover.x} y={d.cover.y} width={d.cover.w} height={d.cover.h} rx="8" />
-          <text x={d.cover.x + d.cover.w / 2} y={d.cover.y + d.cover.h / 2 + 6} textAnchor="middle">{pick(d.cover.text)}</text>
-        </g>
+        <Cover x={d.cover.x} y={d.cover.y} w={d.cover.w} h={d.cover.h} text={pick(d.cover.text)} />
       )}
       {d.points.map(pt)}
     </svg>

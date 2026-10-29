@@ -1,6 +1,7 @@
 /** Arabic copy for the induction-motor explorer: part names, spec cards and the explorer's controls. */
 import type { ExplorerStrings, PartSpec } from '../components/MachineExplorer';
 import { inductionMotorParts } from '../models/inductionMotor';
+import { tx, type ModelDef } from '../models/kit';
 
 /** Keeps part numbers like 6205-2Z in left-to-right order inside Arabic text. */
 const ltr = (t: string) => `\u2066${t}\u2069`;
@@ -39,4 +40,16 @@ export const explorerStringsAr: ExplorerStrings = {
   digitalTwin: 'التوأم الرقمي', viewModes: 'أوضاع العرض', xray: 'أشعة سينية', cutaway: 'مقطع', run: 'تشغيل', stop: 'إيقاف',
   assemble: 'تجميع', explode: 'تفكيك', explodedView: 'العرض المفكك', component: 'المكوّن',
   datasheet: 'فتح ورقة البيانات ←', hint: 'اضغط على دبوس مرقّم أو على قطعة لعرض مواصفاتها.',
+  vr: 'دخول الواقع الافتراضي', vrExit: 'خروج من الواقع الافتراضي',
+  vrStereoNote: 'لا توجد نظارة واقع افتراضي، لذا هذا هو العرض المجسم: ضع الهاتف في نظارة VR (مثل Cardboard) واسحب للنظر حولك.',
+  vrHeadset: 'واقع افتراضي غامر على نظارتك. انزعها أو اضغط «خروج» للعودة.',
+};
+
+/** The induction motor as a switchable model (its Arabic comes from the table above). */
+export const motorModel: ModelDef = {
+  id: 'induction-motor',
+  title: tx('3-phase induction motor · IEC 132M', 'محرك حثي ثلاثي الأطوار · IEC 132M'),
+  assetTag: 'WS-ELEC-07 · MTR-0132',
+  parts: [],
+  specs: (lang) => (lang === 'ar' ? inductionMotorPartsAr : inductionMotorParts),
 };

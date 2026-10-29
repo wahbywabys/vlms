@@ -5,6 +5,9 @@
  */
 import { tx } from '../i18n';
 import { heatmap } from './shared';
+import { cncLathe } from '../../models/cncLathe';
+import { cncLessons } from '../../lessons/cnc';
+import { motorModel } from '../motorAr';
 import type { Trade } from './types';
 import { cncLab } from '../../../../api/src/labs/cnc';
 
@@ -90,4 +93,7 @@ export const cnc: Trade = {
     { learner: tx('Salma Mostafa', 'سلمى مصطفى'), mode: 'Guided', score: 79, passed: true, gateFailures: [], at: tx('Yesterday 13:40', 'أمس 13:40') },
   ],
   lab: cncLab,
+  accent: '#2f8fd8',
+  models: [cncLathe, motorModel],
+  lessons: cncLessons,
 };

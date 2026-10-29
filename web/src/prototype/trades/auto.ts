@@ -5,6 +5,8 @@
  */
 import { tx } from '../i18n';
 import { heatmap } from './shared';
+import { carEngine } from '../../models/carEngine';
+import { autoLessons } from '../../lessons/auto';
 import type { Trade } from './types';
 import { autoLab } from '../../../../api/src/labs/auto';
 
@@ -84,4 +86,7 @@ export const auto: Trade = {
     { learner: tx('Seif Magdy', 'سيف مجدي'), mode: 'Guided', score: 74, passed: true, gateFailures: [], at: tx('Yesterday 12:15', 'أمس 12:15') },
   ],
   lab: autoLab,
+  accent: '#d9463b',
+  models: [carEngine],
+  lessons: autoLessons,
 };
