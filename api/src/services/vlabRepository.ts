@@ -5,6 +5,7 @@ export interface SessionRow {
   id: string;
   learner_id: string;
   institution_id: string;
+  lab_code: string;
   mode: 'guided' | 'sandbox' | 'assessment';
   status: 'in_progress' | 'submitted' | 'evaluated' | 'aborted' | 'voided';
   rubric_id: string | null;
@@ -18,10 +19,11 @@ export interface SessionRow {
 /** Locks the session row so concurrent batches for one session serialise. */
 export async function lockSession(tx: Tx, sessionId: string): Promise<SessionRow | null> {
   const { rows } = await tx.query<SessionRow>(
-    `SELECT s.id, s.learner_id, u.institution_id, s.mode, s.status, s.rubric_id,
+    `SELECT s.id, s.learner_id, u.institution_id, l.code AS lab_code, s.mode, s.status, s.rubric_id,
             s.injected_fault_ids, s.started_at, s.submitted_at, s.time_limit_s, s.last_seq
        FROM virtual_lab_sessions s
        JOIN users u ON u.id = s.learner_id
+       JOIN virtual_labs l ON l.id = s.lab_id
       WHERE s.id = $1
       FOR UPDATE OF s`,
     [sessionId],

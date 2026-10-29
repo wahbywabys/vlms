@@ -2,13 +2,13 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useL } from '@/components/LangProvider';
-import { FAULTS } from '@/lib/dol';
+import type { PublicLab } from '@/lib/lab';
 
-export function StartExam({ learners }: { learners: { id: string; name: string; nameAr: string | null }[] }) {
+export function StartExam({ labCode, faults, learners }: { labCode: string; faults: PublicLab['faults']; learners: { id: string; name: string; nameAr: string | null }[] }) {
   const { L, pick, ar } = useL();
   const router = useRouter();
   const [learnerId, setLearner] = useState('');
-  const [fault, setFault] = useState(FAULTS[0]!.code);
+  const [fault, setFault] = useState(faults[0]?.code ?? '');
   const [minutes, setMinutes] = useState(30);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -16,7 +16,7 @@ export function StartExam({ learners }: { learners: { id: string; name: string; 
     setBusy(true); setMsg(null);
     const r = await fetch('/api/v1/vlab/sessions', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ labCode: 'VLAB-DOL-STARTER', mode: 'assessment', learnerId, faultCode: fault, timeLimitS: minutes * 60 }),
+      body: JSON.stringify({ labCode, mode: 'assessment', learnerId, faultCode: fault, timeLimitS: minutes * 60 }),
     });
     setBusy(false);
     const who = learners.find((x) => x.id === learnerId);
@@ -33,7 +33,7 @@ export function StartExam({ learners }: { learners: { id: string; name: string; 
         </select></label>
       <label className="field"><span>{L('Fault to inject', 'العطل المزروع')}</span>
         <select value={fault} onChange={(e) => setFault(e.target.value)}>
-          {FAULTS.map((f) => <option key={f.code} value={f.code}>{f.code} · {pick(f.title)}</option>)}
+          {faults.map((f) => <option key={f.code} value={f.code}>{f.code} · {pick(f.title)}</option>)}
         </select></label>
       <label className="field"><span>{L('Time limit (minutes)', 'الزمن المسموح (دقيقة)')}</span>
         <input type="number" min={5} max={120} value={minutes} onChange={(e) => setMinutes(Number(e.target.value))} dir="ltr" /></label>

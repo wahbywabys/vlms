@@ -1,0 +1,9 @@
+**/node_modules
+**/.next
+**/dist
+**/dist-prototype
+**/.env
+**/.env.local
+**/*.tsbuildinfo
+.git
+web

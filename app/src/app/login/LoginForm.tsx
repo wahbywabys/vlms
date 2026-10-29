@@ -4,7 +4,10 @@ import { useL } from '@/components/LangProvider';
 import { login } from './actions';
 
 export const DEMO_ACCOUNTS = [
-  { email: 'student@vtc.example', role: { en: 'Student', ar: 'الطالب' }, who: { en: 'Omar Lotfy', ar: 'عمر لطفي' }, key: 'student', initials: { en: 'OL', ar: 'ع' } },
+  { email: 'student@vtc.example', role: { en: 'Student · CNC machining', ar: 'الطالب · تشغيل CNC' }, who: { en: 'Omar Lotfy', ar: 'عمر لطفي' }, key: 'student', initials: { en: 'OL', ar: 'ع' } },
+  { email: 'student.auto@vtc.example', role: { en: 'Student · Automotive', ar: 'الطالب · ميكانيكا السيارات' }, who: { en: 'Ziad Hassan', ar: 'زياد حسن' }, key: 'student', initials: { en: 'ZH', ar: 'ز' } },
+  { email: 'student.elec@vtc.example', role: { en: 'Student · Electrical', ar: 'الطالب · التركيبات الكهربائية' }, who: { en: 'Rana Ibrahim', ar: 'رنا إبراهيم' }, key: 'student', initials: { en: 'RI', ar: 'ر' } },
+  { email: 'student.weld@vtc.example', role: { en: 'Student · Welding', ar: 'الطالب · اللحام' }, who: { en: 'Hassan Gamal', ar: 'حسن جمال' }, key: 'student', initials: { en: 'HG', ar: 'ح' } },
   { email: 'trainer@vtc.example', role: { en: 'Vocational trainer', ar: 'المدرب المهني' }, who: { en: 'Eng. Huda Kamal', ar: 'م. هدى كمال' }, key: 'trainer', initials: { en: 'HK', ar: 'ه' } },
   { email: 'teacher@vtc.example', role: { en: 'Academic teacher', ar: 'المعلم الأكاديمي' }, who: { en: 'Mr. Ahmed Saleh', ar: 'أ. أحمد صالح' }, key: 'teacher', initials: { en: 'AS', ar: 'أ' } },
   { email: 'supervisor@vtc.example', role: { en: 'Workplace supervisor', ar: 'مشرف موقع العمل' }, who: { en: 'Eng. Tamer Hassan', ar: 'م. تامر حسن' }, key: 'supervisor', initials: { en: 'TH', ar: 'ت' } },
@@ -33,7 +36,7 @@ export function LoginForm() {
 
       <section className="panel demo-accounts" aria-labelledby="demo-h">
         <h2 id="demo-h">{L('Demo accounts', 'حسابات تجريبية')}</h2>
-        <p className="muted small">{L('One account per role. Password for all:', 'حساب لكل دور. كلمة المرور للجميع:')} <code dir="ltr">demo1234</code></p>
+        <p className="muted small">{L('One account per role, and a learner in each trade. Password for all:', 'حساب لكل دور، ومتدرب في كل تخصص. كلمة المرور للجميع:')} <code dir="ltr">demo1234</code></p>
         <ul>
           {DEMO_ACCOUNTS.map((a) => (
             <li key={a.email}>

@@ -1,11 +1,13 @@
 import Link from 'next/link';
 import { AssessmentTable } from '@/components/AssessmentTable';
 import { AutoRefresh } from '@/components/AutoRefresh';
+import { TradeIcon } from '@/components/TradeBar';
 import { PageHead, Stat } from '@/components/ui';
 import { requireRole } from '@/lib/auth';
 import { q, q1 } from '@/lib/db';
 import { getI18n } from '@/lib/i18n-server';
 import type { AssessmentRow } from '@/lib/queries';
+import { currentTrade, trades } from '@/lib/trade';
 import { IqaExport } from './IqaExport';
 
 export const metadata = { title: 'Institution overview' };
@@ -16,48 +18,84 @@ export default async function DirectorPage() {
   const t = await getI18n();
   const { L, ar, num } = t;
   const inst = s.institutionId;
+  // $2 is the trade picked in the trade bar, or null for all trades.
+  const picked = await currentTrade(s, 'all');
+  const tr = picked === 'all' ? null : picked;
+  const allTrades = await trades();
+  const tradeName = (id: string) => { const x = allTrades.find((t) => t.id === id); return x ? ar(x.name, x.name_ar) : id; };
+  /** SQL: the learner (a users.id expression) is in the picked trade. */
+  const learnerIn = (col: string) => `($2::text IS NULL OR EXISTS (SELECT 1 FROM v_user_trades ut WHERE ut.user_id = ${col} AND ut.trade_id = $2))`;
+  const workshopIn = (col: string) => `($2::text IS NULL OR ${col} = $2)`;
 
   const k = (await q1<{
     learners: number; attain: number | null; pass30: number | null; attempts30: number; alerts30: number; open_alerts: number;
     wbl_pct: number | null; pending: number; stale: number; util: number | null; in_review: number; overdue_service: number; low_stock: number;
   }>(
     `SELECT
-       (SELECT count(*)::int FROM users u JOIN user_roles r ON r.user_id = u.id AND r.role = 'student' WHERE u.institution_id = $1) AS learners,
+       (SELECT count(*)::int FROM users u JOIN user_roles r ON r.user_id = u.id AND r.role = 'student' WHERE u.institution_id = $1 AND ${learnerIn('u.id')}) AS learners,
        (SELECT round(100.0 * count(*) FILTER (WHERE lc.level IN ('autonomous', 'master')) / NULLIF(count(*), 0), 1)::float
-          FROM learner_competencies lc JOIN users u ON u.id = lc.learner_id WHERE u.institution_id = $1) AS attain,
+          FROM learner_competencies lc JOIN users u ON u.id = lc.learner_id WHERE u.institution_id = $1 AND ${learnerIn('u.id')}) AS attain,
        (SELECT round(100.0 * count(*) FILTER (WHERE e.passed) / NULLIF(count(*), 0), 1)::float
           FROM rubric_evaluations e JOIN users u ON u.id = e.learner_id
-         WHERE u.institution_id = $1 AND e.evaluated_at > now() - interval '30 days') AS pass30,
+         WHERE u.institution_id = $1 AND e.evaluated_at > now() - interval '30 days' AND ${learnerIn('u.id')}) AS pass30,
        (SELECT count(*)::int FROM rubric_evaluations e JOIN users u ON u.id = e.learner_id
-         WHERE u.institution_id = $1 AND e.evaluated_at > now() - interval '30 days') AS attempts30,
-       (SELECT count(*)::int FROM safety_alerts WHERE institution_id = $1 AND raised_at > now() - interval '30 days') AS alerts30,
-       (SELECT count(*)::int FROM safety_alerts WHERE institution_id = $1 AND resolved_at IS NULL) AS open_alerts,
+         WHERE u.institution_id = $1 AND e.evaluated_at > now() - interval '30 days' AND ${learnerIn('u.id')}) AS attempts30,
+       (SELECT count(*)::int FROM safety_alerts WHERE institution_id = $1 AND raised_at > now() - interval '30 days' AND ${learnerIn('learner_id')}) AS alerts30,
+       (SELECT count(*)::int FROM safety_alerts WHERE institution_id = $1 AND resolved_at IS NULL AND ${learnerIn('learner_id')}) AS open_alerts,
        (SELECT round(avg(100.0 * v.approved_hours / NULLIF(v.required_hours, 0)), 1)::float FROM v_wbl_hours_progress v
-          JOIN users u ON u.id = v.learner_id WHERE u.institution_id = $1) AS wbl_pct,
+          JOIN users u ON u.id = v.learner_id WHERE u.institution_id = $1 AND ${learnerIn('u.id')}) AS wbl_pct,
        (SELECT count(*)::int FROM wbl_logbook_entries e JOIN wbl_placements p ON p.id = e.placement_id JOIN users u ON u.id = p.learner_id
-         WHERE u.institution_id = $1 AND e.status = 'submitted') AS pending,
+         WHERE u.institution_id = $1 AND e.status = 'submitted' AND ${learnerIn('u.id')}) AS pending,
        (SELECT count(*)::int FROM wbl_logbook_entries e JOIN wbl_placements p ON p.id = e.placement_id JOIN users u ON u.id = p.learner_id
-         WHERE u.institution_id = $1 AND e.status = 'submitted' AND e.submitted_at < now() - interval '5 days') AS stale,
+         WHERE u.institution_id = $1 AND e.status = 'submitted' AND e.submitted_at < now() - interval '5 days' AND ${learnerIn('u.id')}) AS stale,
        (SELECT round(avg(utilisation_pct), 1)::float FROM v_asset_utilisation_30d v JOIN workshop_assets a ON a.id = v.asset_id
-          JOIN workshops w ON w.id = a.workshop_id WHERE w.institution_id = $1 AND a.category = 'machine' AND v.utilisation_pct > 0) AS util,
-       (SELECT count(*)::int FROM questions WHERE institution_id = $1 AND status = 'in_review') AS in_review,
+          JOIN workshops w ON w.id = a.workshop_id WHERE w.institution_id = $1 AND a.category = 'machine' AND v.utilisation_pct > 0 AND ${workshopIn('w.trade_id')}) AS util,
+       (SELECT count(*)::int FROM questions q WHERE q.institution_id = $1 AND q.status = 'in_review'
+           AND ($2::text IS NULL OR EXISTS (SELECT 1 FROM question_competencies qc JOIN competencies c ON c.id = qc.competency_id
+                JOIN competency_frameworks f ON f.id = c.framework_id WHERE qc.question_id = q.id AND f.trade_id = $2))) AS in_review,
        (SELECT count(*)::int FROM workshop_assets a JOIN workshops w ON w.id = a.workshop_id
-         WHERE w.institution_id = $1 AND a.next_service_due < current_date AND a.status <> 'retired') AS overdue_service,
-       (SELECT count(*)::int FROM consumables c JOIN workshops w ON w.id = c.workshop_id WHERE w.institution_id = $1 AND c.on_hand < c.reorder_point) AS low_stock`,
-    [inst]))!;
+         WHERE w.institution_id = $1 AND a.next_service_due < current_date AND a.status <> 'retired' AND ${workshopIn('w.trade_id')}) AS overdue_service,
+       (SELECT count(*)::int FROM consumables c JOIN workshops w ON w.id = c.workshop_id
+         WHERE w.institution_id = $1 AND c.on_hand < c.reorder_point AND ${workshopIn('w.trade_id')}) AS low_stock`,
+    [inst, tr]))!;
+
+  // One card per trade on the all-trades view.
+  const byTrade = tr ? [] : await q<{ trade_id: string; learners: number; attain: number | null; pass30: number | null; open_alerts: number; low_stock: number }>(
+    `SELECT t.id AS trade_id,
+            (SELECT count(DISTINCT ut.user_id)::int FROM v_user_trades ut JOIN user_roles r ON r.user_id = ut.user_id AND r.role = 'student'
+              JOIN users u ON u.id = ut.user_id WHERE ut.trade_id = t.id AND u.institution_id = $1) AS learners,
+            (SELECT round(100.0 * count(*) FILTER (WHERE lc.level IN ('autonomous', 'master')) / NULLIF(count(*), 0))::float
+               FROM learner_competencies lc JOIN v_user_trades ut ON ut.user_id = lc.learner_id AND ut.trade_id = t.id
+               JOIN users u ON u.id = lc.learner_id WHERE u.institution_id = $1) AS attain,
+            (SELECT round(100.0 * count(*) FILTER (WHERE e.passed) / NULLIF(count(*), 0))::float
+               FROM rubric_evaluations e JOIN v_user_trades ut ON ut.user_id = e.learner_id AND ut.trade_id = t.id
+               JOIN users u ON u.id = e.learner_id WHERE u.institution_id = $1 AND e.evaluated_at > now() - interval '30 days') AS pass30,
+            (SELECT count(*)::int FROM safety_alerts a JOIN v_user_trades ut ON ut.user_id = a.learner_id AND ut.trade_id = t.id
+              WHERE a.institution_id = $1 AND a.resolved_at IS NULL) AS open_alerts,
+            (SELECT count(*)::int FROM consumables c JOIN workshops w ON w.id = c.workshop_id
+              WHERE w.institution_id = $1 AND w.trade_id = t.id AND c.on_hand < c.reorder_point) AS low_stock
+       FROM trades t ORDER BY t.sort_order`, [inst]);
 
   const units = await q<{ code: string; title: string; title_ar: string | null; pct: number; learners: number; safety: boolean }>(
     `SELECT u.code, u.title, u.title_ar, u.is_safety_critical AS safety,
             round(100.0 * count(*) FILTER (WHERE lc.level IN ('autonomous', 'master')) / NULLIF(count(*), 0))::int AS pct,
             count(DISTINCT lc.learner_id)::int AS learners
        FROM competencies u JOIN competencies e ON e.parent_id = u.id
+       JOIN competency_frameworks f ON f.id = u.framework_id
        JOIN learner_competencies lc ON lc.competency_id = e.id JOIN users x ON x.id = lc.learner_id AND x.institution_id = $1
-      WHERE u.kind = 'unit' GROUP BY u.id ORDER BY pct`, [inst]);
+      WHERE u.kind = 'unit' AND ($2::text IS NULL OR (f.trade_id = $2 AND ${learnerIn('x.id')}))
+      GROUP BY u.id ORDER BY pct LIMIT 12`, [inst, tr]);
 
   const assets = await q<{ asset_tag: string; name: string; workshop: string; pct: number }>(
     `SELECT v.asset_tag, v.name, v.workshop, v.utilisation_pct::float AS pct
        FROM v_asset_utilisation_30d v JOIN workshop_assets a ON a.id = v.asset_id JOIN workshops w ON w.id = a.workshop_id
-      WHERE w.institution_id = $1 AND a.category = 'machine' ORDER BY v.utilisation_pct DESC LIMIT 10`, [inst]);
+      WHERE w.institution_id = $1 AND a.category = 'machine' AND ${workshopIn('w.trade_id')} ORDER BY v.utilisation_pct DESC LIMIT 10`, [inst, tr]);
+
+  const stock = await q<{ sku: string; name: string; workshop: string; workshop_ar: string | null; on_hand: number; reorder_point: number; unit: string }>(
+    `SELECT c.sku, c.name, w.name AS workshop, w.name_ar AS workshop_ar, c.on_hand::float, c.reorder_point::float, c.unit
+       FROM consumables c JOIN workshops w ON w.id = c.workshop_id
+      WHERE w.institution_id = $1 AND ${workshopIn('w.trade_id')}
+      ORDER BY c.on_hand / NULLIF(c.reorder_point, 0), c.name LIMIT 8`, [inst, tr]);
 
   const latest = await q<AssessmentRow & { learner: string; learner_ar: string | null }>(
     `SELECT e.subject_type AS kind, e.subject_id AS id, COALESCE(l.title, r.title) AS title, l.title_ar, s.mode::text AS mode,
@@ -66,7 +104,7 @@ export default async function DirectorPage() {
        FROM rubric_evaluations e JOIN rubrics r ON r.id = e.rubric_id JOIN users u ON u.id = e.learner_id
        LEFT JOIN virtual_lab_sessions s ON e.subject_type = 'vlab_session' AND s.id = e.subject_id
        LEFT JOIN virtual_labs l ON l.id = s.lab_id LEFT JOIN users ev ON ev.id = e.evaluator_id
-      WHERE u.institution_id = $1 ORDER BY e.evaluated_at DESC LIMIT 12`, [inst]);
+      WHERE u.institution_id = $1 AND ${learnerIn('u.id')} ORDER BY e.evaluated_at DESC LIMIT 12`, [inst, tr]);
 
   const instRow = await q1<{ name: string; name_ar: string | null }>(`SELECT name, name_ar FROM institutions WHERE id = $1`, [inst]);
   const queue = [
@@ -81,7 +119,7 @@ export default async function DirectorPage() {
   return (
     <div className="dash">
       <AutoRefresh ms={10000} />
-      <PageHead eyebrow={L('Director · Institutional health', 'المدير · صحة المؤسسة')} title={ar(instRow?.name, instRow?.name_ar)}
+      <PageHead eyebrow={L('Director · Institutional health', 'المدير · صحة المؤسسة')} title={tr ? `${ar(instRow?.name, instRow?.name_ar)} · ${tradeName(tr)}` : ar(instRow?.name, instRow?.name_ar)}
         sub={L('Live from the system of record. Refreshes every 10 seconds.', 'مباشرة من سجل النظام. تتحدث كل 10 ثوانٍ.')}>
         <IqaExport institution={instRow?.name ?? ''} rows={iqaRows} />
       </PageHead>
@@ -94,6 +132,30 @@ export default async function DirectorPage() {
         <Stat label={L('Placement hours', 'ساعات التدريب الميداني')} value={num(k.wbl_pct ?? 0)} unit="%" sub={L('of required hours, approved', 'من الساعات المطلوبة، معتمدة')} />
         <Stat label={L('Machine utilisation · 30 d', 'استغلال الماكينات · 30 يومًا')} value={num(k.util ?? 0)} unit="%" sub={L('booked ÷ 8 h days', 'المحجوز ÷ 8 ساعات يوميًا')} />
       </div>
+
+      {!tr && (
+        <section className="panel trades-panel">
+          <header className="panel-head"><h2>{L('Trades at this centre', 'التخصصات في هذا المركز')}</h2>
+            <span className="muted">{L('Pick a trade above to see its own figures', 'اختر تخصصًا بالأعلى لعرض أرقامه')}</span></header>
+          <div className="trade-cards">
+            {byTrade.map((x) => {
+              const tt = allTrades.find((t) => t.id === x.trade_id);
+              return (
+                <div key={x.trade_id} className="trade-card">
+                  <div className="trade-card-head"><TradeIcon d={tt?.icon ?? null} size={22} />
+                    <span><strong>{tradeName(x.trade_id)}</strong><small>{L(`${x.learners} learners`, `${x.learners} متدربًا`)}</small></span></div>
+                  <dl>
+                    <div><dt>{L('Attainment', 'التحقق')}</dt><dd>{num(x.attain ?? 0)}%</dd></div>
+                    <div><dt>{L('Pass · 30 d', 'النجاح · 30 يومًا')}</dt><dd>{num(x.pass30 ?? 0)}%</dd></div>
+                    <div><dt>{L('Open alerts', 'تنبيهات مفتوحة')}</dt><dd className={x.open_alerts ? 'bad-text' : ''}>{x.open_alerts}</dd></div>
+                  </dl>
+                  {x.low_stock > 0 && <p className="muted small">▲ {L(`${x.low_stock} consumable${x.low_stock === 1 ? '' : 's'} low`, `${x.low_stock} من المستهلكات منخفضة`)}</p>}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <div className="dash-grid">
         <section className="panel">
@@ -144,8 +206,22 @@ export default async function DirectorPage() {
         </section>
 
         <section className="panel">
+          <header className="panel-head"><h2>{L('Consumables stock', 'مخزون المستهلكات')}</h2>
+            <span className="muted">{L('lowest against reorder point first', 'الأقل مقارنة بحد إعادة الطلب أولًا')}</span></header>
+          <ul className="stock">
+            {stock.map((c) => (
+              <li key={c.sku} className={c.on_hand < c.reorder_point ? 'low' : ''}>
+                <span>{c.name}</span>
+                <span className="qty" dir="ltr">{num(c.on_hand, c.on_hand % 1 ? 1 : 0)} {c.unit}</span>
+                <small>{ar(c.workshop, c.workshop_ar)} · {L(`reorder at ${c.reorder_point}`, `إعادة الطلب عند ${c.reorder_point}`)}</small>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="panel">
           <header className="panel-head"><h2>{L('Where the evidence comes from', 'مصادر الأدلة')}</h2></header>
-          <EvidenceMix inst={inst} />
+          <EvidenceMix inst={inst} trade={tr} />
         </section>
 
         <section className="panel wide">
@@ -158,17 +234,18 @@ export default async function DirectorPage() {
   );
 }
 
-async function EvidenceMix({ inst }: { inst: string }) {
+async function EvidenceMix({ inst, trade }: { inst: string; trade: string | null }) {
   const { L, num } = await getI18n();
+  const inTrade = `($2::text IS NULL OR EXISTS (SELECT 1 FROM v_user_trades ut WHERE ut.user_id = u.id AND ut.trade_id = $2))`;
   const rows = await q<{ source_type: string; n: number }>(
     `SELECT e.source_type, count(*)::int AS n FROM competency_evidence e JOIN users u ON u.id = e.learner_id
-      WHERE u.institution_id = $1 GROUP BY 1`, [inst]);
+      WHERE u.institution_id = $1 AND ${inTrade} GROUP BY 1`, [inst, trade]);
   const evals = await q<{ subject_type: string; n: number }>(
     `SELECT e.subject_type, count(*)::int AS n FROM rubric_evaluations e JOIN users u ON u.id = e.learner_id
-      WHERE u.institution_id = $1 GROUP BY 1`, [inst]);
+      WHERE u.institution_id = $1 AND ${inTrade} GROUP BY 1`, [inst, trade]);
   const signed = await q1<{ n: number }>(
     `SELECT count(*)::int AS n FROM wbl_signoffs s JOIN wbl_logbook_entries e ON e.id = s.entry_id JOIN wbl_placements p ON p.id = e.placement_id
-      JOIN users u ON u.id = p.learner_id WHERE u.institution_id = $1`, [inst]);
+      JOIN users u ON u.id = p.learner_id WHERE u.institution_id = $1 AND ${inTrade}`, [inst, trade]);
   const get = (list: { n: number }[], key: string, field: 'source_type' | 'subject_type') =>
     (list as Record<string, unknown>[]).find((r) => r[field] === key)?.['n'] as number | undefined ?? 0;
   const items = [

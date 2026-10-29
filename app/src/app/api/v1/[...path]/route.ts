@@ -7,7 +7,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { API_URL } from '@/lib/api';
 import { apiToken, getSession } from '@/lib/auth';
 
-const ALLOWED = /^(vlab\/sessions(\/[0-9a-f-]{36}(\/(telemetry|probe|evaluate))?)?|alerts(\/[0-9a-f-]{36}\/resolve)?|workshop\/observations)$/;
+const ALLOWED = /^(vlab\/labs(\/[A-Z0-9-]+)?|vlab\/sessions(\/[0-9a-f-]{36}(\/(telemetry|probe|evaluate))?)?|alerts(\/[0-9a-f-]{36}\/resolve)?|workshop\/observations)$/;
 
 async function forward(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
   const s = await getSession();

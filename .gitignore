@@ -6,3 +6,4 @@ dist-prototype
 .next
 next-env.d.ts
 *.tsbuildinfo
+dist-offline

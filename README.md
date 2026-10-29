@@ -30,11 +30,25 @@ Sign in with any demo account (password `demo1234`), or use the one-click button
 
 | Role | Email | Workspace |
 |---|---|---|
-| Student | student@vtc.example | Progress, V-Lab fault test + 3D motor, theory quiz, logbook with GPS check-in |
-| Vocational trainer | trainer@vtc.example | Workshop floor (alerts, one-tap rubric, offline outbox), V-Lab exams, learner records |
+| Student (CNC machining) | student@vtc.example | Progress, V-Lab fault test + 3D motor, theory quiz, logbook with GPS check-in |
+| Student (automotive, electrical, welding) | student.auto@ / student.elec@ / student.weld@vtc.example | The same screens, for that trade's V-Lab, job cards and questions |
+| Vocational trainer | trainer@vtc.example | Workshop floor (alerts, one-tap rubric, offline outbox), V-Lab exams, learner records, for every trade (switch with the trade bar) |
 | Academic teacher | teacher@vtc.example | Question bank (draft → review → approved), new bilingual items, competency matrix |
 | Workplace supervisor | supervisor@vtc.example | Logbook sign-offs with signed, immutable decisions |
 | Director | director@vtc.example | Institution KPIs, attainment by unit, utilisation, compliance queue, IQA export |
+
+### Trades (specialisations)
+
+The demo centre teaches four trades: CNC machining, automotive mechanics, electrical installation and welding. Each has its own competency framework, cohort, workshop, job-card rubric, consumables, V-Lab fault test and questions. Staff switch trade with the trade bar under the top bar (the director also has "All trades"); a learner always sees their own cohort's trade. Each trade also has its own trainer (`trainer.auto@`, `trainer.elec@`, `trainer.weld@vtc.example`).
+
+To add a trade:
+
+1. Insert a row in `trades` (see `db/migrations/001_trades.sql`) and set `trade_id` on its framework, cohort, workshop and rubrics.
+2. Give the workshop an observation rubric (`workshops.observation_rubric_id`); the trainer floor scores against it.
+3. Write its V-Lab as one file in `api/src/labs/` (shaped like `cnc.ts`), list it in `api/src/labs/index.ts`, and seed its `virtual_labs`, `lab_faults` and rubric rows. `api/test/labs.test.ts` checks that every fault can be found and a careful attempt scores 100.
+4. For the clickable prototype, add `web/src/prototype/trades/<id>.ts` and list it in `trades/index.ts`.
+
+To put it online, follow [DEPLOY.md](DEPLOY.md) (Railway: app, API, Postgres and Redis, with the schema applied on every deploy). `npm run migrate` in `api/` applies the same migrations locally.
 
 Tests: `cd api && DATABASE_URL=postgres://…/vtc_lms_test npm test` (unit + integration against a real database).
 
