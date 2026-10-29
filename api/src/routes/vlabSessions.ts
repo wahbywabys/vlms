@@ -1,11 +1,13 @@
 /**
  * V-Lab fault-test endpoints
  *
+ *   GET  /v1/vlab/labs[?trade=]                   lab catalogue (what a client needs to draw a rig)
+ *   GET  /v1/vlab/labs/:code                      one lab's catalogue
  *   POST /v1/vlab/sessions                        start a practice or assessment session
  *   GET  /v1/vlab/sessions/:sessionId             session state (rig, events, result)
  *   POST /v1/vlab/sessions/:sessionId/telemetry   batched, idempotent ingestion
  *                                                 + live safety guardrails
- *   POST /v1/vlab/sessions/:sessionId/probe       multimeter reading at a test point
+ *   POST /v1/vlab/sessions/:sessionId/probe       instrument reading at a test point
  *                                                 (computed server-side; recorded as telemetry)
  *   POST /v1/vlab/sessions/:sessionId/evaluate    submit & score against rubric
  */
@@ -16,7 +18,7 @@ import { isStaff, type Principal } from '../lib/auth.js';
 import { withTx, type Db, type Tx } from '../lib/db.js';
 import { conflict, forbidden, HttpError, notFound } from '../lib/errors.js';
 import type { Realtime } from '../lib/redis.js';
-import { INSIDE_PANEL, TEST_POINTS, motorRuns, readMeter, type RigState } from '../services/dolSimulator.js';
+import { LABS, labByCode, machineRuns, publicCatalogue, readMeter, rigFrom, runObservation, type LabDef } from '../labs/index.js';
 import { detectGateViolations, evaluate, levelForScore, type GuardrailAlert, type TelemetryEvent } from '../services/rubricEngine.js';
 import * as repo from '../services/vlabRepository.js';
 
@@ -44,7 +46,7 @@ const TelemetryBatch = z.object({
 const ProbeBody = z.object({
   seq: z.number().int().positive(),
   occurredAt: z.string().datetime({ offset: true }),
-  testPoint: z.enum(TEST_POINTS),
+  testPoint: z.string().min(1).max(60),
 });
 
 const CreateSession = z.object({
@@ -62,23 +64,30 @@ function assertCanAct(p: Principal, session: repo.SessionRow) {
   if (p.userId !== session.learner_id && !isStaff(p)) throw forbidden();
 }
 
-/** Rig state is derived from the recorded stream, never trusted from the client. */
-export function rigFrom(events: TelemetryEvent[]): RigState & { ppe: boolean } {
-  const rig = { ppe: false, locked: false, panelOpen: false, replaced: [] as string[] };
-  for (const e of [...events].sort((a, b) => a.seq - b.seq)) {
-    if (e.verb === 'ppe_donned') rig.ppe = true;
-    else if (e.verb === 'loto_applied') rig.locked = true;
-    else if (e.verb === 'loto_removed') rig.locked = false;
-    else if (e.verb === 'panel_opened') rig.panelOpen = true;
-    else if (e.verb === 'panel_closed') rig.panelOpen = false;
-    else if (e.verb === 'component_replaced' && e.objectRef && !rig.replaced.includes(e.objectRef)) rig.replaced.push(e.objectRef);
-  }
-  return rig;
+export { rigFrom };
+
+function labOf(session: repo.SessionRow): LabDef {
+  const lab = labByCode(session.lab_code);
+  if (!lab) throw new HttpError(422, 'lab_unsupported', `No simulator for ${session.lab_code}`);
+  return lab;
 }
 
 export function vlabSessionsRouter(deps: { db: Db; realtime: Realtime; log: Logger }) {
   const { db, realtime, log } = deps;
   const router = Router();
+
+  // -------------------------------------------------------------------------
+  // Lab catalogue (public: labels, test points, drawing; never readings)
+  // -------------------------------------------------------------------------
+  router.get('/v1/vlab/labs', (req: Request, res) => {
+    const trade = typeof req.query['trade'] === 'string' ? req.query['trade'] : undefined;
+    res.json({ labs: LABS.filter((l) => !trade || l.trade === trade).map(publicCatalogue) });
+  });
+  router.get('/v1/vlab/labs/:code', (req: Request, res) => {
+    const lab = labByCode(String(req.params['code']));
+    if (!lab) throw notFound('Lab');
+    res.json(publicCatalogue(lab));
+  });
 
   // -------------------------------------------------------------------------
   // Start a session
@@ -233,9 +242,11 @@ export function vlabSessionsRouter(deps: { db: Db; realtime: Realtime; log: Logg
     const all = [...prior, ...fresh];
     const rig = rigFrom(all);
     const lastSeq = Math.max(Number(session.last_seq), ...fresh.map((f) => f.seq));
+    const ran = fresh.some((f) => f.verb === 'start_pressed');
     return {
       session, fresh, duplicates: seen.size, rejected, alerts, stored, lastSeq, rig,
-      motorRuns: fresh.some((f) => f.verb === 'start_pressed') ? motorRuns(faultComponents, rig) : undefined,
+      motorRuns: ran ? machineRuns(faultComponents, rig) : undefined,
+      observation: ran ? runObservation(labOf(session), faultComponents, rig) : undefined,
     };
   }
 
@@ -262,7 +273,7 @@ export function vlabSessionsRouter(deps: { db: Db; realtime: Realtime; log: Logg
     // In guided mode the client must block the unsafe action and replay the safety micro-lesson.
     guardrail: o.session.mode === 'guided' && o.alerts.length > 0 ? ('block' as const) : null,
     rig: o.rig,
-    ...(o.motorRuns !== undefined ? { motorRuns: o.motorRuns } : {}),
+    ...(o.motorRuns !== undefined ? { motorRuns: o.motorRuns, observation: o.observation } : {}),
   });
 
   router.post('/v1/vlab/sessions/:sessionId/telemetry', async (req: Request, res) => {
@@ -282,10 +293,13 @@ export function vlabSessionsRouter(deps: { db: Db; realtime: Realtime; log: Logg
     const body = ProbeBody.parse(req.body);
     let meter: ReturnType<typeof readMeter> | null = null;
     const outcome = await withTx(db, (tx) =>
-      ingest(tx, req.principal!, sessionId, [], Date.now(), (_session, prior, faultComponents) => {
+      ingest(tx, req.principal!, sessionId, [], Date.now(), (session, prior, faultComponents) => {
+        const lab = labOf(session);
+        const tp = lab.testPoints.find((t) => t.ref === body.testPoint);
+        if (!tp) throw new HttpError(422, 'unknown_test_point', `${body.testPoint} is not on ${lab.code}`);
         const rig = rigFrom(prior);
-        if (INSIDE_PANEL.has(body.testPoint) && !rig.panelOpen) throw conflict('panel_closed', 'Open the panel door first');
-        meter = readMeter(body.testPoint, faultComponents, rig);
+        if (tp.inside && !rig.panelOpen) throw conflict('panel_closed', 'Open the enclosure first');
+        meter = readMeter(lab, body.testPoint, faultComponents, rig);
         const value = meter.live ? {} : { reading: meter.reading, unit: meter.unit };
         return [{ seq: body.seq, occurredAt: body.occurredAt, verb: meter.live ? 'energized_contact' : 'measured', objectRef: body.testPoint, value }];
       }));

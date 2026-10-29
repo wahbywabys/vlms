@@ -6,7 +6,7 @@ import { inductionMotorParts } from '../models/inductionMotor';
 import { tx, type Txt } from './i18n';
 import { TRADES, type Trade } from './trades';
 import type { Diagram, Fault, Lab, RigState, TestPoint } from './trades/types';
-import { detectGateViolations, evaluate, levelForScore, toEvent, type EvaluationResult, type TelemetryEvent } from './vlab';
+import { detectGateViolations, evaluate, levelForScore, stepDone, toEvent, type EvaluationResult, type TelemetryEvent } from './vlab';
 import { explorerStringsAr, inductionMotorPartsAr } from './motorAr';
 import { useL, useStore } from './store';
 import { CardHead, PageHeader } from './ui';
@@ -181,7 +181,7 @@ function FaultTest({ trade }: { trade: Trade }) {
       }
       return;
     }
-    const r = tp.read(fault, rig);
+    const r = tp.read({ isFaulty: (c) => c === fault.componentRef && !rig.replaced.includes(c), rig });
     if (emit('measured', tp.ref, { reading: r.reading, unit: r.unit })) setMeter({ tp, display: r.display });
   })();
   const submitDiagnosis = act(() => {
@@ -207,10 +207,9 @@ function FaultTest({ trade }: { trade: Trade }) {
   };
 
   // Guided step pointer: first step whose evidence is not in the stream yet.
-  const has = (verb: string, ref?: string) => events.some((e) => e.verb === verb && (!ref || e.objectRef === ref));
-  const stepDone = lab.steps.map((s) => s.done(has, rig));
+  const done = lab.steps.map((s) => stepDone(s.done, events, rig));
   const nSteps = lab.steps.length;
-  const step = stepDone.findIndex((d) => !d);
+  const step = done.findIndex((d) => !d);
 
   return (
     <div className="vlab">
@@ -263,8 +262,8 @@ function FaultTest({ trade }: { trade: Trade }) {
               sub={L(`Step ${step === -1 ? nSteps : step + 1} of ${nSteps}`, `الخطوة ${step === -1 ? nSteps : step + 1} من ${nSteps}`)} />
             <ol className="steps">
               {lab.steps.map((s, i) => (
-                <li key={s.text.en} className={stepDone[i] ? 'done' : i === step ? 'now' : ''}>
-                  <span className="step-mark" aria-hidden="true">{stepDone[i] ? '✓' : i + 1}</span>{pick(s.text)}
+                <li key={s.text.en} className={done[i] ? 'done' : i === step ? 'now' : ''}>
+                  <span className="step-mark" aria-hidden="true">{done[i] ? '✓' : i + 1}</span>{pick(s.text)}
                 </li>
               ))}
             </ol>
