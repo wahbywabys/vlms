@@ -48,9 +48,10 @@ export default async function TrainerFloorPage() {
       ORDER BY a.asset_tag NULLS LAST, u.full_name`, [s.userId, trade, bay.rubric_code]);
 
   const rubric = await q<ObsCriterion>(
-    `SELECT c.key, c.label, c.label_ar AS "labelAr", c.weight::float AS weight, c.is_gate AS "isGate", c.scoring
+    `SELECT c.key, c.label, c.label_ar AS "labelAr", c.weight::float AS weight, c.is_gate AS "isGate", c.scoring,
+            c.category, c.descriptors, c.photo_rule AS "photoRule", r.pass_threshold::float AS "passThreshold"
        FROM rubric_criteria c JOIN rubrics r ON r.id = c.rubric_id
-      WHERE r.code = $1 ORDER BY c.is_gate DESC, c.weight DESC, c.key`, [bay.rubric_code]);
+      WHERE r.code = $1 ORDER BY c.is_gate DESC, c.sort_order, c.weight DESC, c.key`, [bay.rubric_code]);
 
   const stock = await q<{ name: string; on_hand: number; reorder_point: number; unit: string }>(
     `SELECT name, on_hand::float, reorder_point::float, unit FROM consumables

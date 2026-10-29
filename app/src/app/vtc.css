@@ -701,3 +701,12 @@ button:hover:not(:disabled) { border-color: var(--blue); }
 .lesson-state.done { background: var(--ok-soft); color: var(--ok); }
 .lesson-note { margin: 0; font-size: 13px; }
 @media (max-width: 760px) { .explore-foot { grid-template-columns: minmax(0, 1fr); } }
+
+/* ── Module screens (Tailwind) ─────────────────────────────────────────── */
+.obs.obs-tw { background: none; border: 0; box-shadow: none; padding: 0; }
+@media (min-width: 1081px) { .obs.obs-tw { padding-bottom: 4px; } }
+.evidence-strip { display: flex; gap: 8px; overflow-x: auto; margin: 4px 0 8px; }
+.evidence-strip img, .evidence-strip video { height: 88px; width: 88px; object-fit: cover; border-radius: 8px; border: 1px solid var(--rule); background: var(--sunk); }
+@media print { .shell-side, .topbar, .tradebar, .page-head .head-actions { display: none !important; } }
+/* Grid children may shrink below their content, so long names truncate instead of widening the page on phones. */
+.page > * { min-width: 0; }

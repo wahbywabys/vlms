@@ -15,7 +15,9 @@ export const WORKSPACE: Record<WorkspaceKey, { role: Role; label: Txt; home: str
     sections: [
       { href: '/student', label: tx('My progress', 'تقدّمي'), exact: true },
       { href: '/student/lab', label: tx('V-Lab', 'المعمل الافتراضي') },
+      { href: '/student/machine', label: tx('Machine access', 'تشغيل الماكينة') },
       { href: '/student/quiz', label: tx('Theory quiz', 'اختبار نظري') },
+      { href: '/student/assess', label: tx('Applied assessment', 'تقييم تطبيقي') },
       { href: '/student/logbook', label: tx('Logbook', 'سجل التدريب') },
     ],
   },
@@ -23,8 +25,11 @@ export const WORKSPACE: Record<WorkspaceKey, { role: Role; label: Txt; home: str
     role: 'vocational_trainer', label: tx('Vocational trainer', 'المدرب المهني'), home: '/trainer', alerts: '/trainer', trades: 'pick',
     sections: [
       { href: '/trainer', label: tx('Workshop floor', 'أرضية الورشة'), exact: true },
+      { href: '/trainer/machines', label: tx('Machines', 'الماكينات') },
+      { href: '/trainer/stores', label: tx('Stores', 'المخزن') },
       { href: '/trainer/vlab', label: tx('V-Lab exams', 'امتحانات المعمل') },
       { href: '/trainer/learners', label: tx('Learners', 'المتدربون') },
+      { href: '/trainer/risk', label: tx('Early warning', 'الإنذار المبكر') },
     ],
   },
   teacher: {
@@ -32,6 +37,7 @@ export const WORKSPACE: Record<WorkspaceKey, { role: Role; label: Txt; home: str
     sections: [
       { href: '/teacher', label: tx('Question bank', 'بنك الأسئلة'), exact: true },
       { href: '/teacher/new', label: tx('New question', 'سؤال جديد') },
+      { href: '/teacher/parametric', label: tx('Parameterised item', 'سؤال بمتغيرات') },
       { href: '/teacher/matrix', label: tx('Competency matrix', 'مصفوفة الجدارات') },
     ],
   },
@@ -44,6 +50,8 @@ export const WORKSPACE: Record<WorkspaceKey, { role: Role; label: Txt; home: str
     sections: [
       { href: '/director', label: tx('Institution overview', 'نظرة عامة على المؤسسة'), exact: true },
       { href: '/director/learners', label: tx('Learners', 'المتدربون') },
+      { href: '/director/skills', label: tx('Skills heatmap', 'خريطة المهارات') },
+      { href: '/director/risk', label: tx('Early warning', 'الإنذار المبكر') },
     ],
   },
 };

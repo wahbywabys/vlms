@@ -107,7 +107,7 @@ Before each API deploy, Railway runs `npx tsx src/migrate.ts` (`npm run migrate`
 
 1. `db/schema.sql` and `db/seed.sql` (the base schema and reference data)
 2. every file in `db/migrations/` in name order, for example `db/migrations/001_trades.sql`
-3. `db/demo.sql` and then `db/demo_trades.sql` (the automotive, electrical and welding cohorts), only when `SEED_DEMO=true`
+3. `db/demo.sql`, then `db/demo_trades.sql` (the automotive, electrical and welding cohorts), then `db/demo_modules.sql` (machines, pre-checks, OJT shifts, schematics and parametric items), only when `SEED_DEMO=true`
 
 Each file runs in a transaction and is recorded in the table `public.vtc_migrations`. If a file fails, the deploy stops and the running version stays live. To change the schema later, add a new numbered file to `db/migrations/` and push. Do not edit `schema.sql` after the first deploy, because that file is never run again.
 

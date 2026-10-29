@@ -22,8 +22,8 @@ export default async function SupervisorPage() {
        FROM wbl_placements p JOIN users u ON u.id = p.learner_id JOIN employer_sites es ON es.id = p.site_id
        JOIN v_wbl_hours_progress v ON v.placement_id = p.id
       WHERE p.supervisor_id = $1 ORDER BY u.full_name`, [s.userId]);
-  const pending = await q<{ id: string; name: string; name_ar: string | null; work_date: Date; hours: number; task_summary: string; codes: string[]; submitted_at: Date; inside: boolean | null }>(
-    `SELECT e.id, u.full_name AS name, u.full_name_ar AS name_ar, e.work_date, e.hours::float, e.task_summary, e.submitted_at,
+  const pending = await q<{ id: string; name: string; name_ar: string | null; work_date: Date; hours: number; task_summary: string; codes: string[]; submitted_at: Date; inside: boolean | null; media: { mediaId: string; type: string; captured_at: string }[] }>(
+    `SELECT e.id, u.full_name AS name, u.full_name_ar AS name_ar, e.work_date, e.hours::float, e.task_summary, e.submitted_at, e.media,
             ARRAY(SELECT c.code FROM competencies c WHERE c.id = ANY(e.competency_ids) ORDER BY c.code) AS codes,
             (SELECT bool_and(c.inside_geofence) FROM wbl_checkins c WHERE c.placement_id = e.placement_id AND c.device_time::date = e.work_date) AS inside
        FROM wbl_logbook_entries e JOIN wbl_placements p ON p.id = e.placement_id JOIN users u ON u.id = p.learner_id
@@ -59,6 +59,14 @@ export default async function SupervisorPage() {
                 </div>
                 <p dir="auto">{e.task_summary}</p>
                 <p className="muted small mono">{e.codes.join(' · ')}</p>
+                {e.media.some((m) => m.mediaId) && (
+                  <div className="evidence-strip">
+                    {e.media.filter((m) => m.mediaId).map((m) => m.type === 'video'
+                      ? <video key={m.mediaId} src={`/api/v1/media/${m.mediaId}`} controls preload="none" />
+                      : <a key={m.mediaId} href={`/api/v1/media/${m.mediaId}`} target="_blank" rel="noreferrer" title={new Date(m.captured_at).toLocaleString('en-GB')}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}<img src={`/api/v1/media/${m.mediaId}`} alt={L('Evidence photo', 'صورة دليل')} loading="lazy" /></a>)}
+                  </div>
+                )}
                 <form action={decide} className="entry-actions">
                   <input type="hidden" name="entry" value={e.id} />
                   <label className="field"><span>{L('Rating', 'التقييم')}</span>

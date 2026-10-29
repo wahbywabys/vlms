@@ -1,13 +1,18 @@
 'use client';
 /**
  * Trainer tablet floor view, wired to the API: live alert rail, one-tap
- * rubric scoring graded by the server's rubric engine, and an offline
- * outbox that replays sign-offs idempotently (clientMutationId) on reconnect.
+ * rubric scoring with instant photo capture (FloorRubric), graded by the
+ * server's rubric engine, and an IndexedDB outbox that keeps sign-offs and
+ * their photos while the workshop Wi-Fi is down and replays them through
+ * /v1/sync, idempotently on clientMutationId, when it comes back.
  */
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useL } from '@/components/LangProvider';
+import { FloorRubric, previewScore, type Category, type Mark, type RubricCriterion, type RubricPhoto } from '@/components/modules/FloorRubric';
+import { compressImage } from '@/components/modules/media';
+import { flush as flushOutbox, pendingCount, queueMedia, queueMutation } from '@/components/modules/outbox';
 import { tx, type Txt } from '@/lib/i18n';
 
 export interface FloorStation {
@@ -17,15 +22,19 @@ export interface FloorStation {
 export interface ObsCriterion {
   key: string; label: string; labelAr: string | null; weight: number; isGate: boolean;
   scoring: { rule: string; objectRef?: string; expected?: number; absTol?: number; unit?: string; measure?: Txt };
+  category: Category | null; descriptors: RubricCriterion['descriptors']; photoRule: RubricCriterion['photoRule']; passThreshold: number;
 }
 interface Alert {
   id: string; source: 'vlab' | 'rfid' | 'observation'; criterionKey: string | null; verb: string | null; detail: string;
   raisedAt: string; learnerId: string; learnerName: string; learnerNameAr: string | null;
 }
 type StationStatus = 'done' | 'working' | 'alert' | 'idle';
-type Marks = Record<string, string | number | undefined>;
+type Marks = Record<string, Mark>;
 interface Outbound { clientMutationId: string; learnerId: string; rubricCode: string; assetTag?: string; taskRef: string;
-  checks: Record<string, boolean>; ratings: Record<string, number>; measurements: Record<string, number>; note?: string }
+  checks: Record<string, boolean>; ratings: Record<string, number>; measurements: Record<string, number>; note?: string;
+  media?: { mediaId: string; criterionKey?: string }[] }
+/** A photo on the tablet: the local copy (always in IndexedDB) and the server id once uploaded. */
+type Photo = RubricPhoto & { localId: string; serverId?: string };
 
 const GLYPH: Record<StationStatus, string> = { done: '✓', working: '●', alert: '▲', idle: '○' };
 const STATUS_LABEL: Record<StationStatus, Txt> = {
@@ -42,33 +51,7 @@ const GATE_LABEL: Record<string, Txt> = {
   hot_work: tx('Hot-work controls missing', 'ضوابط الأعمال الساخنة غير مطبّقة'),
 };
 const SOURCE: Record<Alert['source'], Txt> = { vlab: tx('V-Lab exam', 'امتحان افتراضي'), rfid: tx('RFID interlock', 'قفل RFID'), observation: tx('Floor observation', 'ملاحظة الورشة') };
-const OUTBOX = 'vtc-outbox';
-const PASS = 70;
-
-const readOutbox = (): Outbound[] => { try { return JSON.parse(localStorage.getItem(OUTBOX) ?? '[]') as Outbound[]; } catch { return []; } };
-const writeOutbox = (o: Outbound[]) => { try { localStorage.setItem(OUTBOX, JSON.stringify(o)); } catch { /* storage unavailable */ } };
-
-/** Same bands as the API's measurement_tolerance rule: full inside, half inside 2×. */
-function tolScore(c: ObsCriterion, v: number) {
-  const e = c.scoring.expected ?? 0, t = c.scoring.absTol ?? 0, d = Math.abs(v - e);
-  return d <= t + 1e-12 ? 100 : d <= 2 * t + 1e-12 ? 50 : 0;
-}
-
-/** Live preview only; the score that is saved comes from the server's rubric engine. */
-function preview(rubric: ObsCriterion[], m: Marks) {
-  let weighted = 0, weights = 0, complete = true, gateFail = false;
-  for (const c of rubric) {
-    const v = m[c.key];
-    weights += c.weight;
-    if (v === undefined || v === '') { complete = false; continue; }
-    const s = c.scoring.rule === 'check' ? (v === 'pass' ? 100 : 0)
-      : c.scoring.rule === 'rating' ? (Number(v) / 4) * 100 : tolScore(c, Number(v));
-    if (c.isGate && s < 100) gateFail = true;
-    weighted += s * c.weight;
-  }
-  const score = weights ? Math.round((weighted / weights) * 100) / 100 : 0;
-  return { complete, gateFail, score, passed: !gateFail && score >= PASS };
-}
+const API = '/api/v1';
 
 export function Floor({ bay, job, stations, rubric, stock, toolsOut, lab, liveExams, trainer }: {
   bay: { name: string; name_ar: string | null; cohort: string; cohort_ar: string | null };
@@ -79,12 +62,13 @@ export function Floor({ bay, job, stations, rubric, stock, toolsOut, lab, liveEx
   stock: { name: string; on_hand: number; reorder_point: number; unit: string }[];
   toolsOut: number; liveExams: number; trainer: { name: string; nameAr: string | null };
 }) {
-  const { L, pick, ar, time } = useL();
+  const { L, pick, ar, time, lang } = useL();
   const router = useRouter();
   const [sel, setSel] = useState(() => stations.find((s) => s.score === null && s.assetTag)?.learnerId ?? stations[0]?.learnerId ?? '');
   const [marks, setMarks] = useState<Record<string, Marks>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
-  const [noteOpen, setNoteOpen] = useState(false);
+  const [photos, setPhotos] = useState<Record<string, Photo[]>>({});
+  const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<Txt | null>(null);
   const [allAlerts, setAlerts] = useState<Alert[]>([]);
   const [simOffline, setSimOffline] = useState(false);
@@ -102,28 +86,24 @@ export function Floor({ bay, job, stations, rubric, stock, toolsOut, lab, liveEx
   useEffect(() => { void loadAlerts(); const t = setInterval(loadAlerts, 5000); return () => clearInterval(t); }, [loadAlerts]);
 
   useEffect(() => {
-    setNetOnline(navigator.onLine); setQueued(readOutbox().length);
+    setNetOnline(navigator.onLine); void pendingCount().then(setQueued).catch(() => undefined);
     const on = () => setNetOnline(navigator.onLine);
     addEventListener('online', on); addEventListener('offline', on);
     return () => { removeEventListener('online', on); removeEventListener('offline', on); };
   }, []);
 
-  // Replay the outbox when back online. Replays are idempotent on clientMutationId.
+  // Replay the outbox when back online: photos first, then one /v1/sync batch.
   const flush = useCallback(async () => {
-    const box = readOutbox();
-    if (!box.length) return;
     setSyncing(true);
-    const left: Outbound[] = [];
-    for (const item of box) {
-      const r = await fetch('/api/v1/workshop/observations', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(item) }).catch(() => null);
-      if (!r || (!r.ok && r.status >= 500)) left.push(item);
-    }
-    writeOutbox(left); setQueued(left.length); setSyncing(false);
-    if (left.length < box.length) { router.refresh(); void loadAlerts(); }
+    const r = await flushOutbox(API).catch(() => null);
+    setSyncing(false);
+    if (!r) return;
+    setQueued(r.left);
+    if (r.rejected.length) setToast(tx(`${r.rejected.length} queued sign-off(s) were refused: ${r.rejected[0]!.rejected?.code}`, `رُفض ${r.rejected.length} اعتماد من قائمة الانتظار: ${r.rejected[0]!.rejected?.code}`));
+    if (r.applied) { router.refresh(); void loadAlerts(); }
   }, [router, loadAlerts]);
   useEffect(() => { if (online && queued > 0) { const t = setTimeout(() => void flush(), 800); return () => clearTimeout(t); } }, [online, queued, flush]);
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); }, [toast]);
-  useEffect(() => { setNoteOpen(false); }, [sel]);
 
   // The rail shows this trade's learners only; the badge in the top bar counts every open alert.
   const alerts = allAlerts.filter((a) => stations.some((s) => s.learnerId === a.learnerId));
@@ -132,8 +112,34 @@ export function Floor({ bay, job, stations, rubric, stock, toolsOut, lab, liveEx
     alertByLearner.has(s.learnerId) ? 'alert' : signed[s.learnerId] || s.score !== null ? 'done' : s.assetTag ? 'working' : 'idle';
   const station = stations.find((s) => s.learnerId === sel);
   const m = marks[sel] ?? {};
-  const result = useMemo(() => preview(rubric, m), [rubric, m]);
-  const setMark = (k: string, v: string | number) => setMarks((all) => ({ ...all, [sel]: { ...all[sel], [k]: v } }));
+  const pass = rubric[0]?.passThreshold ?? 70;
+  const criteria = useMemo<RubricCriterion[]>(() => rubric.map((c) => ({
+    key: c.key, label: c.label, labelAr: c.labelAr, weight: c.weight, isGate: c.isGate, category: c.category,
+    rule: c.scoring.rule as RubricCriterion['rule'], expected: c.scoring.expected, absTol: c.scoring.absTol, unit: c.scoring.unit,
+    descriptors: c.descriptors, photoRule: c.photoRule,
+  })), [rubric]);
+  const result = useMemo(() => previewScore(criteria, m, pass), [criteria, m, pass]);
+  const setMark = (k: string, v: Mark) => setMarks((all) => ({ ...all, [sel]: { ...all[sel], [k]: v } }));
+  const mine = photos[sel] ?? [];
+  const setPhoto = (learner: string, id: string, patch: Partial<Photo>) =>
+    setPhotos((all) => ({ ...all, [learner]: (all[learner] ?? []).map((p) => (p.id === id ? { ...p, ...patch } : p)) }));
+
+  // Instant capture: compress on the tablet, keep a copy in IndexedDB, upload straight away when online.
+  const capture = async (file: File, criterionKey?: string) => {
+    const learner = sel, localId = crypto.randomUUID();
+    const c = await compressImage(file);
+    setPhotos((all) => ({ ...all, [learner]: [...(all[learner] ?? []), { id: localId, localId, url: c.url, criterionKey, state: online ? 'uploading' : 'queued' }] }));
+    await queueMedia({ localId, blob: c.blob, capturedAt: c.capturedAt, width: c.width, height: c.height, kind: 'photo' }).catch(() => undefined);
+    if (!online) return;
+    const r = await fetch(`${API}/media`, { method: 'POST', body: c.blob, headers: { 'content-type': c.blob.type || 'image/jpeg',
+      'x-client-mutation-id': localId, 'x-captured-at': c.capturedAt, 'x-kind': 'photo', 'x-width': String(c.width), 'x-height': String(c.height) } }).catch(() => null);
+    if (r?.ok) {
+      const serverId = ((await r.json()) as { id: string }).id;
+      await queueMedia({ localId, blob: c.blob, capturedAt: c.capturedAt, width: c.width, height: c.height, kind: 'photo', serverId }).catch(() => undefined);
+      setPhoto(learner, localId, { serverId, state: 'saved' });
+    } else setPhoto(learner, localId, { state: 'queued' });
+  };
+  const removePhoto = (id: string) => setPhotos((all) => ({ ...all, [sel]: (all[sel] ?? []).filter((p) => p.id !== id) }));
   const done = stations.filter((s) => statusOf(s) === 'done').length;
   const stationNo = (s: FloorStation) => (s.assetTag ? Number(/(\d+)$/.exec(s.assetTag)?.[1] ?? NaN) || null : null);
 
@@ -150,6 +156,7 @@ export function Floor({ bay, job, stations, rubric, stock, toolsOut, lab, liveEx
       ...(station.assetTag ? { assetTag: station.assetTag } : {}),
       checks: {}, ratings: {}, measurements: {}, ...(notes[sel] ? { note: notes[sel] } : {}),
     };
+    const refs = mine.map((p) => ({ localId: p.localId, ...(p.criterionKey ? { criterionKey: p.criterionKey } : {}) }));
     for (const c of rubric) {
       const v = m[c.key];
       if (c.scoring.rule === 'check') body.checks[c.key] = v === 'pass';
@@ -158,18 +165,28 @@ export function Floor({ bay, job, stations, rubric, stock, toolsOut, lab, liveEx
     }
     const who = ar(station.name, station.nameAr);
     const next = stations.find((s) => s.learnerId !== sel && statusOf(s) === 'working');
-    if (!online) {
-      const box = [...readOutbox(), body]; writeOutbox(box); setQueued(box.length);
+    const queue = async () => {
+      await queueMutation({ clientMutationId: body.clientMutationId, type: 'observation', payload: { ...body }, media: refs });
+      setQueued(await pendingCount());
       setSigned((x) => ({ ...x, [sel]: { score: result.score, passed: result.passed } }));
       setToast(tx(`${station.name} signed off · queued until online`, `تم اعتماد ${who} · في الانتظار حتى عودة الاتصال`));
-    } else {
-      const r = await fetch('/api/v1/workshop/observations', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).catch(() => null);
-      if (!r?.ok) { setToast(tx('Could not save. Check the connection and try again.', 'تعذّر الحفظ. تحقق من الاتصال وحاول مرة أخرى.')); return; }
-      const saved = (await r.json()) as { totalScore: number; passed: boolean };
-      setSigned((x) => ({ ...x, [sel]: { score: saved.totalScore, passed: saved.passed } }));
-      setToast(tx(`${station.name} signed off · ${saved.totalScore} saved`, `تم اعتماد ${who} · حُفظت الدرجة ${saved.totalScore}`));
-      void loadAlerts(); router.refresh();
+    };
+    setBusy(true);
+    if (!online || mine.some((p) => !p.serverId)) await queue();
+    else {
+      body.media = mine.map((p) => ({ mediaId: p.serverId!, ...(p.criterionKey ? { criterionKey: p.criterionKey } : {}) }));
+      const r = await fetch(`${API}/workshop/observations`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).catch(() => null);
+      if (!r) await queue();
+      else if (!r.ok) { setBusy(false); setToast(tx('Could not save. Check the marks and try again.', 'تعذّر الحفظ. راجع التقييم وحاول مرة أخرى.')); return; }
+      else {
+        const saved = (await r.json()) as { totalScore: number; passed: boolean; lowStock?: { name: string }[] };
+        setSigned((x) => ({ ...x, [sel]: { score: saved.totalScore, passed: saved.passed } }));
+        const low = saved.lowStock?.length ? ` · ${saved.lowStock.map((i) => i.name).join(', ')} low` : '';
+        setToast(tx(`${station.name} signed off · ${saved.totalScore} saved${low}`, `تم اعتماد ${who} · حُفظت الدرجة ${saved.totalScore}`));
+        void loadAlerts(); router.refresh();
+      }
     }
+    setBusy(false);
     if (next) setSel(next.learnerId);
   };
 
@@ -260,62 +277,16 @@ export function Floor({ bay, job, stations, rubric, stock, toolsOut, lab, liveEx
         </section>
 
         {station ? (
-          <section className="obs" aria-label={L('Observation', 'الملاحظة')}>
-            <header className="obs-head">
-              <p className="eyebrow">{station.assetTag ? `${station.assetTag} · ` : ''}{L(`Job card ${job.code}`, `بطاقة العمل ${job.code}`)}</p>
-              <h2>{ar(station.name, station.nameAr)}</h2>
-              <p className="muted">{L('Task', 'المهمة')}: {ar(job.task, job.taskAr)}
-                {station.denied && <><br /><span className="bad-text">{L(`Badge refused at the station today: ${station.denied}`, `رُفضت البطاقة عند المحطة اليوم: ${station.denied}`)}</span></>}</p>
-            </header>
-
-            <div className="rubric">
-              {rubric.map((c) => (
-                <div key={c.key} className={`row ${c.isGate ? 'row-gate' : ''}`}>
-                  <div className="row-label">
-                    {ar(c.label, c.labelAr)}
-                    {c.isGate && <span className="gate">{L('Gate', 'شرط أمان')}</span>}
-                  </div>
-                  {c.scoring.rule === 'check' && (
-                    <div className="seg" role="radiogroup" aria-label={c.label}>
-                      <button type="button" role="radio" aria-checked={m[c.key] === 'pass'} className="seg-pass" onClick={() => setMark(c.key, 'pass')}>✓ {L('Pass', 'ناجح')}</button>
-                      <button type="button" role="radio" aria-checked={m[c.key] === 'fail'} className="seg-fail" onClick={() => setMark(c.key, 'fail')}>✗ {L('Fail', 'راسب')}</button>
-                    </div>
-                  )}
-                  {c.scoring.rule === 'rating' && (
-                    <div className="seg" role="radiogroup" aria-label={c.label}>
-                      {[1, 2, 3, 4].map((n) => (
-                        <button key={n} type="button" role="radio" aria-checked={m[c.key] === n} onClick={() => setMark(c.key, n)}>{n}</button>
-                      ))}
-                    </div>
-                  )}
-                  {c.scoring.rule === 'measurement_tolerance' && <ToleranceInput c={c} value={m[c.key]} onChange={(v) => setMark(c.key, v)} id={`tol-${sel}`} />}
-                </div>
-              ))}
-            </div>
-
-            <div className="evidence">
-              <button type="button" className="ghost" aria-expanded={noteOpen} onClick={() => setNoteOpen((o) => !o)}>✎ {L('Note', 'ملاحظة')}</button>
-            </div>
-            {noteOpen && (
-              <textarea className="note" rows={2}
-                placeholder={L('e.g. Good method; remind about housekeeping', 'مثال: منهجية جيدة؛ ذكّره بالنظافة والترتيب')}
-                value={notes[sel] ?? ''} onChange={(e) => setNotes((n) => ({ ...n, [sel]: e.target.value }))} />
-            )}
-
-            <footer className="obs-foot">
-              <div className={`verdict ${!result.complete ? '' : result.passed ? 'v-pass' : 'v-fail'}`} aria-live="polite">
-                <span className="v-score">{result.complete ? Math.round(result.score) : '—'}</span>
-                <span>
-                  {!result.complete ? L('Score every row to sign off', 'قيّم كل البنود للاعتماد')
-                    : result.gateFail ? L('Not yet · safety gate failed', 'لم يجتز بعد · رسب في شرط أمان')
-                    : result.passed ? L('Pass', 'ناجح') : L(`Not yet · below ${PASS}`, `لم يجتز بعد · أقل من ${PASS}`)}
-                </span>
-              </div>
-              <button type="button" className="primary" disabled={!result.complete || Boolean(signed[sel])} onClick={() => void signOff()}>
-                {signed[sel] ? L('Signed off', 'تم الاعتماد') : L('Sign off & next station →', 'اعتماد والانتقال للمحطة التالية ←')}
-              </button>
-            </footer>
-          </section>
+          <div className="obs obs-tw">
+            <FloorRubric ui={{ L, lang }} criteria={criteria} marks={m} onMark={setMark}
+              photos={mine} onCapture={(f, k) => void capture(f, k)} onRemovePhoto={removePhoto}
+              note={notes[sel] ?? ''} onNote={(n) => setNotes((x) => ({ ...x, [sel]: n }))}
+              onSignOff={() => void signOff()} passThreshold={pass} busy={busy} signedOff={signed[sel] ?? null}
+              header={{ learner: ar(station.name, station.nameAr), station: station.assetTag, job: job.code, task: ar(job.task, job.taskAr),
+                warning: station.denied ? L(`Badge refused at the station today: ${station.denied}`, `رُفضت البطاقة عند المحطة اليوم: ${station.denied}`) : null }}
+              status={online ? (queued ? L(`${queued} waiting to sync`, `${queued} في انتظار المزامنة`) : L('Saved to the server on sign-off', 'يُحفظ على الخادم عند الاعتماد'))
+                : L('Offline · sign-off and photos are kept on this tablet', 'غير متصل · يُحفظ الاعتماد والصور على هذا الجهاز')} />
+          </div>
         ) : <section className="obs"><p className="muted">{L('No learners in your cohort yet.', 'لا يوجد متدربون في مجموعتك بعد.')}</p></section>}
       </div>
 
@@ -326,27 +297,6 @@ export function Floor({ bay, job, stations, rubric, stock, toolsOut, lab, liveEx
         ))}
       </footer>
       {toast && <div className="toast" role="status">{pick(toast)}</div>}
-    </div>
-  );
-}
-
-function ToleranceInput({ c, value, onChange, id }: { c: ObsCriterion; value: string | number | undefined; onChange: (v: string) => void; id: string }) {
-  const { L, pick } = useL();
-  const v = value === undefined || value === '' ? null : Number(value);
-  const s = v === null || Number.isNaN(v) ? null : tolScore(c, v);
-  const e = c.scoring.expected ?? 0, t = c.scoring.absTol ?? 0;
-  const unit = c.scoring.unit ?? 'mm';
-  const digits = t < 0.05 ? 3 : 2;
-  return (
-    <div className="tol">
-      <label htmlFor={id} className="sr-only">{c.scoring.measure ? pick(c.scoring.measure) : L(`Measured value in ${unit}`, `القيمة المقاسة (${unit})`)}</label>
-      <input id={id} dir="ltr" inputMode="decimal" placeholder={(e + t).toFixed(digits)} value={value ?? ''}
-        onChange={(ev) => onChange(ev.target.value.replace(',', '.').replace('٫', '.'))}
-        className={s === null ? '' : s === 100 ? 'in' : s === 50 ? 'near' : 'out'} />
-      <span className="mono tol-band" dir="ltr">{(e - t).toFixed(digits)}–{(e + t).toFixed(digits)} {unit}</span>
-      {s !== null && <span className={`tol-flag ${s === 100 ? 'ok' : 'bad'}`}>
-        {s === 100 ? `✓ ${L('In tolerance', 'ضمن التفاوت')}` : s === 50 ? `◐ ${L('Within 2×', 'ضمن ضعف التفاوت')}` : `✗ ${L('Out', 'خارج التفاوت')}`}
-      </span>}
     </div>
   );
 }

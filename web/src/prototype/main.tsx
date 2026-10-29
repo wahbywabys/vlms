@@ -1,6 +1,7 @@
-import { StrictMode, useRef } from 'react';
+import { StrictMode, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DirectorDashboard } from './DirectorDashboard';
+import { ApprenticePhone, DirectorSkills, RiskScreen, StudentAssess, StudentMachine, TrainerMachines, TrainerStores } from './Modules';
 import { FullscreenIcon, useFullscreen } from './fullscreen';
 import { tx } from './i18n';
 import { LogoMark, Wordmark } from './Logo';
@@ -12,6 +13,27 @@ import { TrainerFloor } from './TrainerFloor';
 import wabysLogoDark from './assets/wabys-logo-dark.png';
 import wabysLogo from './assets/wabys-logo.png';
 import './prototype.css';
+
+/** Screens inside each role. The first is the role's home; all stay mounted so work in progress survives switching. */
+const SCREENS: Record<Role, { id: string; label: ReturnType<typeof tx>; el: () => ReactNode }[]> = {
+  trainer: [
+    { id: 'floor', label: tx('Workshop floor', 'أرضية الورشة'), el: () => <TrainerFloor /> },
+    { id: 'machines', label: tx('Machines', 'الماكينات'), el: () => <TrainerMachines /> },
+    { id: 'stores', label: tx('Stores', 'المخزن'), el: () => <TrainerStores /> },
+    { id: 'risk', label: tx('Early warning', 'الإنذار المبكر'), el: () => <RiskScreen /> },
+  ],
+  student: [
+    { id: 'lab', label: tx('V-Lab', 'المعمل الافتراضي'), el: () => <StudentLab /> },
+    { id: 'machine', label: tx('Machine access', 'تشغيل الماكينة'), el: () => <StudentMachine /> },
+    { id: 'assess', label: tx('Applied assessment', 'تقييم تطبيقي'), el: () => <StudentAssess /> },
+    { id: 'ojt', label: tx('OJT logbook · phone', 'سجل التدريب الميداني · الهاتف'), el: () => <ApprenticePhone /> },
+  ],
+  director: [
+    { id: 'overview', label: tx('Overview', 'نظرة عامة'), el: () => <DirectorDashboard /> },
+    { id: 'skills', label: tx('Skills heatmap', 'خريطة المهارات'), el: () => <DirectorSkills /> },
+    { id: 'risk', label: tx('Early warning', 'الإنذار المبكر'), el: () => <RiskScreen all /> },
+  ],
+};
 
 /** The trainer and student follow the active trade; the director oversees all of them. */
 const roles = (t: Trade) => [
@@ -27,6 +49,7 @@ function Shell() {
   const ROLES = roles(trade);
   const appRef = useRef<HTMLDivElement>(null);
   const fs = useFullscreen(appRef);
+  const [screens, setScreens] = useState<Record<Role, string>>({ trainer: 'floor', student: 'lab', director: 'overview' });
   return (
     <div ref={appRef} className={`app ${fs.isFull ? 'is-full' : ''} ${fs.isFallback ? 'is-max' : ''}`}>
       <header className="topbar">
@@ -75,11 +98,18 @@ function Shell() {
         </div>
       </header>
       <TradeBar />
+      <nav className="subnav" aria-label={L('Screens', 'الشاشات')}>
+        <div className="subnav-inner" role="tablist">
+          {SCREENS[role].map((sc) => (
+            <button key={sc.id} type="button" role="tab" aria-selected={screens[role] === sc.id} onClick={() => setScreens((x) => ({ ...x, [role]: sc.id }))}>{pick(sc.label)}</button>
+          ))}
+        </div>
+      </nav>
       <main className="screen">
-        {/* All three stay mounted so a half-finished V-Lab attempt or rubric survives a role switch. */}
-        <div hidden={role !== 'trainer'}><TrainerFloor /></div>
-        <div hidden={role !== 'student'}><StudentLab /></div>
-        <div hidden={role !== 'director'}><DirectorDashboard /></div>
+        {/* Every role and screen stays mounted so a half-finished V-Lab attempt, rubric or pre-check survives switching. */}
+        {(Object.keys(SCREENS) as Role[]).map((r) => SCREENS[r].map((sc) => (
+          <div key={`${r}-${sc.id}`} hidden={role !== r || screens[r] !== sc.id}>{sc.el()}</div>
+        )))}
       </main>
       <footer className="app-foot">
         <img className="org-logo org-light" src={wabysLogo} alt="" width={78} height={24} />

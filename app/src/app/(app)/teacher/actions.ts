@@ -70,3 +70,39 @@ export async function createQuestion(_prev: { error?: string } | null, form: For
   redirect('/teacher?created=1');
 }
 
+
+/** Save a parameterised calculation (already linted through POST /v1/questions/preview). */
+export async function createParametric(d: {
+  body: { template: string; template_ar?: string; answer_expr: string; unit?: string; derived?: Record<string, string>; constraint?: string; answer_decimals?: number };
+  params: { name: string; min: number; max: number; step: number; unit?: string | null; choices?: number[] | null }[];
+  absTol: number | null; relTol: number | null; competencyId: string; bloom: string; submit: boolean;
+}): Promise<{ error?: string }> {
+  const s = await requireRole('academic_teacher');
+  if (!UUID.test(d.competencyId)) return { error: 'competency' };
+  if (d.body.template.trim().length < 10 || !d.body.answer_expr.trim() || !d.params.length) return { error: 'incomplete' };
+  if (d.params.some((p) => !/^[A-Za-z_][A-Za-z0-9_]{0,15}$/.test(p.name) || !(p.step > 0) || p.max < p.min)) return { error: 'params' };
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const row = (await client.query<{ id: string }>(
+      `INSERT INTO questions (institution_id, type, bloom, status, author_id) VALUES ($1, 'calculation', $2, $3, $4) RETURNING id`,
+      [s.institutionId, ['remember', 'understand', 'apply', 'analyze', 'evaluate'].includes(d.bloom) ? d.bloom : 'apply', d.submit ? 'in_review' : 'draft', s.userId])).rows[0]!;
+    await client.query(
+      `INSERT INTO question_versions (question_id, version, stem, body, answer_key, abs_tolerance, rel_tolerance, max_points) VALUES ($1, 1, $2, $3, '{}', $4, $5, 2)`,
+      [row.id, d.body.template, d.body, d.absTol, d.relTol]);
+    for (const p of d.params) {
+      await client.query(
+        `INSERT INTO question_parameters (question_id, version, name, min_value, max_value, step, unit, choices) VALUES ($1, 1, $2, $3, $4, $5, $6, $7)`,
+        [row.id, p.name, p.min, p.max, p.step, p.unit ?? null, p.choices?.length ? p.choices : null]);
+    }
+    await client.query(`INSERT INTO question_competencies (question_id, competency_id) VALUES ($1, $2)`, [row.id, d.competencyId]);
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+  revalidatePath('/teacher');
+  redirect('/teacher?created=1');
+}
