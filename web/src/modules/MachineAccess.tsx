@@ -12,13 +12,22 @@
  * A passport from earlier in the shift skips the quiz. The parent supplies
  * the calls (`api`), so the same screen runs against the API in the app and
  * against the in-memory engines in the prototype.
+ *
+ * The QR sticker holds only the machine's code. When the server cannot be
+ * reached, `offline` answers from the qualification list saved on the device:
+ * the answer is marked "not yet confirmed" and the scan is queued, so the
+ * server checks it again when the device reconnects.
  */
 import { useEffect, useRef, useState } from 'react';
+import { codeFromQr, type OfflineDecision, type PackMachine } from './offlinePack';
 import { cx, pickAr, type Bi, type Ui } from './types';
 
 export interface MachineInfo {
   machine: { tag: string; name: string; status: string; workshop: string; workshopAr: string | null; controller: 'hardware' | 'virtual';
-    requiredCompetency: { code: string; title: string } | null };
+    requiredCompetency: { code: string; title: string } | null;
+    /** The real machine, from the machine register. */
+    center?: string | null; typeName?: string | null; typeNameAr?: string | null; brand?: string | null; model?: string | null; serial?: string | null;
+    photoId?: string | null; twin?: { id: string; match: string | null } | null };
   precheck: { code: string; title: string; titleAr: string | null; questions: number; unlockMinutes: number } | null;
   eligible: boolean; blockers: string[];
   passport: { id: string; validUntil: string } | null;
@@ -32,6 +41,11 @@ export type StartResult =
 export interface SubmitResult {
   result: { score: number; passed: boolean; criticalMissed: string[]; wrong: { id: string; why?: Bi }[] };
   passport: { id: string; validUntil: string } | null; lock: LockView | null;
+}
+/** Offline fallback: the decision from the saved list, and a way to queue the scan for confirmation. */
+export interface MachineOffline {
+  check: (code: string) => { machine: PackMachine; decision: OfflineDecision; packAt: string; expired: boolean } | null | 'no_pack';
+  record: (code: string, allowed: boolean) => Promise<void>;
 }
 export interface MachineApi {
   scan(code: string): Promise<MachineInfo>;
@@ -49,17 +63,26 @@ const BLOCKER: Record<string, Bi> = {
   machine_retired: { en: 'This machine is no longer in service', ar: 'هذه الماكينة خارج الخدمة' },
   machine_in_use: { en: 'Someone else is using this machine', ar: 'شخص آخر يستخدم هذه الماكينة' },
   no_precheck: { en: 'No pre-check is set up for this machine', ar: 'لا يوجد فحص مسبق مُعدّ لهذه الماكينة' },
+  no_passport: { en: 'No safety passport for this machine yet: take its pre-check when the network is back, or ask your trainer', ar: 'لا يوجد تصريح سلامة لهذه الماكينة بعد: أجرِ الفحص المسبق عند عودة الشبكة أو اسأل مدربك' },
 };
+export const blockerText = (ui: Ui, b: string) => pickAr(ui, BLOCKER[b]?.en ?? b, BLOCKER[b]?.ar);
 
 type Step = { at: 'scan' } | { at: 'machine'; info: MachineInfo; code: string }
   | { at: 'quiz'; info: MachineInfo; code: string; attemptId: string; items: ServedQuestion[]; answers: Record<string, string>; i: number }
   | { at: 'failed'; info: MachineInfo; code: string; res: SubmitResult; items: ServedQuestion[]; answers: Record<string, string> }
   | { at: 'unlocked'; info: MachineInfo; code: string; lock: LockView; validUntil: string | null; reused: boolean }
-  | { at: 'done'; info: MachineInfo };
+  | { at: 'done'; info: MachineInfo }
+  | { at: 'offline'; code: string; machine: PackMachine; decision: OfflineDecision; packAt: string; expired: boolean };
 
-export function MachineAccess({ ui, api, initialCode, demoCodes }: { ui: Ui; api: MachineApi; initialCode?: string | null;
+export function MachineAccess({ ui, api, initialCode, demoCodes, offline, decodeFrame, photoUrl, twinHref }: { ui: Ui; api: MachineApi; initialCode?: string | null;
   /** Demo only: QR codes the learner can "scan" with a tap. */
-  demoCodes?: { code: string; label: string }[] }) {
+  demoCodes?: { code: string; label: string }[];
+  offline?: MachineOffline;
+  /** Reads a QR from a camera frame where the browser has no BarcodeDetector (iPhone, Firefox). */
+  decodeFrame?: FrameDecoder;
+  photoUrl?: (mediaId: string) => string;
+  /** Link to practise on the machine's 3D twin. */
+  twinHref?: (twinId: string) => string }) {
   const { L } = ui;
   const [step, setStep] = useState<Step>({ at: 'scan' });
   const [busy, setBusy] = useState(false);
@@ -73,9 +96,22 @@ export function MachineAccess({ ui, api, initialCode, demoCodes }: { ui: Ui; api
     else if (f?.status === 404) setErr(L('No machine has that code.', 'لا توجد ماكينة بهذا الرمز.'));
     else setErr(f?.message ?? L('Something went wrong. Try again.', 'حدث خطأ. حاول مرة أخرى.'));
   };
-  const scan = async (code: string) => {
+  const scan = async (raw: string) => {
+    const code = codeFromQr(raw);
     setBusy(true); setErr(null);
-    try { setStep({ at: 'machine', info: await api.scan(code.trim()), code: code.trim() }); } catch (e) { fail(e); }
+    try { setStep({ at: 'machine', info: await api.scan(code), code }); } catch (e) {
+      const f = e as ApiFailure;
+      const unreachable = f?.status === 0 || f?.code === 'offline' || f?.code === 'api_unavailable' || f?.status === 503;
+      const local = unreachable && offline ? offline.check(code) : null;
+      if (local && local !== 'no_pack') {
+        setStep({ at: 'offline', code, ...local });
+        if (!local.expired) void offline!.record(code, local.decision.state === 'allowed').catch(() => undefined);
+      } else if (unreachable) {
+        setErr(local === 'no_pack'
+          ? L('No connection, and this device has no saved list yet. Connect once to the centre network so it can download one.', 'لا يوجد اتصال، ولا توجد قائمة محفوظة على هذا الجهاز بعد. اتصل مرة بشبكة المركز ليحمّلها.')
+          : L('No connection, and this machine is not in the saved list.', 'لا يوجد اتصال، وهذه الماكينة ليست في القائمة المحفوظة.'));
+      } else fail(e);
+    }
     setBusy(false);
   };
   useEffect(() => { if (initialCode) void scan(initialCode); }, [initialCode]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -105,10 +141,12 @@ export function MachineAccess({ ui, api, initialCode, demoCodes }: { ui: Ui; api
     <div className="mx-auto flex w-full max-w-md flex-col gap-3 font-body text-ink">
       {err && <p role="alert" className="rounded-xl bg-bad-soft px-4 py-3 font-semibold text-bad">{err}</p>}
 
-      {step.at === 'scan' && <Scanner ui={ui} busy={busy} onCode={(c) => void scan(c)} demoCodes={demoCodes} />}
+      {step.at === 'scan' && <Scanner ui={ui} busy={busy} onCode={(c) => void scan(c)} demoCodes={demoCodes} decodeFrame={decodeFrame} />}
+
+      {step.at === 'offline' && <OfflineCard ui={ui} s={step} onAgain={() => { setErr(null); setStep({ at: 'scan' }); }} onRetry={() => void scan(step.code)} />}
 
       {step.at === 'machine' && (
-        <MachineCard ui={ui} info={step.info}>
+        <MachineCard ui={ui} info={step.info} photoUrl={photoUrl} twinHref={twinHref}>
           {step.info.lock && ['unlocked', 'unlock_pending'].includes(step.info.lock.state)
             ? <Big onClick={() => setStep({ at: 'unlocked', info: step.info, code: step.code, lock: step.info.lock!, validUntil: step.info.passport?.validUntil ?? null, reused: true })}>
                 {L('Back to my session', 'العودة إلى جلستي')}</Big>
@@ -197,8 +235,10 @@ function Big({ children, onClick, busy, tone = 'accent' }: { children: React.Rea
   );
 }
 
-function MachineCard({ ui, info, children }: { ui: Ui; info: MachineInfo; children: React.ReactNode }) {
+function MachineCard({ ui, info, children, photoUrl, twinHref }: { ui: Ui; info: MachineInfo; children: React.ReactNode;
+  photoUrl?: (id: string) => string; twinHref?: (id: string) => string }) {
   const { L } = ui;
+  const m = info.machine;
   return (
     <section className="flex flex-col gap-3 rounded-2xl bg-sheet p-4 shadow-card">
       <div className="flex items-start gap-3">
@@ -212,6 +252,17 @@ function MachineCard({ ui, info, children }: { ui: Ui; info: MachineInfo; childr
           </p>
         </div>
       </div>
+      {(m.brand || m.serial || m.photoId) && (
+        <div className="flex items-center gap-3 rounded-xl bg-sunk p-2 text-sm">
+          {m.photoId && photoUrl && <img src={photoUrl(m.photoId)} alt="" className="h-16 w-16 shrink-0 rounded-lg object-cover" />}
+          <div className="min-w-0">
+            <p className="font-semibold">{pickAr(ui, m.typeName, m.typeNameAr)}{m.brand ? ` · ${m.brand} ${m.model ?? ''}` : ''}</p>
+            {m.serial && <p className="text-ink-2">{L('Serial', 'الرقم التسلسلي')} <span className="font-mono" dir="ltr">{m.serial}</span> · {L('check it matches the nameplate', 'تأكد أنه يطابق لوحة البيانات')}</p>}
+          </div>
+        </div>
+      )}
+      {m.twin && twinHref && <a href={twinHref(m.twin.id)} className="text-sm font-semibold text-accent underline">
+        {m.twin.match === 'similar' ? L('Practise first on the closest 3D twin', 'تدرّب أولًا على أقرب نموذج ثلاثي الأبعاد') : L('Practise first on its 3D twin', 'تدرّب أولًا على نموذجها ثلاثي الأبعاد')} →</a>}
       {info.passport && <p className="rounded-xl bg-ok-soft px-3 py-2 text-sm font-semibold text-ok">✓ {L(`Safety passport valid until ${new Date(info.passport.validUntil).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`, `تصريح السلامة ساري حتى ${new Date(info.passport.validUntil).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`)}</p>}
       {children}
     </section>
@@ -253,8 +304,11 @@ function Unlocked({ ui, s, busy, onRelease }: { ui: Ui; s: Extract<Step, { at: '
   );
 }
 
-/** Camera QR scanning where the browser has BarcodeDetector; manual code entry everywhere. */
-function Scanner({ ui, busy, onCode, demoCodes }: { ui: Ui; busy: boolean; onCode: (c: string) => void; demoCodes?: { code: string; label: string }[] }) {
+export type FrameDecoder = (frame: ImageData) => string | null;
+
+/** Camera QR scanning with BarcodeDetector, or `decodeFrame` on browsers without it; manual code entry everywhere. */
+export function Scanner({ ui, busy, onCode, demoCodes, decodeFrame, title, hint }: { ui: Ui; busy: boolean; onCode: (c: string) => void; demoCodes?: { code: string; label: string }[];
+  decodeFrame?: FrameDecoder; title?: string; hint?: string }) {
   const { L } = ui;
   const video = useRef<HTMLVideoElement>(null);
   const [camera, setCamera] = useState<'off' | 'on' | 'unsupported'>('off');
@@ -263,8 +317,18 @@ function Scanner({ ui, busy, onCode, demoCodes }: { ui: Ui; busy: boolean; onCod
     if (camera !== 'on') return;
     let stream: MediaStream | null = null, stop = false;
     const Detector = (globalThis as unknown as { BarcodeDetector?: new (o: { formats: string[] }) => { detect(v: HTMLVideoElement): Promise<{ rawValue: string }[]> } }).BarcodeDetector;
-    if (!Detector || !navigator.mediaDevices) { setCamera('unsupported'); return; }
-    const det = new Detector({ formats: ['qr_code'] });
+    if ((!Detector && !decodeFrame) || !navigator.mediaDevices) { setCamera('unsupported'); return; }
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const det = Detector ? new Detector({ formats: ['qr_code'] }) : {
+      detect: async (v: HTMLVideoElement) => {
+        if (!ctx || !v.videoWidth) return [];
+        const w = Math.min(640, v.videoWidth), h = Math.round(v.videoHeight * (w / v.videoWidth));
+        canvas.width = w; canvas.height = h; ctx.drawImage(v, 0, 0, w, h);
+        const raw = decodeFrame!(ctx.getImageData(0, 0, w, h));
+        return raw ? [{ rawValue: raw }] : [];
+      },
+    };
     void (async () => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
@@ -273,17 +337,17 @@ function Scanner({ ui, busy, onCode, demoCodes }: { ui: Ui; busy: boolean; onCod
         while (!stop) {
           const found = await det.detect(video.current).catch(() => []);
           const raw = found[0]?.rawValue;
-          if (raw) { onCode(/[?&]code=([^&]+)/.exec(raw)?.[1] ?? raw); break; }
+          if (raw) { onCode(codeFromQr(raw)); break; }
           await new Promise((r) => setTimeout(r, 250));
         }
       } catch { setCamera('unsupported'); }
     })();
     return () => { stop = true; stream?.getTracks().forEach((t) => t.stop()); };
-  }, [camera, onCode]);
+  }, [camera, onCode, decodeFrame]);
   return (
     <section className="flex flex-col gap-3 rounded-2xl bg-sheet p-4 shadow-card">
-      <h2 className="font-display text-2xl font-bold">{L('Scan the machine', 'امسح الماكينة')}</h2>
-      <p className="text-ink-2">{L('Point your camera at the QR label on the machine to take its safety pre-check.', 'وجّه الكاميرا إلى ملصق QR على الماكينة لإجراء فحص السلامة المسبق.')}</p>
+      <h2 className="font-display text-2xl font-bold">{title ?? L('Scan the machine', 'امسح الماكينة')}</h2>
+      <p className="text-ink-2">{hint ?? L('Point your camera at the QR label on the machine to take its safety pre-check.', 'وجّه الكاميرا إلى ملصق QR على الماكينة لإجراء فحص السلامة المسبق.')}</p>
       {camera === 'on'
         ? <video ref={video} muted playsInline className="aspect-square w-full rounded-xl bg-ink object-cover" />
         : <button type="button" onClick={() => setCamera('on')} disabled={camera === 'unsupported'}
@@ -305,6 +369,39 @@ function Scanner({ ui, busy, onCode, demoCodes }: { ui: Ui; busy: boolean; onCod
           </div>
         </div>
       )}
+    </section>
+  );
+}
+
+/** The answer from the list saved on the device, while the server cannot be reached. */
+function OfflineCard({ ui, s, onAgain, onRetry }: { ui: Ui; s: Extract<Step, { at: 'offline' }>; onAgain: () => void; onRetry: () => void }) {
+  const { L } = ui;
+  const ok = s.decision.state === 'allowed' && !s.expired;
+  const at = (iso: string) => new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return (
+    <section className={cx('flex flex-col gap-3 rounded-2xl border-2 bg-sheet p-4 shadow-card', ok ? 'border-amber-fill' : 'border-bad')} aria-live="polite">
+      <p className="rounded-lg bg-amber-fill px-3 py-1.5 text-sm font-bold text-on-amber">📡 {L('Offline · not yet confirmed', 'بدون اتصال · لم يتأكد بعد')}</p>
+      <div>
+        <p className="font-mono text-xs uppercase tracking-wider text-ink-3">{s.machine.tag} · {pickAr(ui, s.machine.workshop, s.machine.workshopAr)}</p>
+        <h2 className="font-display text-2xl font-bold leading-tight">{pickAr(ui, s.machine.typeName ?? s.machine.name, s.machine.typeNameAr)}</h2>
+        {s.machine.serial && <p className="text-sm text-ink-2">{s.machine.brand} {s.machine.model} · S/N <span className="font-mono" dir="ltr">{s.machine.serial}</span></p>}
+      </div>
+      {ok ? (
+        <div className="rounded-xl bg-ok-soft p-3 text-ok">
+          <p className="font-display text-xl font-bold">✓ {L('Allowed on this machine', 'مسموح لك بهذه الماكينة')}</p>
+          <p className="text-sm">{L(`Safety passport valid until ${at(s.decision.passportUntil!)}. Show this screen to your trainer before you start.`, `تصريح السلامة ساري حتى ${at(s.decision.passportUntil!)}. اعرض هذه الشاشة على مدربك قبل البدء.`)}</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <p className="font-display text-xl font-bold text-bad">⛔ {L('Not allowed now', 'غير مسموح الآن')}</p>
+          {s.expired ? <p className="rounded-xl bg-bad-soft p-3 text-sm font-semibold text-bad">{L('The saved list is too old to trust. Connect to the centre network first.', 'القائمة المحفوظة قديمة جدًا. اتصل بشبكة المركز أولًا.')}</p>
+            : s.decision.reasons.map((b) => <p key={b} className="rounded-xl bg-bad-soft p-3 text-sm font-semibold text-bad">{blockerText(ui, b)}</p>)}
+        </div>
+      )}
+      <p className="text-xs text-ink-3">{L(`From the list saved on this device at ${at(s.packAt)}. The server checks this scan again when the device reconnects, and tells your trainer if it disagrees.`,
+        `من القائمة المحفوظة على هذا الجهاز في ${at(s.packAt)}. يعيد الخادم فحص هذا المسح عند عودة الاتصال، ويبلغ مدربك إذا اختلفت النتيجة.`)}</p>
+      <Big onClick={onRetry}>{L('Try the network again', 'جرّب الشبكة مرة أخرى')}</Big>
+      <button type="button" className="tw-reset h-11 text-sm font-semibold text-ink-3 underline" onClick={onAgain}>{L('Scan another machine', 'امسح ماكينة أخرى')}</button>
     </section>
   );
 }

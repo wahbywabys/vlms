@@ -3,6 +3,7 @@ import type { z } from 'zod';
 import { isStaff, type Principal } from '../lib/auth.js';
 import type { Tx } from '../lib/db.js';
 import { Movement, recordMovement } from './inventory.js';
+import { MachineScan, recordOfflineScan } from './machineOffline.js';
 import { Entry, recordEntry } from './logbook.js';
 import { Observation, recordObservation } from './observations.js';
 import { CheckIn, recordCheckin } from './ojt.js';
@@ -19,4 +20,5 @@ export const syncHandlers = {
   checkin: handler({ schema: CheckIn, allowed: (p) => p.roles.includes('student'), apply: (tx, p, b) => recordCheckin(tx, p, b) }),
   logbook: handler({ schema: Entry, allowed: (p) => p.roles.includes('student'), apply: recordEntry }),
   consumable: handler({ schema: Movement, allowed: isStaff, apply: recordMovement }),
+  machine_scan: handler({ schema: MachineScan, allowed: () => true, apply: recordOfflineScan }),
 };

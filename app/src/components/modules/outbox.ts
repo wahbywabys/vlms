@@ -13,9 +13,9 @@
  *      duplicate items leave the queue, rejected ones are kept with the reason
  *      so the screen can show them, and 5xx keeps everything for next time.
  *
- * The same mutation types as /v1/sync: observation, checkin, logbook, consumable.
+ * The same mutation types as /v1/sync: observation, checkin, logbook, consumable, machine_scan.
  */
-export type MutationType = 'observation' | 'checkin' | 'logbook' | 'consumable';
+export type MutationType = 'observation' | 'checkin' | 'logbook' | 'consumable' | 'machine_scan';
 export interface QueuedMedia { localId: string; blob: Blob; capturedAt: string; width?: number; height?: number;
   kind?: 'photo' | 'video' | 'signature'; lat?: number; lon?: number; serverId?: string }
 export interface QueuedMutation {

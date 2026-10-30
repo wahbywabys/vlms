@@ -21,7 +21,7 @@ import { syncHandlers } from './syncHandlers.js';
 
 const Batch = z.object({
   deviceId: z.string().max(80).optional(),
-  mutations: z.array(z.object({ type: z.enum(['observation', 'checkin', 'logbook', 'consumable']), payload: z.record(z.unknown()) })).min(1).max(100),
+  mutations: z.array(z.object({ type: z.enum(['observation', 'checkin', 'logbook', 'consumable', 'machine_scan']), payload: z.record(z.unknown()) })).min(1).max(100),
 });
 
 export function syncRouter(deps: { db: Db }) {
