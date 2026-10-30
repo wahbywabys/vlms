@@ -1,0 +1,55 @@
+# VTC_LMS online hub: run this on your own server (next to your quality
+# system). Every training centre uploads here when it has internet; your
+# dashboard reads the export API. Settings live in .env (see .env.example).
+name: vtc-hub
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vtc_hub
+      POSTGRES_USER: vtc
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    volumes: [hubdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vtc -d vtc_hub"]
+      interval: 5s
+      retries: 30
+
+  hub:
+    image: ${VTC_REGISTRY:-ghcr.io/wahbywabys}/vtc-lms-api:${VTC_VERSION:-latest}
+    build: { context: .., dockerfile: api/Dockerfile }
+    restart: unless-stopped
+    command: ["npx", "tsx", "src/hub-server.ts"]
+    environment:
+      DATABASE_URL: postgres://vtc:${DB_PASSWORD}@db:5432/vtc_hub
+      PORT: 4100
+      HUB_ADMIN_KEY: ${HUB_ADMIN_KEY:?set HUB_ADMIN_KEY in .env}
+      HUB_EXPORT_KEY: ${HUB_EXPORT_KEY:?set HUB_EXPORT_KEY in .env}
+      HUB_WEBHOOK_URLS: ${HUB_WEBHOOK_URLS:-}
+      HUB_WEBHOOK_SECRET: ${HUB_WEBHOOK_SECRET:-}
+      HUB_LRS_ENDPOINT: ${HUB_LRS_ENDPOINT:-}
+      HUB_LRS_USERNAME: ${HUB_LRS_USERNAME:-}
+      HUB_LRS_PASSWORD: ${HUB_LRS_PASSWORD:-}
+    depends_on:
+      db: { condition: service_healthy }
+    # Reachable on this server at http://127.0.0.1:4100 for your own web server (nginx, IIS, Apache) to proxy.
+    ports: ["127.0.0.1:${HUB_LOCAL_PORT:-4100}:4100"]
+
+  # Optional HTTPS front door with a free Let's Encrypt certificate:
+  #   docker compose --profile https up -d   (needs HUB_DOMAIN pointing at this server, ports 80/443 free)
+  https:
+    image: caddy:2-alpine
+    profiles: [https]
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      HUB_DOMAIN: ${HUB_DOMAIN:-}
+    command: ["caddy", "reverse-proxy", "--from", "${HUB_DOMAIN}", "--to", "hub:4100"]
+    volumes: [caddy_data:/data]
+    depends_on: [hub]
+
+volumes:
+  hubdata:
+  caddy_data:

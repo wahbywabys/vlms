@@ -1,0 +1,8 @@
+# Build the images from this repository instead of downloading them
+# (used by the installer when it runs inside a full checkout of the code):
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml build
+services:
+  api:
+    build: { context: .., dockerfile: api/Dockerfile }
+  app:
+    build: { context: .., dockerfile: app/Dockerfile }

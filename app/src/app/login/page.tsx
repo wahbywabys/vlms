@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { LangToggle } from '@/components/LangToggle';
 import { LogoMark, OrgLogo, Wordmark } from '@/components/Logo';
@@ -13,7 +14,10 @@ export default async function LoginPage() {
   const { L } = await getI18n();
   return (
     <div className="login">
-      <div className="login-top"><LangToggle /></div>
+      <div className="login-top">
+        <Link className="help-btn" href="/help?for=everyone"><span className="q" aria-hidden="true">?</span>{L('Instructions', 'تعليمات')}</Link>
+        <LangToggle />
+      </div>
       <div className="login-hero">
         <LogoMark size={88} />
         <Wordmark />
@@ -22,6 +26,7 @@ export default async function LoginPage() {
           'الجدارات والمعامل الافتراضية وأرضية الورشة والتعلم في موقع العمل في سجل واحد.')}</p>
       </div>
       <LoginForm />
+      <p className="muted"><a href="/join">{L('Connect another device to this centre', 'وصّل جهاز تاني بالمركز')}</a></p>
       <p className="login-org">
         <span className="org" role="img" aria-label={L('WABYS for Training and Education', 'وابيز للتدريب والتعليم')}><OrgLogo height={28} /></span>
         <span>{L('VTC_LMS is a product of WABYS for Training and Education.', 'VTC_LMS منتج من وابيز للتدريب والتعليم.')}</span>

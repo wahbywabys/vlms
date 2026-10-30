@@ -1,6 +1,6 @@
 import 'server-only';
 import { SignJWT, jwtVerify } from 'jose';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { q1 } from './db';
 
@@ -52,8 +52,20 @@ export async function startSession(s: Session) {
     .setProtectedHeader({ alg: 'HS256' }).setSubject(s.userId).setIssuedAt().setExpirationTime(`${MAX_AGE_S}s`)
     .sign(key('SESSION_SECRET'));
   (await cookies()).set(COOKIE, token, {
-    httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: MAX_AGE_S,
+    httpOnly: true, sameSite: 'lax', secure: await secureRequest(), path: '/', maxAge: MAX_AGE_S,
   });
+}
+
+/**
+ * Secure cookies only over HTTPS. A training-centre server is often reached at
+ * plain http://192.168.x.x on the local Wi-Fi, where a Secure cookie would be
+ * dropped and nobody could sign in. COOKIE_SECURE=true|false overrides.
+ */
+async function secureRequest() {
+  const forced = process.env.COOKIE_SECURE;
+  if (forced === 'true' || forced === 'false') return forced === 'true';
+  const proto = (await headers()).get('x-forwarded-proto')?.split(',')[0]?.trim();
+  return proto ? proto === 'https' : process.env.NODE_ENV === 'production';
 }
 
 export async function endSession() {

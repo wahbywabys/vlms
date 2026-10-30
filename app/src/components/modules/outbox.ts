@@ -13,6 +13,12 @@
  *      duplicate items leave the queue, rejected ones are kept with the reason
  *      so the screen can show them, and 5xx keeps everything for next time.
  *
+ * Away from the centre (an apprentice at an employer site with mobile data),
+ * the centre server cannot be reached at all. If the centre syncs to an
+ * online hub, writes without photos are then handed to the hub with the relay
+ * token the phone picked up on the centre Wi-Fi (see saveRelay); the centre
+ * applies them, still idempotent, the next time it is online.
+ *
  * The same mutation types as /v1/sync: observation, checkin, logbook, consumable, machine_scan.
  */
 export type MutationType = 'observation' | 'checkin' | 'logbook' | 'consumable' | 'machine_scan';
@@ -61,7 +67,33 @@ function withMedia(m: QueuedMutation, ids: Map<string, string>) {
   return m.payload;
 }
 
-export interface FlushResult { applied: number; duplicate: number; rejected: QueuedMutation[]; left: number }
+export interface FlushResult { applied: number; duplicate: number; rejected: QueuedMutation[]; left: number; relayed: number }
+
+/** The online hub this centre syncs to, and this user's relay token (from GET /api/center/relay). */
+export interface RelayConfig { hubUrl: string; centerId: string; token: string; savedAt?: string }
+const RELAY_KEY = 'vtc_relay';
+export function saveRelay(c: RelayConfig | null) {
+  try { if (c) localStorage.setItem(RELAY_KEY, JSON.stringify({ ...c, savedAt: new Date().toISOString() })); else localStorage.removeItem(RELAY_KEY); } catch { /* private mode */ }
+}
+export function readRelay(): RelayConfig | null {
+  try { return JSON.parse(localStorage.getItem(RELAY_KEY) ?? 'null') as RelayConfig | null; } catch { return null; }
+}
+
+/** The centre server is out of reach: hand photo-free writes to the online hub, if there is one. */
+async function relayAway(queue: QueuedMutation[], out: FlushResult) {
+  const cfg = readRelay();
+  if (!cfg) return;
+  const items = queue.filter((m) => !m.rejected && !m.media.length);
+  for (let i = 0; i < items.length; i += 100) {
+    const batch = items.slice(i, i + 100);
+    const r = await fetch(`${cfg.hubUrl}/hub/v1/relay`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${cfg.token}` },
+      body: JSON.stringify({ centerId: cfg.centerId, mutations: batch.map((m) => ({ type: m.type, payload: m.payload })) }) }).catch(() => null);
+    if (r?.status === 401) { saveRelay(null); return; }   // expired: a new token comes with the next visit to the centre
+    if (r?.status !== 202) return;
+    for (const m of batch) await dropMutation(m.clientMutationId);
+    out.relayed += batch.length;
+  }
+}
 
 /** Replay the queue. Safe to call often; concurrent calls share one run. */
 let running: Promise<FlushResult> | null = null;
@@ -72,7 +104,7 @@ export function flush(base: string): Promise<FlushResult> {
 
 async function doFlush(base: string): Promise<FlushResult> {
   const queue = (await listMutations()).filter((m) => !m.rejected);
-  const out: FlushResult = { applied: 0, duplicate: 0, rejected: [], left: queue.length };
+  const out: FlushResult = { applied: 0, duplicate: 0, rejected: [], left: queue.length, relayed: 0 };
   if (!queue.length) return out;
   const ids = new Map<string, string>();
   const ready: QueuedMutation[] = [];
@@ -88,7 +120,8 @@ async function doFlush(base: string): Promise<FlushResult> {
           ...(qm.kind ? { 'x-kind': qm.kind } : {}), ...(qm.width ? { 'x-width': String(qm.width), 'x-height': String(qm.height ?? 0) } : {}),
           ...(qm.lat !== undefined ? { 'x-lat': String(qm.lat), 'x-lon': String(qm.lon) } : {}),
         } }).catch(() => null);
-        if (!r?.ok) return out;               // still offline, or the server is down: try again later
+        if (!r) { await relayAway(queue, out); out.left = await pendingCount(); return out; }   // centre out of reach
+        if (!r.ok) return out;                // the server is down: try again later
         qm.serverId = ((await r.json()) as { id: string }).id;
         await queueMedia(qm);
       }
@@ -101,7 +134,8 @@ async function doFlush(base: string): Promise<FlushResult> {
     const batch = ready.slice(i, i + 100);
     const r = await fetch(`${base}/sync`, { method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ mutations: batch.map((m) => ({ type: m.type, payload: withMedia(m, ids) })) }) }).catch(() => null);
-    if (!r?.ok) break;
+    if (!r) { await relayAway(ready.slice(i), out); break; }
+    if (!r.ok) break;
     const { results } = (await r.json()) as { results: { clientMutationId: string | null; status: 'applied' | 'duplicate' | 'rejected'; error?: { code: string; message?: string } }[] };
     for (const [k, res] of results.entries()) {
       const m = batch[k]!;

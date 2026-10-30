@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { LangProvider } from '@/components/LangProvider';
 import { PwaRegister } from '@/components/PwaRegister';
 import { getLang } from '@/lib/i18n-server';
+import './fonts.css';
 import './vtc.css';
 import './app.css';
 import './tw.css';
@@ -18,11 +19,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const lang = await getLang();
   return (
     <html lang={lang} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@500;600;700&display=swap" />
-      </head>
       <body>
         <LangProvider lang={lang}>{children}</LangProvider>
         <PwaRegister />

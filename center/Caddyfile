@@ -1,0 +1,32 @@
+# VTC_LMS centre server front door.
+#  - http://<server-ip>   works on every device straight away
+#  - https://<server-ip>  uses a certificate from this server's own local
+#    authority (no internet needed); devices trust it after installing
+#    /vtc-center-ca.crt once. Needed only for "install as app" and for using
+#    the app away from the centre.
+{
+	local_certs
+	skip_install_trust
+	auto_https disable_redirects
+}
+
+(vtc) {
+	handle /vtc-center-ca.crt {
+		root * /data/caddy/pki/authorities/local
+		rewrite * /root.crt
+		header Content-Type application/x-x509-ca-cert
+		file_server
+	}
+	handle {
+		reverse_proxy app:3000
+	}
+}
+
+:80 {
+	import vtc
+}
+
+https://{$CENTER_IP}, https://localhost {
+	tls internal
+	import vtc
+}

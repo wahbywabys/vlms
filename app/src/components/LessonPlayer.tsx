@@ -344,7 +344,7 @@ function voiceOver(): HTMLAudioElement {
 function voiceOverUrl(text: string) {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619) >>> 0;
-  return new URL('vo/' + h.toString(16).padStart(8, '0') + '.mp3', import.meta.url).href;
+  return '/vo/' + h.toString(16).padStart(8, '0') + '.mp3';
 }
 
 /** The browser's speech voices (they load asynchronously). */
