@@ -1,15 +1,15 @@
 /** Screen 2 — Student 3D Lab Explorer + V-Lab fault test (docs/ui-blueprint.md §2). */
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { FullscreenIcon, useFullscreen } from './fullscreen';
 import { MachineExplorer, type ExplorerEvent } from '../components/MachineExplorer';
 import { LessonPlayer, type LessonEvent } from '../components/LessonPlayer';
+import { SafetySim, type SimEvent } from '../components/SafetySim';
 import { modelParts } from '../models/kit';
 import { TradeIcon } from './TradeBar';
 import { tx, type Txt } from './i18n';
 import { TRADES, type Trade } from './trades';
 import type { Diagram, Fault, Lab, RigState, TestPoint } from './trades/types';
 import { detectGateViolations, evaluate, levelForScore, stepDone, toEvent, type EvaluationResult, type TelemetryEvent } from './vlab';
-import { explorerStringsAr } from './motorAr';
 import { useL, useStore } from './store';
 import { CardHead, PageHeader } from './ui';
 
@@ -17,7 +17,7 @@ type Mode = 'Guided' | 'Sandbox' | 'Exam';
 const MODE_LABEL: Record<Mode, Txt> = { Guided: tx('Guided', 'موجّه'), Sandbox: tx('Sandbox', 'تجريبي حر'), Exam: tx('Exam', 'امتحان') };
 const TIME_LIMIT_S = 1800;
 
-type Tab = '3d' | 'lessons' | 'vlab';
+type Tab = '3d' | 'lessons' | 'safety' | 'vlab';
 
 export function StudentLab() {
   const { L, pick } = useL();
@@ -39,6 +39,7 @@ export function StudentLab() {
   const TABS: { id: Tab; label: Txt; n?: number }[] = [
     { id: '3d', label: tx('3D & VR', 'ثلاثي الأبعاد والواقع الافتراضي'), n: trade.models.length },
     { id: 'lessons', label: tx('Video lessons', 'دروس الفيديو'), n: trade.lessons.length },
+    { id: 'safety', label: tx('Safety simulator', 'محاكي السلامة'), n: trade.safety.length },
     { id: 'vlab', label: tx('V-Lab fault test', 'اختبار الأعطال الافتراضي') },
   ];
   const head: Record<Tab, { title: string; meta: string }> = {
@@ -48,6 +49,9 @@ export function StudentLab() {
     lessons: { title: L(`${trade.name.en}: video lessons`, `${trade.name.ar}: دروس الفيديو`),
       meta: L('Each lesson stops at checkpoints for you to answer. Zoom in, change speed, open hotspots and jump between chapters.',
         'كل درس يتوقف عند نقاط تحقق لتجيب عنها. كبّر الصورة، وغيّر السرعة، وافتح نقاط المعلومات، وتنقّل بين الفصول.') },
+    safety: { title: L(`${trade.name.en}: safety simulator`, `${trade.name.ar}: محاكي السلامة`),
+      meta: L('Do a real job at the machine as the WABYS student. Choose the PPE and the order of the work: mistakes play out in 3D, then you rewind and try again.',
+        'نفّذ مهمة حقيقية على الماكينة بصفتك متدرب WABYS. اختر معدات الوقاية وترتيب العمل: الأخطاء تحدث أمامك ثلاثيًا، ثم ترجع وتحاول من جديد.') },
     vlab: { title: pick(lab.intro), meta: L('Find and fix the fault safely. Your actions are scored against the unit rubric.', 'حدّد العطل وأصلحه بأمان. تُقيَّم إجراءاتك وفق معايير الوحدة.') },
   };
   return (
@@ -69,6 +73,7 @@ export function StudentLab() {
         <div key={t.id} className="lab-panes">
           {shown(t, '3d') && <div hidden={!on(t, '3d')}><Explore trade={t} active={on(t, '3d')} /></div>}
           {shown(t, 'lessons') && <div hidden={!on(t, 'lessons')}><Lessons trade={t} active={on(t, 'lessons')} /></div>}
+          {shown(t, 'safety') && <div hidden={!on(t, 'safety')}><Safety trade={t} active={on(t, 'safety')} /></div>}
           {shown(t, 'vlab') && <div hidden={!on(t, 'vlab')}><FaultTest trade={t} /></div>}
         </div>
       ))}
@@ -106,8 +111,8 @@ function Explore({ trade, active }: { trade: Trade; active: boolean }) {
           <div key={m.id} hidden={m.id !== modelId} className="explore-model">
             <MachineExplorer title={pick(m.title)} assetTag={m.assetTag} parts={modelParts(m, lang)} view={m.view}
               params={m.params} runParams={m.runParams} active={active && m.id === modelId}
-              strings={lang === 'ar' ? explorerStringsAr : undefined}
-              onEvent={onEvent} height="min(620px, 72vh)" />
+              env={m.env && { ...m.env, bay: trade.id as 'cnc' }} lang={lang}
+              onEvent={onEvent} height="min(660px, 76vh)" />
           </div>
         ))}
       </div>
@@ -122,6 +127,52 @@ function Explore({ trade, active }: { trade: Trade; active: boolean }) {
         <TelemetryStrip items={log.map((e) => ({ seq: e.seq, verb: e.verb, objectRef: e.objectRef }))}
           empty={L('Drag the explode slider, tap a numbered pin or switch view mode to see the events this sends.',
             'حرّك شريط التفكيك أو اضغط دبوسًا مرقّمًا أو غيّر وضع العرض لترى الأحداث المرسلة.')} />
+      </div>
+    </div>
+  );
+}
+
+function Safety({ trade, active }: { trade: Trade; active: boolean }) {
+  const { lang, L, pick } = useL();
+  const [log, setLog] = useState<(SimEvent & { seq: number })[]>([]);
+  const onEvent = useCallback((e: SimEvent) => setLog((l) => [{ ...e, seq: (l[0]?.seq ?? 0) + 1 }, ...l].slice(0, 5)), []);
+  const [id, setId] = useState(trade.safety[0]?.id);
+  const sc = trade.safety.find((s) => s.id === id) ?? trade.safety[0];
+  // The machine stands in this trade's bay; keep the object stable so the scene does not rebuild.
+  const scenario = useMemo(() => sc && { ...sc, model: { ...sc.model, env: sc.model.env && { ...sc.model.env, bay: trade.id as 'cnc' } } }, [sc, trade.id]);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const fs = useFullscreen(stageRef);
+  if (!sc || !scenario) return null;
+  return (
+    <div className="explore">
+      {trade.safety.length > 1 && (
+        <div className="model-switch" role="radiogroup" aria-label={L('Choose a job', 'اختر المهمة')}>
+          {trade.safety.map((s) => (
+            <button key={s.id} type="button" role="radio" aria-checked={s.id === sc.id} onClick={() => setId(s.id)}>
+              <b>{pick(s.title)}</b><small>{pick(s.model.title).split(' · ')[0]}</small>
+            </button>
+          ))}
+        </div>
+      )}
+      <div ref={stageRef} className={`explore-stage ${fs.isFull ? 'is-full' : ''} ${fs.isFallback ? 'is-max' : ''}`}>
+        <button type="button" className="fs-btn fs-float" aria-pressed={fs.isFull} onClick={() => void fs.toggle()}
+          title={fs.isFull ? L('Exit full screen (Esc)', 'الخروج من ملء الشاشة (Esc)') : L('Full screen', 'ملء الشاشة')}>
+          <FullscreenIcon exit={fs.isFull} />
+        </button>
+        <SafetySim key={`${sc.id}:${lang}`} scenario={scenario}
+          lang={lang} active={active} onEvent={onEvent} height={fs.isFull ? '100vh' : 'min(700px, 80vh)'} />
+      </div>
+      <div className="explore-foot">
+        <section className="card vr-card">
+          <CardHead title={L('How it works', 'كيف يعمل')} sub={L('Nobody gets hurt here, so try things', 'لا أحد يُصاب هنا، فجرّب')} />
+          <ul>
+            <li><b>{L('PPE', 'الوقاية')}</b> {L('Pick what to wear and what to take off. Wrong or missing PPE shows up when the job needs it.', 'اختر ما ترتديه وما تخلعه. الوقاية الخاطئة أو الناقصة تظهر عندما تحتاجها المهمة.')}</li>
+            <li><b>{L('Order', 'الترتيب')}</b> {L('Steps are shuffled. Choose them in the order you think is safe; the student walks to the machine and does it.', 'الخطوات مخلوطة. اخترها بالترتيب الذي تراه آمنًا؛ يمشي المتدرب إلى الماكينة وينفّذها.')}</li>
+            <li><b>{L('Score', 'الدرجة')}</b> {L('Each incident costs points by severity. Three stars means no incident and the right PPE.', 'كل حادث يخصم نقاطًا حسب خطورته. ثلاث نجوم تعني بلا حوادث وبالوقاية الصحيحة.')}</li>
+          </ul>
+        </section>
+        <TelemetryStrip items={log.map((e) => ({ seq: e.seq, verb: e.verb, objectRef: e.objectRef }))}
+          empty={L('Start the job to see the events this sends to your record.', 'ابدأ المهمة لترى الأحداث المرسلة إلى سجلك.')} />
       </div>
     </div>
   );

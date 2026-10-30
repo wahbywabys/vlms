@@ -7,6 +7,9 @@ import { tx } from '../i18n';
 import { heatmap } from './shared';
 import { migWelder } from '../../models/migWelder';
 import { weldLessons } from '../../lessons/weld';
+import { weldSafety } from '../../safety/weld';
+import { grinderSafety } from '../../safety/grinder';
+import { benchGrinder } from '../../models/benchGrinder';
 import type { Trade } from './types';
 import { migLab } from '../../../../api/src/labs/mig';
 
@@ -88,6 +91,7 @@ export const weld: Trade = {
   ],
   lab: migLab,
   accent: '#f06721',
-  models: [migWelder],
+  models: [migWelder, benchGrinder],
   lessons: weldLessons,
+  safety: [weldSafety, grinderSafety],
 };

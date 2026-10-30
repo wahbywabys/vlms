@@ -5,7 +5,6 @@ import { MachineExplorer, type ExplorerEvent } from '@/components/MachineExplore
 import { FullscreenIcon, useFullscreen } from '@/components/fullscreen';
 import { LEARNING } from '@/lib/learning';
 import { modelParts } from '@/models/kit';
-import { explorerStringsAr } from '@/models/motorAr';
 import { TelemetryStrip } from './TelemetryStrip';
 
 /** The trade's 3D digital twins, with a machine switcher and VR. Loaded only in the browser (WebGL). */
@@ -41,7 +40,7 @@ export default function Explore({ trade, active }: { trade: string; active: bool
           <div key={m.id} hidden={m.id !== modelId} className="explore-model">
             <MachineExplorer title={pick(m.title)} assetTag={m.assetTag} parts={modelParts(m, lang)} view={m.view}
               params={m.params} runParams={m.runParams} active={active && m.id === modelId}
-              strings={lang === 'ar' ? explorerStringsAr : undefined} onEvent={onEvent} height="min(620px, 72vh)" />
+              env={m.env && { ...m.env, bay: trade as 'cnc' }} lang={lang} onEvent={onEvent} height="min(660px, 76vh)" />
           </div>
         ))}
       </div>

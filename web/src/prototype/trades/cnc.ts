@@ -8,6 +8,9 @@ import { heatmap } from './shared';
 import { cncLathe } from '../../models/cncLathe';
 import { cncLessons } from '../../lessons/cnc';
 import { motorModel } from '../motorAr';
+import { cncSafety } from '../../safety/cnc';
+import { grinderSafety } from '../../safety/grinder';
+import { benchGrinder } from '../../models/benchGrinder';
 import type { Trade } from './types';
 import { cncLab } from '../../../../api/src/labs/cnc';
 
@@ -31,7 +34,7 @@ export const cnc: Trade = {
     trainer: tx('Eng. Huda Kamal', 'م. هدى كمال'), trainerInitials: tx('HK', 'ه'),
     jobCards: 'JC-118, JC-121',
   },
-  learner: { name: tx('Omar Lotfy', 'عمر لطفي'), initials: tx('OL', 'ع') },
+  learner: { name: tx('Omar Lotfy', 'عمر لطفي'), initials: tx('OL', 'ع'), photo: new URL('./student-photo.jpg', import.meta.url).href },
   stations: (() => {
     const TURN = tx('Turn Ø25 h7 shaft, Ra 1.6', 'خراطة عمود Ø25 h7، خشونة Ra 1.6');
     const FACE = tx('Face & chamfer Ø40 flange', 'تسوية وشطف فلنجة Ø40');
@@ -94,6 +97,7 @@ export const cnc: Trade = {
   ],
   lab: cncLab,
   accent: '#2f8fd8',
-  models: [cncLathe, motorModel],
+  models: [cncLathe, benchGrinder, motorModel],
   lessons: cncLessons,
+  safety: [cncSafety, grinderSafety],
 };

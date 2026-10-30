@@ -122,4 +122,78 @@ export const filletWeld: Lesson = {
   ],
 };
 
-export const weldLessons = [migSetup, filletWeld];
+
+export const hotWorkSafety: Lesson = {
+  id: 'weld-l3-safety',
+  title: tx('Hot-work safety: gear up, set up, weld', 'سلامة الأعمال الساخنة: الوقاية والتجهيز واللحام'),
+  summary: tx('The WABYS student gets ready for a MIG weld: welding PPE, the gas cylinder, fire risk, fume and protecting the people around you.',
+    'متدرب WABYS يستعد للحام MIG: معدات وقاية اللحام وأسطوانة الغاز وخطر الحريق والدخان وحماية من حولك.'),
+  model: migWelder,
+  duration: 110,
+  student: { boots: true, glasses: true, gloves: null, helmet: null, apron: false },
+  chapters: [
+    { at: 0, title: tx('Welding PPE', 'معدات وقاية اللحام') },
+    { at: 30, title: tx('Gas cylinder', 'أسطوانة الغاز') },
+    { at: 52, title: tx('Fire and fume', 'الحريق والدخان') },
+    { at: 80, title: tx('Strike the arc', 'إشعال القوس') },
+  ],
+  shots: [
+    shot(0, [-1.6, 1.6, 6.2], [-4.2, 0.3, 2.2], 'The WABYS student starts at the PPE station. MIG welding needs more than the basic glasses and boots.',
+      'يبدأ متدرب WABYS عند محطة الوقاية. لحام MIG يحتاج أكثر من النظارة والحذاء الأساسيين.', { avatar: { at: 'ppe' }, params: { bead: 0, arc: 0, flow: 0 } }),
+    shot(10, [-3.0, 1.0, 4.6], [-4.6, 0.6, 2.4], 'Leather gauntlets and a leather apron. Spatter lands at over 1000 °C; synthetic gloves melt onto the skin.',
+      'قفازات جلدية طويلة ومريلة جلدية. الرذاذ يسقط بأكثر من 1000 °م، والقفازات الصناعية تذوب على الجلد.', { avatar: { ppe: { gloves: 'leather', apron: true } } }),
+    shot(20, [-3.2, 1.2, 4.2], [-4.7, 0.8, 2.4], 'The auto-darkening helmet, shade 10 to 13. The glasses stay on underneath for chipping and grinding.',
+      'الخوذة ذاتية التعتيم بدرجة 10 إلى 13. والنظارة تبقى تحتها للتكسير والتجليخ.', { avatar: { ppe: { helmet: 'welding' } } }),
+    shot(30, [0.2, 1.4, 4.6], [-2.2, 0.2, -0.2], 'At the cylinder: chained upright at two-thirds of its height before the valve is touched.',
+      'عند الأسطوانة: مربوطة بسلسلة وقائمة على ثلثي ارتفاعها قبل لمس الصمام.', { avatar: { at: 'gas', pose: 'reach', reach: [-2.25, 0.4, -0.05] }, highlight: 'gas', move: 2.4 }),
+    shot(42, [-1.0, 1.4, 2.6], [-2.25, 0.8, -0.1], 'Open the valve slowly, standing to the side of the regulator, then set 12 to 15 L/min.',
+      'افتح الصمام ببطء مع الوقوف بجانب المنظم، ثم اضبط 12 إلى 15 لتر/دقيقة.', { avatar: { reach: [-2.25, 0.86, -0.04] }, highlight: 'gas', sweep: { flow: [0, 0.6] } }),
+    shot(52, [4.2, 1.6, 4.8], [1.6, -0.4, 0.6], 'Sparks travel up to 11 metres. Rags, cardboard and thinner go well away, and the extinguisher stays within reach.',
+      'الشرر يطير حتى 11 مترًا. تُبعد الخرق والكرتون والتنر، وتبقى الطفاية في متناول اليد.', { avatar: { at: 'weld', pose: 'point', reach: [2.6, -0.6, 1.2] }, params: { flow: 0.6 }, move: 2.4 }),
+    shot(66, [2.8, 1.4, 3.6], [1.0, 0.0, 0.2], 'Fume extraction on, the hood about 20 cm from the arc. All welding fume is a known cause of lung cancer.',
+      'الشفط يعمل والفوهة على بعد 20 سم من القوس تقريبًا. كل أدخنة اللحام مسبب معروف لسرطان الرئة.', { avatar: { pose: 'reach', reach: [1.0, 0.4, 0.3] } }),
+    shot(80, [3.4, 1.2, 3.8], [1.0, -0.15, 0.2], 'Screens closed, a warning to anyone nearby, helmet down. Only now does the student strike the arc.',
+      'الستائر مغلقة وتنبيه لمن حولك والخوذة منخفضة. الآن فقط يشعل المتدرب القوس.', { avatar: { pose: 'weld', reach: [0.6, -0.15, 0.09] }, running: true, params: { arc: 1 }, sweep: { bead: [0, 0.6] } }),
+    shot(96, [1.8, 0.6, 2.4], [1.1, -0.2, 0.05], 'After the weld: the steel stays hot for minutes. Handle it with pliers and check the area for smouldering sparks.',
+      'بعد اللحام: يبقى الحديد ساخنًا لدقائق. أمسكه بالزردية وافحص المكان بحثًا عن شرر مشتعل.', { avatar: { pose: 'inspect', reach: [1.1, -0.15, 0.1] }, params: { arc: 0, bead: 1 } }),
+  ],
+  callouts: [
+    { id: 'c-chain', at: 32, until: 42, anchor: [-2.25, 0.25, -0.05], label: tx('Chain at ⅔ height', 'سلسلة على ثلثي الارتفاع'), tone: 'ok', dx: 90, dy: -60 },
+    { id: 'c-reg', at: 42, until: 52, anchor: [-2.25, 0.8, -0.1], label: tx('Stand to the side', 'قف بجانب المنظم'), sub: tx('Open the valve slowly', 'افتح الصمام ببطء'), tone: 'warn', dx: 100, dy: -50 },
+    { id: 'c-arc', at: 82, until: 96, anchor: [0.6, -0.1, 0.1], label: tx('Arc: UV and IR', 'القوس: أشعة فوق بنفسجية وتحت حمراء'), sub: tx('Burns eyes in seconds', 'يحرق العين في ثوانٍ'), tone: 'bad', dx: -110, dy: -80 },
+  ],
+  flows: [
+    { id: 'f-gas', at: 44, until: 66, points: [[-2.25, 0.86, -0.07], [-2.0, 0.5, 0.2], [-1.4, 0.0, 0.3], [-0.6, -0.3, 0.3], [0.4, -0.2, 0.15], [0.6, -0.15, 0.09]], color: '#7fd4ff', label: tx('Ar/CO₂ shielding gas', 'غاز الحماية Ar/CO₂'), size: 0.045 },
+    { id: 'f-fume', at: 68, until: 80, points: [[0.6, -0.1, 0.1], [0.7, 0.1, 0.2], [0.85, 0.35, 0.3], [0.9, 0.55, 0.35]], color: '#b8b8b8', label: tx('Fume to the hood', 'الدخان إلى الفوهة'), size: 0.04 },
+  ],
+  cards: [
+    { id: 'k-ppe', at: 4, until: 30, side: 'end', kind: 'dodont', title: tx('Dressed to weld', 'ملابس اللحام'),
+      do: [tx('Helmet, shade 10–13', 'خوذة بدرجة 10–13'), tx('Leather gauntlets and apron', 'قفازات ومريلة جلدية'), tx('Glasses under the helmet', 'نظارة تحت الخوذة'), tx('Cotton or FR clothing, no turn-ups', 'ملابس قطنية أو مقاومة للهب بلا ثنيات')],
+      dont: [tx('Nitrile or synthetic gloves', 'قفازات نيتريل أو صناعية'), tx('Polyester clothing', 'ملابس بوليستر'), tx('Lighter in a pocket', 'ولاعة في الجيب')] },
+    { id: 'k-cyl', at: 32, until: 52, side: 'start', kind: 'spec', title: tx('M21 cylinder', 'أسطوانة M21'),
+      rows: [[tx('Gas', 'الغاز'), '82 % Ar · 18 % CO₂'], [tx('Full pressure', 'الضغط عند الامتلاء'), '200 bar'], [tx('Full weight (50 L)', 'الوزن ممتلئة (50 لتر)'), '≈ 80 kg'], [tx('Flow for MIG', 'التدفق للحام MIG'), '12 – 15 L/min']] },
+    { id: 'k-fire', at: 54, until: 66, side: 'start', kind: 'stat', value: '11 m', tone: 'warn', label: tx('how far welding sparks can travel: clear or cover flammables', 'المسافة التي قد يطير إليها شرر اللحام: أبعد المواد القابلة للاشتعال أو غطّها') },
+    { id: 'k-fume', at: 66, until: 80, side: 'end', kind: 'sign', sign: 'mandatory', pic: 'fume', code: 'IARC Group 1',
+      text: tx('Welding fume causes lung cancer. Use extraction for every weld indoors.', 'دخان اللحام يسبب سرطان الرئة. استخدم الشفط لكل لحام داخل المبنى.') },
+  ],
+  stops: [
+    stop('q1', 29, tx('Which gloves for MIG welding?', 'أي قفازات للحام MIG؟'),
+      tx('Leather welding gauntlets', 'قفازات لحام جلدية طويلة'),
+      [tx('Nitrile gloves', 'قفازات نيتريل'), tx('No gloves, for better control', 'بدون قفازات لتحكم أفضل')],
+      tx('Leather does not melt or burn; nitrile melts onto the skin.', 'الجلد لا يذوب ولا يشتعل، والنيتريل يذوب على الجلد.')),
+    stop('q2', 51, tx('What must you do before opening the cylinder valve?', 'ماذا يجب أن تفعل قبل فتح صمام الأسطوانة؟'),
+      tx('Chain the cylinder upright', 'اربط الأسطوانة قائمة بسلسلة'),
+      [tx('Lay it on its side', 'ضعها على جانبها'), tx('Oil the valve thread', 'زيّت سن الصمام')],
+      tx('A falling cylinder crushes feet, and a broken valve turns it into a missile. Never oil oxygen or gas fittings.', 'الأسطوانة الساقطة تهرس القدم والصمام المكسور يحولها إلى صاروخ. لا تزيّت وصلات الغاز أبدًا.'), [0, 1, 2]),
+    stop('q3', 95, tx('Someone is walking past the open booth. What do you do?', 'شخص يمر بجوار الكابينة المفتوحة. ماذا تفعل؟'),
+      tx('Close the screens and warn them before you strike', 'أغلق الستائر ونبّهه قبل إشعال القوس'),
+      [tx('Weld quickly before they look', 'الحم بسرعة قبل أن ينظر'), tx('Nothing, they are not welding', 'لا شيء، فهو لا يلحم')],
+      tx('The arc gives arc eye to anyone who sees it, not just the welder.', 'القوس يصيب أي شخص يراه بالتهاب العين، وليس اللحام فقط.'), [1, 2, 0]),
+  ],
+  hotspots: [
+    { id: 'h1', at: 20, until: 30, position: [-5.1, 0.6, 2.6], title: tx('Auto-darkening helmet', 'خوذة ذاتية التعتيم'),
+      body: tx('Switches from shade 4 to the set shade in under 1/10 000 s when the arc strikes. Check the battery and the lens before use.', 'تتحول من الدرجة 4 إلى الدرجة المضبوطة في أقل من 1/10000 ثانية عند إشعال القوس. افحص البطارية والعدسة قبل الاستخدام.') },
+  ],
+};
+
+export const weldLessons = [hotWorkSafety, migSetup, filletWeld];

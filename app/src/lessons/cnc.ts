@@ -121,4 +121,78 @@ export const turningToSize: Lesson = {
   ],
 };
 
-export const cncLessons = [latheAnatomy, turningToSize];
+
+
+export const latheSafety: Lesson = {
+  id: 'cnc-l3-safety',
+  title: tx('Lathe safety with the WABYS student', 'سلامة المخرطة مع متدرب WABYS'),
+  summary: tx('Follow the WABYS student from the PPE station to the lathe: dress, the chuck key, the guard, swarf and why gloves never go near a turning chuck.',
+    'رافق متدرب WABYS من محطة الوقاية إلى المخرطة: الملابس ومفتاح الظرف والباب والرايش، ولماذا لا تقترب القفازات من ظرف يدور.'),
+  model: cncLathe,
+  duration: 112,
+  student: { boots: false, glasses: false, jewellery: true, looseSleeves: true },
+  chapters: [
+    { at: 0, title: tx('Dress for the lathe', 'الملابس المناسبة للمخرطة') },
+    { at: 34, title: tx('The chuck key', 'مفتاح الظرف') },
+    { at: 58, title: tx('Guard and start', 'الباب والتشغيل') },
+    { at: 84, title: tx('Gloves and swarf', 'القفازات والرايش') },
+  ],
+  shots: [
+    shot(0, [-1.2, 1.3, 5.6], [-3.4, 0.2, 2.4], 'The WABYS student arrives in the CNC bay. Before the lathe, every shift starts here, at the PPE station.',
+      'يصل متدرب WABYS إلى ورشة CNC. قبل المخرطة، تبدأ كل وردية هنا عند محطة معدات الوقاية.', { avatar: { at: 'ppe' }, params: { door: 1, cut: 0, feed: 0 } }),
+    shot(10, [-2.4, 0.9, 4.4], [-3.6, 0.5, 2.6], 'Safety glasses and safety boots first. Chips leave the cut hot and fast; bars and chucks are heavy.',
+      'نظارة السلامة وحذاء الأمان أولًا. الرايش يخرج من القطع ساخنًا وسريعًا، والأعمدة والظروف ثقيلة.', { avatar: { ppe: { glasses: true, boots: true } } }),
+    shot(20, [-2.2, 0.8, 4.0], [-3.7, 0.3, 2.6], 'Then the things a lathe can catch: the watch and ring come off, cuffs are fastened, nothing hangs loose.',
+      'ثم ما يمكن أن تلتقطه المخرطة: تُخلع الساعة والخاتم، وتُربط الأكمام، ولا شيء يتدلى.', { avatar: { ppe: { jewellery: false, looseSleeves: false } } }),
+    shot(34, [0.6, 1.0, 3.4], [-0.9, 0.1, 0.6], 'At the chuck, the bar is loaded and tightened with the chuck key.',
+      'عند الظرف، يُحمَّل العمود ويُربط بمفتاح الظرف.', { avatar: { at: 'chuck', pose: 'reach' }, highlight: 'chuck', move: 2.4 }),
+    shot(46, [-0.2, 0.7, 2.4], [-0.9, 0.2, 0.2], 'The key comes straight out and back on its holder. A key left in the chuck is thrown out when the spindle starts.',
+      'يُخرج المفتاح فورًا ويعود إلى حامله. المفتاح المتروك في الظرف ينطلق عند بدء الدوران.', { avatar: { reach: [-0.9, 0.45, 0.1] }, highlight: 'chuck' }),
+    shot(58, [1.8, 1.2, 4.4], [0, 0.2, 0.8], 'The student clears the bed and closes the guard. The interlock will not let the spindle start with the door open.',
+      'ينظف المتدرب الفرش ويغلق الباب. القفل البيني لا يسمح بالدوران والباب مفتوح.', { avatar: { at: 'front' }, highlight: 'guard', sweep: { door: [1, 0] } }),
+    shot(70, [3.6, 1.4, 3.6], [1.6, 0.4, 0.6], 'At the control: program, offset, emergency stop tested. Cycle start, with a hand near feed hold.',
+      'عند لوحة التحكم: البرنامج والإزاحة واختبار زر الطوارئ. ثم بدء الدورة واليد قريبة من إيقاف التغذية.', { avatar: { at: 'controls' }, running: true, params: { door: 0 }, sweep: { cut: [0, 1], feed: [0.1, 0.9] } }),
+    shot(84, [0.8, 0.9, 3.0], [-0.6, 0.1, 0.3], 'Why no gloves? At 1000 rpm the bar turns 16 times a second. A glove that touches it is wrapped round before you can let go.',
+      'لماذا لا قفازات؟ عند 1000 لفة/دقيقة يدور العمود 16 مرة في الثانية. القفاز الذي يلمسه يلتف قبل أن تفلته.', { avatar: { at: 'front', pose: 'point', reach: [-0.5, 0.1, 0.4] }, running: true, xray: true, highlight: 'workpiece' }),
+    shot(98, [0.6, 1.1, 3.0], [-0.4, -0.1, 0.3], 'Spindle stopped, door open: swarf comes out with a chip hook and brush. Never by hand, never with the air gun.',
+      'العمود متوقف والباب مفتوح: يُزال الرايش بالخطاف والفرشاة. لا باليد ولا بمسدس الهواء.', { avatar: { pose: 'reach', reach: [-0.4, -0.1, 0.4] }, params: { door: 1, cut: 1 } }),
+  ],
+  callouts: [
+    { id: 'c-key', at: 46, until: 58, anchor: [-1.0, 0.6, 0], label: tx('Chuck key out', 'أخرج مفتاح الظرف'), sub: tx('Never let go of it in the chuck', 'لا تتركه في الظرف أبدًا'), tone: 'bad', dx: -110, dy: -60 },
+    { id: 'c-door', at: 60, until: 70, anchor: [0.65, 0.3, 0.84], label: tx('Interlocked guard', 'باب بقفل بيني'), sub: tx('No spindle while open', 'لا دوران وهو مفتوح'), tone: 'ok' },
+    { id: 'c-estop', at: 72, until: 84, anchor: [2.43, 0.2, 0.6], label: tx('Emergency stop', 'زر الطوارئ'), sub: tx('Test it every shift', 'اختبره كل وردية'), tone: 'warn', dx: 80, dy: -80 },
+    { id: 'c-wrap', at: 86, until: 98, anchor: [-0.3, 0.1, 0.1], label: tx('16 turns a second', '16 لفة في الثانية'), sub: tx('Gloves, sleeves, rags: all get caught', 'القفازات والأكمام والخرق: كلها تعلق'), tone: 'bad', dx: 90, dy: -90 },
+  ],
+  flows: [
+    { id: 'f-cool', at: 72, until: 84, points: [[-1.2, 0.9, -0.3], [-0.9, 0.85, -0.25], [-0.55, 0.4, -0.1], [-0.45, 0.13, 0]], color: '#3ad1ff', label: tx('Coolant', 'سائل التبريد'), size: 0.04 },
+  ],
+  cards: [
+    { id: 'k-dress', at: 20, until: 34, side: 'end', kind: 'dodont', title: tx('Dressed for the lathe', 'ملابس المخرطة'),
+      do: [tx('Safety glasses, all the time', 'نظارة السلامة طوال الوقت'), tx('Safety boots', 'حذاء الأمان'), tx('Cuffs fastened, long hair tied up', 'الأكمام مربوطة والشعر الطويل مرفوع')],
+      dont: [tx('Gloves near rotating parts', 'قفازات قرب الأجزاء الدوارة'), tx('Watch, ring, chain', 'ساعة أو خاتم أو سلسلة'), tx('Loose sleeves or a tie', 'أكمام فضفاضة أو ربطة عنق')] },
+    { id: 'k-key', at: 36, until: 56, side: 'end', kind: 'sign', sign: 'warning', pic: 'flying', code: 'ISO 23125',
+      text: tx('A chuck key left in the chuck leaves at 20 m/s or more when the spindle starts.', 'مفتاح الظرف المتروك ينطلق بسرعة 20 م/ث أو أكثر عند بدء الدوران.') },
+    { id: 'k-start', at: 60, until: 82, side: 'start', kind: 'steps', title: tx('Before cycle start', 'قبل بدء الدورة'),
+      items: [tx('Key out, bed clear', 'المفتاح خارج والفرش نظيف'), tx('Guard closed', 'الباب مغلق'), tx('Program and G54 checked', 'البرنامج وG54 مراجَعان'), tx('E-stop tested', 'زر الطوارئ مُختبر'), tx('Feed override at 25 %', 'التغذية على 25 %')] },
+    { id: 'k-rpm', at: 86, until: 98, side: 'end', kind: 'stat', value: '0.06 s', tone: 'bad', label: tx('one turn of the bar at 1000 rpm: faster than you can let go', 'لفة واحدة للعمود عند 1000 لفة/دقيقة: أسرع من أن تفلت') },
+  ],
+  stops: [
+    stop('q1', 33, tx('Which of these must come off before you work at a lathe?', 'أي مما يلي يجب خلعه قبل العمل على المخرطة؟'),
+      tx('Watch, rings and gloves', 'الساعة والخواتم والقفازات'),
+      [tx('Safety glasses', 'نظارة السلامة'), tx('Safety boots', 'حذاء الأمان')],
+      tx('Anything that can be caught by a turning part comes off. Glasses and boots stay on.', 'كل ما يمكن أن يعلق بجزء دوار يُخلع. النظارة والحذاء يبقيان.')),
+    stop('q2', 57, tx('When does the chuck key come out of the chuck?', 'متى يُخرج مفتاح الظرف من الظرف؟'),
+      tx('Straight after tightening, every time', 'فور الربط، في كل مرة'),
+      [tx('Before cycle start', 'قبل بدء الدورة'), tx('At the end of the shift', 'في نهاية الوردية')],
+      tx('"Before cycle start" is how keys get forgotten. Take it out the moment you finish with it.', '"قبل بدء الدورة" هو سبب نسيان المفاتيح. أخرجه لحظة انتهائك منه.'), [0, 1, 2]),
+    stop('q3', 111, tx('How do you clear swarf from the lathe?', 'كيف تزيل الرايش من المخرطة؟'),
+      tx('Spindle stopped, with a chip hook and brush', 'والعمود متوقف، بخطاف وفرشاة'),
+      [tx('With the air gun, door open', 'بمسدس الهواء والباب مفتوح'), tx('By hand, wearing gloves', 'باليد مع ارتداء القفازات')],
+      tx('Swarf is razor sharp and air throws it back at you.', 'الرايش حاد كالشفرة والهواء يعيده نحوك.'), [2, 0, 1]),
+  ],
+  hotspots: [
+    { id: 'h1', at: 10, until: 34, position: [-4.4, 0.2, 2.7], title: tx('PPE station', 'محطة الوقاية'),
+      body: tx('Signs show what this bay needs: eye protection, safety boots, no gloves at rotating machines.', 'اللوحات توضح ما تحتاجه الورشة: حماية العين وحذاء الأمان، ولا قفازات عند الماكينات الدوارة.') },
+  ],
+};
+export const cncLessons = [latheSafety, latheAnatomy, turningToSize];

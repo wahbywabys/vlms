@@ -146,6 +146,15 @@ export const starterPanel: ModelDef = {
   assetTag: 'ELEC2-P04 · DOL-7k5',
   view: { camera: [2.6, 1.4, 5.0], target: [0, -0.1, 0] },
   params: { door: 1, q1: 0, km: 0, lock: 0, trip: 0 },
+  env: {
+    unitsPerM: 2.75, floorY: -4.0, stand: 'wall', bay: 'elec',
+    stations: [
+      { id: 'front', label: tx('In front of the panel', 'أمام اللوحة'), pos: [0.4, 2.7], face: Math.PI, pose: 'operate', reach: [0.3, -0.25, 0.42] },
+      { id: 'isolator', label: tx('Isolator Q1', 'المفصل Q1'), pos: [-0.5, 2.5], face: Math.PI, pose: 'operate', reach: [-0.45, 0.28, 0.45] },
+      { id: 'inside', label: tx('Inside the panel', 'داخل اللوحة'), pos: [0.3, 2.3], face: Math.PI, pose: 'reach', reach: [0.25, -0.5, 0.05] },
+      { id: 'ppe', label: tx('PPE station', 'محطة الوقاية'), pos: [-4.6, 3.6], face: -Math.PI / 2, pose: 'idle' },
+    ],
+  },
   runParams: { door: 0, q1: 1, km: 1 },
   parts: [
     {

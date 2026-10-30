@@ -8,6 +8,7 @@ import { heatmap } from './shared';
 import { starterPanel } from '../../models/starterPanel';
 import { elecLessons } from '../../lessons/elec';
 import { motorModel } from '../motorAr';
+import { elecSafety } from '../../safety/elec';
 import type { Trade } from './types';
 import { dolLab } from '../../../../api/src/labs/dol';
 
@@ -93,4 +94,5 @@ export const elec: Trade = {
   accent: '#e8a70a',
   models: [starterPanel, motorModel],
   lessons: elecLessons,
+  safety: [elecSafety],
 };

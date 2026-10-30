@@ -116,7 +116,8 @@ export function machineDemo(t: Trade) {
   };
   const demoCodes = (() => {
     const tags = [own(t), [...locks.keys()].find((k) => machines.get(k)?.trade === t.id), PREFIX[t.id]! + '11'].filter(Boolean) as string[];
-    return tags.map((tag) => ({ code: machines.get(tag)!.qr, label: tag }));
+    // Station 11 (the machine under maintenance) only exists in trades with 11 or more stations.
+    return tags.filter((tag) => machines.has(tag)).map((tag) => ({ code: machines.get(tag)!.qr, label: tag }));
   })();
   const rows = (): MachineRow[] => [...machines.values()].filter((m) => m.trade === t.id).map((m) => {
     const l = locks.get(m.tag);

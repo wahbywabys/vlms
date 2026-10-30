@@ -108,6 +108,16 @@ export const cncLathe: ModelDef = {
   assetTag: 'CNC2-L01 · MTL-250',
   view: { camera: [3.8, 2.4, 6.0], target: [0, 0.1, 0] },
   params: { door: 0, feed: 0.3, cut: 0.6 },
+  env: {
+    unitsPerM: 1.14, stand: 'floor', bay: 'cnc',
+    stations: [
+      { id: 'front', label: tx('Operator position', 'موقع المشغل'), pos: [-0.2, 1.6], face: Math.PI, pose: 'operate', reach: [0.65, 0.3, 0.86] },
+      { id: 'controls', label: tx('Control panel', 'لوحة التحكم'), pos: [1.8, 1.4], face: 2.64, pose: 'operate', reach: [2.15, 0.38, 0.66] },
+      { id: 'chuck', label: tx('Chuck', 'الظرف'), pos: [-0.85, 1.5], face: Math.PI, pose: 'reach', reach: [-0.85, 0.08, 0.32] },
+      { id: 'tailstock', label: tx('Tailstock', 'الغراب المتحرك'), pos: [1.5, 1.5], face: Math.PI, pose: 'inspect', reach: [1.35, 0.1, 0.35] },
+      { id: 'ppe', label: tx('PPE station', 'محطة الوقاية'), pos: [-3.9, 2.7], face: -Math.PI / 2, pose: 'idle' },
+    ],
+  },
   parts: [
     {
       id: 'guard', name: tx('Guard door (interlocked)', 'باب الحماية (معشّق)'), explode: [0, 0.3, 1.6], stage: 0,

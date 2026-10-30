@@ -184,6 +184,16 @@ export const carEngine: ModelDef = {
   assetTag: 'AUTO1-ENG-R3',
   view: { camera: [4.4, 2.8, 5.6], target: [0.2, 0.1, 0] },
   params: { crank: 0 },
+  env: {
+    unitsPerM: 3.2, floorY: -2.75, stand: 'engine-stand', bay: 'auto',
+    stations: [
+      { id: 'front', label: tx('Front of the engine', 'أمام المحرك'), pos: [0, 3.3], face: Math.PI, pose: 'operate', reach: [0, 0.95, 0.55] },
+      { id: 'timing', label: tx('Timing belt end', 'جهة سير التوقيت'), pos: [-3.4, 0.6], face: Math.PI / 2, pose: 'reach', reach: [-1.2, 0.25, 0.15] },
+      { id: 'battery', label: tx('Battery', 'البطارية'), pos: [3.7, 2.2], face: -2.45, pose: 'reach', reach: [2.2, -0.58, 0.5] },
+      { id: 'starter', label: tx('Starter side', 'جهة المارش'), pos: [1.0, -3.4], face: 0, pose: 'inspect', reach: [0.95, -0.3, -0.7] },
+      { id: 'ppe', label: tx('PPE station', 'محطة الوقاية'), pos: [-5.2, 4.6], face: -Math.PI / 2, pose: 'idle' },
+    ],
+  },
   parts: [
     {
       id: 'valve_cover', name: tx('Valve cover & ignition coils', 'غطاء الصبابات وملفات الإشعال'), explode: [0, 1.5, 0], stage: 0,

@@ -2,7 +2,7 @@
 .mx-root { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 0; border-radius: 14px; overflow: hidden;
   background: #0f1720; color: #e6edf5; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
 .mx-stage { position: relative; min-height: 0; }
-.mx-header { position: absolute; inset: 0 0 auto 0; display: flex; justify-content: space-between; align-items: flex-start;
+.mx-header { position: absolute; z-index: 4; inset: 0 0 auto 0; display: flex; justify-content: space-between; align-items: flex-start;
   gap: 12px; padding: 14px 16px; pointer-events: none; }
 .mx-header > * { pointer-events: auto; }
 .mx-header h2 { margin: 0; font-size: 17px; font-weight: 650; }
@@ -52,7 +52,38 @@
 .mx-root .mx-switch button { border: 0; border-radius: 0; background: #16212d; }
 .mx-root .mx-switch button + button { border-inline-start: 1px solid #2a3a4d; }
 .mx-root .mx-switch button[aria-checked="true"] { background: #e6edf5; color: #0f1720; }
+/* Camera, setting and student dock (under the header) */
+.mx-dock { position: absolute; inset: 70px 16px auto auto; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; z-index: 4; }
+[dir="rtl"] .mx-dock { inset: 70px auto auto 16px; align-items: flex-start; }
+.mx-seg { display: inline-flex; align-items: center; background: rgba(15, 23, 32, .82); border: 1px solid #2a3a4d; border-radius: 10px;
+  overflow: hidden; backdrop-filter: blur(4px); }
+.mx-root .mx-seg button { min-height: 32px; padding: 0 10px; border: 0; border-radius: 0; background: transparent; font-size: 12.5px; }
+.mx-root .mx-seg button + button { border-inline-start: 1px solid #2a3a4d; }
+.mx-root .mx-seg button[aria-checked="true"] { background: #e6edf5; color: #0f1720; }
+.mx-root .mx-seg button[aria-pressed="true"] { background: #ff9f1c; color: #1a1205; }
+.mx-root .mx-seg button[aria-pressed="false"] { background: transparent; color: #e6edf5; }
+.mx-seg-label { padding: 0 10px; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #f06721; font-weight: 700; }
+.mx-cutbar { position: absolute; inset: auto auto 78px 16px; z-index: 4; display: grid; gap: 8px; width: min(360px, calc(100% - 32px));
+  padding: 10px 12px; border-radius: 12px; background: rgba(15, 23, 32, .88); border: 1px solid #3b2b14; border-inline-start: 4px solid #ff9f1c; }
+[dir="rtl"] .mx-cutbar { inset: auto 16px 78px auto; }
+.mx-cutbar label { display: grid; gap: 2px; font-size: 12px; color: #a9b9cb; }
+.mx-cutbar input { width: 100%; accent-color: #ff9f1c; }
+.mx-cutbar small { color: #8fa3b8; font-size: 11.5px; }
+.mx-walk { position: absolute; inset: auto 16px 78px auto; z-index: 4; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end;
+  max-width: min(520px, calc(100% - 32px)); padding: 8px 10px; border-radius: 12px; background: rgba(15, 23, 32, .85); border: 1px solid #2a3a4d; }
+[dir="rtl"] .mx-walk { inset: auto auto 78px 16px; justify-content: flex-start; }
+.mx-walk > span { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #f06721; font-weight: 700; }
+.mx-root .mx-walk button { min-height: 32px; padding: 0 10px; font-size: 12.5px; }
+.mx-walk small { flex-basis: 100%; text-align: end; color: #8fa3b8; font-size: 11.5px; }
+.mx-pad { position: absolute; inset: auto auto 150px 18px; z-index: 4; display: grid; grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(2, 40px); gap: 4px; }
+.mx-root .mx-pad button { min-height: 40px; padding: 0; border-radius: 10px; background: rgba(15, 23, 32, .75); touch-action: none; user-select: none; }
+.mx-pad .up { grid-column: 2; grid-row: 1; } .mx-pad .lt { grid-column: 1; grid-row: 2; } .mx-pad .dn { grid-column: 2; grid-row: 2; } .mx-pad .rt { grid-column: 3; grid-row: 2; }
+@media (hover: hover) and (pointer: fine) { .mx-pad { display: none; } }
+.mx-cutbar ~ .mx-pad { display: none; }
+
 @media (max-width: 760px) {
+  .mx-dock { inset: auto 10px 70px auto; }
+  .mx-cutbar, .mx-walk { inset: auto 10px 120px 10px; width: auto; max-width: none; }
   .mx-root { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; height: auto !important; }
   .mx-header { flex-direction: column; }
   .mx-header h2 { font-size: 15px; }
@@ -62,3 +93,17 @@
   .mx-panel { border-inline-start: 0; border-top: 1px solid #1f2c3a; }
   .mx-modes button { padding: 0 10px; }
 }
+
+/* Part labels: a name tag beside every pin, and the briefing card. */
+.mx-pinwrap { position: relative; display: flex; align-items: center; gap: 6px; pointer-events: auto; }
+.mx-label { min-height: 0 !important; padding: 3px 8px !important; border-radius: 6px !important; white-space: nowrap; max-width: 200px;
+  overflow: hidden; text-overflow: ellipsis; font-size: 12px; font-weight: 600; line-height: 1.3; color: #fff;
+  background: rgba(12, 20, 30, .82) !important; border: 1px solid rgba(255, 255, 255, .25) !important; cursor: pointer;
+  position: absolute; inset-inline-start: 34px; top: 50%; transform: translateY(-50%); }
+.mx-pinwrap.is-active .mx-label, .mx-label:hover { background: #ff9f1c !important; color: #1a1205; border-color: #ff9f1c !important; }
+.mx-root.is-stereo .mx-label { display: none !important; }
+.mx-brief { display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: rgba(58, 160, 255, .1); border: 1px solid rgba(58, 160, 255, .35); }
+.mx-brief h4, .mx-spec-h { margin: 6px 0 0; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #8fc4ff; }
+.mx-brief h4:first-child { margin-top: 0; }
+.mx-brief p { margin: 0; color: #e6edf5; font-size: 14px; line-height: 1.45; }
+.mx-spec-h { color: #a9b9cb; }

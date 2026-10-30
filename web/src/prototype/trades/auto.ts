@@ -7,6 +7,7 @@ import { tx } from '../i18n';
 import { heatmap } from './shared';
 import { carEngine } from '../../models/carEngine';
 import { autoLessons } from '../../lessons/auto';
+import { autoSafety } from '../../safety/auto';
 import type { Trade } from './types';
 import { autoLab } from '../../../../api/src/labs/auto';
 
@@ -89,4 +90,5 @@ export const auto: Trade = {
   accent: '#d9463b',
   models: [carEngine],
   lessons: autoLessons,
+  safety: [autoSafety],
 };

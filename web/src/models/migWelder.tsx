@@ -138,6 +138,15 @@ export const migWelder: ModelDef = {
   assetTag: 'WELD3-B01 · MIG-250',
   view: { camera: [3.4, 2.2, 5.4], target: [0, -0.1, 0] },
   params: { bead: 1, arc: 0, flow: 0.55, defects: 0 },
+  env: {
+    unitsPerM: 1.25, stand: 'floor', bay: 'weld',
+    stations: [
+      { id: 'weld', label: tx('Welding position', 'موقع اللحام'), pos: [1.25, 1.3], face: Math.PI, pose: 'weld', reach: [1.15, -0.12, 0.3] },
+      { id: 'feeder', label: tx('Wire feeder', 'وحدة تغذية السلك'), pos: [-1.3, 1.45], face: Math.PI, pose: 'operate', reach: [-1.3, 0.25, 0.5] },
+      { id: 'gas', label: tx('Gas cylinder', 'أسطوانة الغاز'), pos: [-2.45, 1.0], face: Math.PI, pose: 'reach', reach: [-2.25, 0.86, -0.04] },
+      { id: 'ppe', label: tx('PPE station', 'محطة الوقاية'), pos: [-4.8, 2.4], face: -Math.PI / 2, pose: 'idle' },
+    ],
+  },
   runParams: { bead: 1, arc: 1 },
   parts: [
     {
