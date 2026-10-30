@@ -93,6 +93,31 @@ describe('programmes admin, machine register and offline scans', { skip: !DB_URL
     assert.equal((await call('GET', '/v1/admin/programs', TRAINER)).status, 403);
   });
 
+  it('loads the WABYS curricula with knowledge, skills and attitudes, and imports K/S/A columns', async () => {
+    const list = await call('GET', '/v1/admin/programs', DIRECTOR);
+    assert.equal(list.body.attitudes.length, 7);
+    const codes = list.body.programs.map((p: any) => p.programCode).filter(Boolean).sort();
+    assert.deepEqual(codes, ['AIT', 'AUT', 'CNC', 'CWS', 'EIM', 'ELI', 'PRT', 'RMG']);
+    const eli = list.body.programs.find((p: any) => p.programCode === 'ELI');
+    assert.equal(eli.id, 'elec', 'the manual reuses the existing electrical trade');
+    assert.equal(eli.profile.hours, 4800);
+    const k01 = eli.competencies.find((c: any) => c.code === 'ELI-Y1-K-01');
+    assert.deepEqual([k01.kind, k01.ksa, k01.year, k01.hours, k01.parentCode], ['element', 'K', 1, 40, 'ELI-Y1-K']);
+    assert.ok(k01.titleAr, 'Arabic title');
+    const s01 = eli.competencies.find((c: any) => c.code === 'ELI-Y1-S-01');
+    assert.equal(s01.targetLevel, 'L3');
+    assert.equal(eli.competencies.find((c: any) => c.code === 'ELI-Y1-A-01').coreAttitude, 'A1');
+    assert.ok(eli.competencies.filter((c: any) => c.parentCode === 'ELI-Y1-K-01').every((c: any) => c.kind === 'criterion' && c.titleAr));
+
+    const out = await call('POST', '/v1/admin/programs/import', DIRECTOR, { rows: [
+      { programCode: 'RMG', competencyCode: 'RMG-Y1-S-99', level: 'Element', parentCode: 'RMG-Y1-S', title: 'Thread an overlock machine', ksa: 'Skill', year: 1, targetLevel: 'L2' },
+      { programCode: 'RMG', competencyCode: 'RMG-Y1-A-99', level: 'Element', parentCode: 'RMG-Y1-A', title: 'Keeps the station tidy', ksa: 'اتجاه', coreAttitude: 'A5' },
+    ] });
+    assert.equal(out.body.created, 2, JSON.stringify(out.body.results));
+    const row = await db.query(`SELECT ksa, year, target_level FROM competencies WHERE code = 'RMG-Y1-S-99'`);
+    assert.deepEqual(row.rows[0], { ksa: 'S', year: 1, target_level: 'L2' });
+  });
+
   it('registers real machines from the inventory template and maps each to a 3D twin', async () => {
     const rows = [
       { centerCode: 'ALX-01', centerName: 'VTC Alexandria', workshop: 'Turning shop', machineType: 'CNC lathe', brand: 'Emco', model: 'Concept Turn 250', serial: 'EM-2201', year: 2019 },

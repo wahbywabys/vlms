@@ -25,6 +25,9 @@ export const PROGRAM_COLUMNS: Columns = {
   level: ['Level', 'Kind', 'المستوى'], parentCode: ['Parent code', 'رمز المستوى الأعلى'], title: ['Skill title', 'Title', 'عنوان المهارة'],
   titleAr: ['Skill title (Arabic)', 'Title (Arabic)', 'عنوان المهارة بالعربية'], safetyCritical: ['Safety-critical', 'Safety critical', 'سلامة حرجة'],
   hours: ['Hours', 'Nominal hours', 'الساعات'],
+  ksa: ['Domain (K/S/A)', 'Domain', 'K/S/A', 'المجال (معرفة/مهارة/اتجاه)', 'المجال'], year: ['Year', 'السنة'],
+  targetLevel: ['Target level', 'Performance level', 'مستوى الأداء المستهدف'], coreAttitude: ['Core attitude', 'الاتجاه الأساسي'],
+  description: ['Description', 'Performance criteria', 'الوصف'], descriptionAr: ['Description (Arabic)', 'الوصف بالعربية'],
 };
 
 const norm = (s: string) => s.replace(/\*/g, '').replace(/\s+/g, ' ').trim().toLowerCase();

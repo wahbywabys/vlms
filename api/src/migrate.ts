@@ -10,6 +10,8 @@
  *                                welding (after demo.sql, same rule)
  *   db/demo_modules.sql          demo data for the workshop, OJT and assessment
  *                                modules (after demo_trades.sql, same rule)
+ *   db/demo_curricula.sql        demo cohorts for the programmes of the WABYS
+ *                                curriculum manual (after demo_modules.sql)
  *
  * Applied files are recorded in public.vtc_migrations. A database built earlier
  * with db/reset.sh (schema present, no record) is adopted as already migrated.
@@ -35,7 +37,7 @@ async function main() {
 
     const extra = (await readdir(join(dbDir, 'migrations')).catch(() => [] as string[]))
       .filter((f) => f.endsWith('.sql')).sort().map((f) => `migrations/${f}`);
-    const plan = ['schema.sql', 'seed.sql', ...extra, ...(withDemo ? ['demo.sql', 'demo_trades.sql', 'demo_modules.sql'] : [])];
+    const plan = ['schema.sql', 'seed.sql', ...extra, ...(withDemo ? ['demo.sql', 'demo_trades.sql', 'demo_modules.sql', 'demo_curricula.sql'] : [])];
 
     let ran = 0;
     for (const name of plan) {

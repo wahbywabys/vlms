@@ -96,7 +96,24 @@ export const GUIDES: HelpGuide[] = [
     steps: [
       { img: 'student-lab', t: tx('Tap "V-Lab". Choose a machine to turn it around with your finger, watch a lesson, or try the safety challenge.',
         'اضغط "المعمل الافتراضي". اختار ماكينة وحرّكها بصباعك، أو اتفرج على درس، أو جرّب تحدي السلامة.') },
-      { t: tx('In the fault test, find what is wrong with the machine safely. Your score comes at the end.', 'في اختبار الأعطال، دوّر على العطل في الماكينة بأمان. الدرجة بتظهر في الآخر.') },
+      { t: tx('Tap any part of the machine to read what it is and what it does. "Section" cuts the machine open so you can see inside.',
+        'اضغط على أي جزء في الماكينة علشان تقرا هو إيه وبيعمل إيه. زرار "مقطع" بيفتح الماكينة علشان تشوف جوه.') },
+      { t: tx('In "Safety simulator", choose your PPE and do the job step by step. A wrong step shows what happens in a real workshop; tap "Rewind and try again" and do it safely.',
+        'في "محاكي السلامة" اختار معدات الوقاية واعمل المهمة خطوة بخطوة. لو خطوة غلط هتشوف اللي بيحصل في الورشة الحقيقية؛ اضغط "ارجع وحاول مرة أخرى" واعملها بأمان.') },
+      { t: tx('In the fault test, find what is wrong with the machine safely. Your score comes at the end. (Some programmes have no fault test yet.)',
+        'في اختبار الأعطال، دوّر على العطل في الماكينة بأمان. الدرجة بتظهر في الآخر. (بعض التخصصات لسه مفيهاش اختبار أعطال.)') },
+    ],
+  },
+  {
+    id: 'student-programme', audience: 'student',
+    title: tx('See everything you will learn in your programme', 'أشوف كل اللي هتعلمه في تخصصي'),
+    steps: [
+      { img: 'student-curriculum', t: tx('Tap "My programme". At the top you see your job after graduation, the hours and the final project.',
+        'اضغط "برنامجي". فوق هتلاقي الوظيفة بعد التخرج وعدد الساعات ومشروع التخرج.') },
+      { t: tx('Choose the year. K = what you need to know, S = what you need to do with your hands, A = how you behave at work.',
+        'اختار السنة. K = اللي لازم تعرفه، S = اللي لازم تعمله بإيدك، A = إزاي تتصرف في الشغل.') },
+      { img: 'student-curriculum-open', t: tx('Tap any line to open it and read exactly what you must be able to do. Use the search box to find a word.',
+        'اضغط على أي سطر علشان يفتح وتقرا بالظبط المطلوب منك. استخدم خانة البحث علشان تلاقي أي كلمة.') },
     ],
   },
   {
@@ -163,6 +180,17 @@ export const GUIDES: HelpGuide[] = [
     tip: tx('A sticker keeps working even if you change the server or have no internet.', 'الملصق بيفضل شغال حتى لو غيّرت الجهاز أو مفيش إنترنت.'),
   },
   {
+    id: 'trainer-curriculum', audience: 'trainer',
+    title: tx('Read the programme curriculum', 'أقرا منهج التخصص'),
+    steps: [
+      { img: 'trainer-curriculum', t: tx('Tap "Curriculum". Choose the programme in the bar at the top, then the year.', 'اضغط "المنهج". اختار التخصص من الشريط اللي فوق، وبعدين السنة.') },
+      { t: tx('"S" shows each practical skill with its target level (L1 to L4) and the performance criteria you assess. A red "Safety-critical" tag means the trainee must pass it before using the machine.',
+        '"S" بيعرض كل مهارة عملية بالمستوى المطلوب (م1 إلى م4) ومعايير الأداء اللي بتقيّمها. العلامة الحمرا "سلامة حرجة" معناها إن المتدرب لازم ينجح فيها قبل ما يشغّل الماكينة.') },
+      { t: tx('"A" shows the attitudes to observe every day, linked to the seven core attitudes at the bottom of the page.',
+        '"A" بيعرض الاتجاهات المهنية اللي تلاحظها كل يوم، ومربوطة بالاتجاهات السبعة الأساسية في آخر الصفحة.') },
+    ],
+  },
+  {
     id: 'trainer-vlab', audience: 'trainer',
     title: tx('Give a V-Lab fault exam', 'أعمل امتحان أعطال في المعمل الافتراضي'),
     steps: [
@@ -189,6 +217,15 @@ export const GUIDES: HelpGuide[] = [
       { img: 'teacher-new', t: tx('Tap "New question". Choose the type and skill, write it in English and Arabic, then "Save & send to review".',
         'اضغط "سؤال جديد". اختار النوع والجدارة، اكتب السؤال بالإنجليزي والعربي، وبعدين "حفظ وإرسال للمراجعة".') },
       { t: tx('Only approved questions reach the trainees.', 'المتدربين بيشوفوا الأسئلة المعتمدة بس.') },
+    ],
+  },
+  {
+    id: 'teacher-curriculum', audience: 'teacher',
+    title: tx('Read the programme curriculum', 'أقرا منهج التخصص'),
+    steps: [
+      { img: 'trainer-curriculum', t: tx('Tap "Curriculum". Choose the programme in the bar at the top.', 'اضغط "المنهج". اختار التخصص من الشريط اللي فوق.') },
+      { t: tx('"K" shows the knowledge modules with their hours and learning outcomes: write your questions for these.',
+        '"K" بيعرض الوحدات المعرفية بساعاتها ونواتج التعلم: اكتب أسئلتك عليها.') },
     ],
   },
 
@@ -221,6 +258,8 @@ export const GUIDES: HelpGuide[] = [
       { img: 'director-programs', t: tx('Tap "Programmes & skills", then "Add programme" and "Add skill".', 'اضغط "التخصصات والمهارات"، وبعدين "أضف التخصص" و"أضف مهارة".') },
       { t: tx('Many at once: under "Import from Excel or CSV" download the "Excel template", fill it, choose the file, tap "Check the file" first, then "Import".',
         'لو كتير مرة واحدة: تحت "استيراد من Excel أو CSV" نزّل "نموذج Excel"، املاه، اختار الملف، اضغط "افحص الملف" الأول، وبعدين "استيراد".') },
+      { t: tx('The 8 programmes of the WABYS manual are already loaded. Tap a programme to see its profile and every knowledge, skill and attitude by year. To change them in Excel, tap "Download curricula (Excel)", edit, and import the file again.',
+        'التخصصات الثمانية من دليل وابيز محمّلة جاهزة. اضغط على أي تخصص علشان تشوف بياناته وكل المعارف والمهارات والاتجاهات لكل سنة. علشان تعدّلها في Excel اضغط "تنزيل المناهج (Excel)"، عدّل، واستورد الملف تاني.') },
     ],
   },
   {

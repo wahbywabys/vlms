@@ -2,6 +2,7 @@ import { requireRole } from '@/lib/auth';
 import { q, q1 } from '@/lib/db';
 import { getI18n } from '@/lib/i18n-server';
 import { labForTrade } from '@/lib/labs';
+import { LEARNING_META } from '@/lib/learningMeta';
 import { currentTrade } from '@/lib/trade';
 import { VLab, type RecentAttempt } from './VLab';
 
@@ -12,6 +13,7 @@ export default async function LabPage() {
   const { L } = await getI18n();
   const trade = await currentTrade(s, 'own');
   const lab = await labForTrade(s, trade);
+  if (!lab && LEARNING_META[trade]) return <VLab lab={null} trade={trade} initialSessionId={null} examFromTrainer={false} recent={[]} />;
   if (!lab?.catalogue) {
     return <div className="lab"><p className="notice notice-danger">{lab
       ? L('The V-Lab service is not reachable right now. Try again in a minute.', 'خدمة المعمل الافتراضي غير متاحة الآن. حاول بعد دقيقة.')

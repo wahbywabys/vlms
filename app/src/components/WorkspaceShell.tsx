@@ -14,6 +14,7 @@ export const WORKSPACE: Record<WorkspaceKey, { role: Role; label: Txt; home: str
     role: 'student', label: tx('Student', 'الطالب'), home: '/student', trades: 'own',
     sections: [
       { href: '/student', label: tx('My progress', 'تقدّمي'), exact: true },
+      { href: '/student/curriculum', label: tx('My programme', 'برنامجي') },
       { href: '/student/private', label: tx('🔒 Private', '🔒 خاص') },
       { href: '/student/lab', label: tx('V-Lab', 'المعمل الافتراضي') },
       { href: '/student/machine', label: tx('Machine access', 'تشغيل الماكينة') },
@@ -26,6 +27,7 @@ export const WORKSPACE: Record<WorkspaceKey, { role: Role; label: Txt; home: str
     role: 'vocational_trainer', label: tx('Vocational trainer', 'المدرب المهني'), home: '/trainer', alerts: '/trainer', trades: 'pick',
     sections: [
       { href: '/trainer', label: tx('Workshop floor', 'أرضية الورشة'), exact: true },
+      { href: '/trainer/curriculum', label: tx('Curriculum', 'المنهج') },
       { href: '/trainer/machines', label: tx('Machines', 'الماكينات') },
       { href: '/trainer/stores', label: tx('Stores', 'المخزن') },
       { href: '/trainer/vlab', label: tx('V-Lab exams', 'امتحانات المعمل') },
@@ -40,6 +42,7 @@ export const WORKSPACE: Record<WorkspaceKey, { role: Role; label: Txt; home: str
       { href: '/teacher/new', label: tx('New question', 'سؤال جديد') },
       { href: '/teacher/parametric', label: tx('Parameterised item', 'سؤال بمتغيرات') },
       { href: '/teacher/matrix', label: tx('Competency matrix', 'مصفوفة الجدارات') },
+      { href: '/teacher/curriculum', label: tx('Curriculum', 'المنهج') },
     ],
   },
   supervisor: {
