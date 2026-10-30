@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { LangToggle } from '@/components/LangToggle';
 import { LogoMark, OrgLogo, Wordmark } from '@/components/Logo';
@@ -13,7 +14,10 @@ export default async function LoginPage() {
   const { L } = await getI18n();
   return (
     <div className="login">
-      <div className="login-top"><LangToggle /></div>
+      <div className="login-top">
+        <Link className="help-btn" href="/help?for=everyone"><span className="q" aria-hidden="true">?</span>{L('Instructions', 'تعليمات')}</Link>
+        <LangToggle />
+      </div>
       <div className="login-hero">
         <LogoMark size={88} />
         <Wordmark />

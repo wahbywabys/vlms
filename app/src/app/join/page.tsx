@@ -46,7 +46,10 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
 
   return (
     <div className={`join${small ? ' join-small' : ''}`}>
-      <div className="login-top join-noprint"><LangToggle /></div>
+      <div className="login-top join-noprint">
+        <a className="help-btn" href="/help?for=everyone"><span className="q" aria-hidden="true">?</span>{L('Instructions', 'تعليمات')}</a>
+        <LangToggle />
+      </div>
       <header className="join-head">
         <LogoMark size={64} />
         <Wordmark />

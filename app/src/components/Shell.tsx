@@ -52,6 +52,9 @@ export function Shell({ user, sections, workspaces, institution, alertsHref, tra
           </nav>
 
           <div className="tools">
+            <Link className="help-btn" href={`/help?for=${user.roleKey}`} title={L('Instructions: how to use VTC_LMS', 'تعليمات: إزاي تستخدم VTC_LMS')}>
+              <span className="q" aria-hidden="true">?</span>{L('Instructions', 'تعليمات')}
+            </Link>
             <LangToggle />
             <button type="button" className="fs-btn" aria-pressed={fs.isFull} onClick={() => void fs.toggle()}
               title={fs.isFull ? L('Exit full screen (Esc)', 'الخروج من ملء الشاشة (Esc)') : L('Full screen', 'ملء الشاشة')}>

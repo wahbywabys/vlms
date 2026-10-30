@@ -66,6 +66,8 @@ If the phone cannot open the address, run `Install VTC_LMS (demo).cmd` once more
    - **Windows:** double-click the file → *Install Certificate* → *Local Machine* → *Trusted Root Certification Authorities*.
 3. From then on, use `https://<server-ip>`.
 
+**Help for everyone:** every screen has an orange **تعليمات / Instructions** button. It opens simple step-by-step guides with pictures, for each role. They are in Arabic first, and you can print them. The same button is on the sign-in page, so people can read how to sign in before they have signed in.
+
 **Without internet:** everything works, including the live trainer floor, the manager dashboard, quizzes, V-Labs and logbooks. If a device loses Wi-Fi for a moment, its records wait on the device and are sent when it reconnects.
 
 ## C. Sync to your own online server (the hub)

@@ -50,6 +50,7 @@ services:
       SESSION_SECRET: ${SESSION_SECRET}
       JWT_SECRET: ${JWT_SECRET}
       API_URL: http://api:4000
+      DEFAULT_LANG: ${DEFAULT_LANG:-ar}
       CENTER_NAME: ${CENTER_NAME:-}
       CENTER_WIFI: ${CENTER_WIFI:-}
       CENTER_URL: http://${CENTER_IP}${HTTP_PORT_SUFFIX:-}
