@@ -17,10 +17,13 @@ When the server has internet, it uploads everything to **your online hub**. The 
 
 A home router works exactly like the centre's, even with no SIM card or internet line: it still creates a Wi-Fi network that your devices share. The laptop plays the server.
 
-1. **While you still have internet** (any connection, once): install Docker Desktop (step A2) and run `Install VTC_LMS (demo).cmd` from the package. This downloads everything and starts the server. If you are using the offline package, you don't need internet for this step.
-2. **Switch to the home router.** Connect the laptop and your phone to the router's Wi-Fi. Windows will show "No internet". That is fine. Run `Install VTC_LMS (demo).cmd` again. It finds the laptop's new address (for example `http://192.168.8.100`), opens the firewall, sets the network to *Private*, and opens the join page.
-3. **On the phone** (on the same Wi-Fi, with mobile data turned off so you are sure it uses the router), scan the QR code on the laptop screen. Sign in as `student@vtc.example`. On a second phone or a browser tab, sign in as `trainer@vtc.example`, and on the laptop as `director@vtc.example`. All passwords are `demo1234`. What the student does appears on the trainer's floor screen and the manager's dashboard.
-4. **Later, give the router or laptop internet.** If you have set up the hub (part C), the join page turns to *Synced* within a minute, and the data appears on your online server.
+1. **Once, while you have internet:** install [Docker Desktop](https://www.docker.com/products/docker-desktop/), restart, and open it once. Then unzip the VTC_LMS package and double-click **`Install VTC_LMS (demo).cmd`**, and click *Yes* on the admin prompt. It downloads everything, starts the server with sample data, and puts two icons on the desktop: **Start VTC_LMS** and **Stop VTC_LMS**. With the offline package, you don't need internet for this step.
+2. **Connect the laptop to the home router's Wi-Fi.** Windows will show "No internet". That is fine.
+3. **Double-click "Start VTC_LMS"** on the desktop. A small window opens with the laptop's address, for example `http://192.168.8.100`, and a QR code. It always shows the current address, even after you change Wi-Fi.
+4. **On your phone**, join the same Wi-Fi (turn mobile data off so you are sure it uses the router). Scan the QR code and sign in as `student@vtc.example`. On a second phone or a browser tab, sign in as `trainer@vtc.example`. On the laptop, sign in as `director@vtc.example`. All passwords are `demo1234`. What the student does appears on the trainer's floor screen and the manager's dashboard.
+5. **Later, give the router or the laptop internet.** If you have set up the hub (part C), the window turns to *Synced* within a minute, and the data appears on your online server.
+
+If the phone cannot open the address, run `Install VTC_LMS (demo).cmd` once more while on the home Wi-Fi. It opens the Windows firewall for that network and sets it to *Private*.
 
 ---
 
@@ -37,7 +40,7 @@ A home router works exactly like the centre's, even with no SIM card or internet
    - Windows: double-click **`Install VTC_LMS.cmd`** and click *Yes* on the admin prompt. To try it with sample data first, use `Install VTC_LMS (demo).cmd` instead.
    - Linux/macOS: `./install.sh`, or `./install.sh --demo` for sample data.
 
-   The installer creates the secrets, finds the PC's address, opens the firewall, starts the server and opens the **join page** (`http://<server-ip>/join`).
+   The installer creates the secrets, finds the PC's address, opens the firewall, starts the server and adds **Start VTC_LMS** and **Stop VTC_LMS** icons to the desktop. *Start VTC_LMS* opens a small window with the address and QR code. The full join page is at `http://<server-ip>/join`.
 5. **Create the real accounts.** Run these in the package folder. Use `--role` with `student`, `vocational_trainer`, `academic_teacher`, `industry_supervisor` or `director`, and add `--cohort "<cohort name>"` for trainees.
    ```
    docker compose exec api npx tsx src/add-user.ts --email manager@centre.org --name "Centre Manager" --role director --password "ChangeMe-2026"
@@ -126,7 +129,7 @@ Run these in the package folder on the server.
 
 | Task | Command |
 |---|---|
-| Stop / start | `docker compose stop` / `docker compose start` (it also starts by itself with the PC) |
+| Start / stop | Desktop icons **Start VTC_LMS** / **Stop VTC_LMS**, or `docker compose start` / `docker compose stop`. It also starts by itself with the PC once Docker Desktop is set to start at sign-in. |
 | Update to a new version | Unzip the new package over the old folder (your `.env` stays), then run the installer again |
 | Back up the data | `./backup.sh` (Windows: `powershell -File backup.ps1`). Copy `backups/` somewhere safe each week. |
 | See what's wrong | `docker compose ps` and `docker compose logs --tail 50 app api` |

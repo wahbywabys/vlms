@@ -28,7 +28,9 @@ function Qr({ text, size = 220 }: { text: string; size?: number }) {
   );
 }
 
-export default async function JoinPage() {
+export default async function JoinPage({ searchParams }: { searchParams: Promise<{ window?: string }> }) {
+  // ?window=1: the small address window "Start VTC_LMS" opens on the server laptop.
+  const small = (await searchParams).window === '1';
   const { L } = await getI18n();
   const addr = await centerAddresses();
   const hub = hubConfig();
@@ -43,7 +45,7 @@ export default async function JoinPage() {
   const healthy = up?.last_success_at && (!up.last_attempt_at || new Date(up.last_success_at) >= new Date(up.last_attempt_at));
 
   return (
-    <div className="join">
+    <div className={`join${small ? ' join-small' : ''}`}>
       <div className="login-top join-noprint"><LangToggle /></div>
       <header className="join-head">
         <LogoMark size={64} />
@@ -52,13 +54,14 @@ export default async function JoinPage() {
       </header>
 
       <section className="card join-card">
-        <h1>{L('Connect your phone, tablet or laptop', 'وصّل موبايلك أو التابلت أو اللابتوب')}</h1>
+        <h1>{small ? L('VTC_LMS is running', 'VTC_LMS شغال') : L('Connect your phone, tablet or laptop', 'وصّل موبايلك أو التابلت أو اللابتوب')}</h1>
+        {small && <p className="muted">{L('On the same Wi-Fi, scan the code or type the address. Keep this computer on.', 'على نفس الواي فاي، صوّر الكود أو اكتب العنوان. خلّي الجهاز ده شغال.')}</p>}
         <div className="join-grid">
           <div className="join-qr">
             <Qr text={main} />
             <code className="join-url">{main}</code>
           </div>
-          <ol className="join-steps">
+          {!small && <ol className="join-steps">
             <li>
               <b>{L('Join the centre Wi-Fi', 'اتصل بشبكة الواي فاي بتاعة المركز')}</b>
               {addr.wifi && <> — <code>{addr.wifi}</code></>}
@@ -79,7 +82,7 @@ export default async function JoinPage() {
                   'أندرويد (كروم): القائمة ⋮ ← إضافة إلى الشاشة الرئيسية. آيفون/آيباد (سفاري): مشاركة ← إضافة إلى الشاشة الرئيسية. ويندوز أو ماك (كروم/إيدج): أيقونة التثبيت في شريط العنوان، أو ⋮ ← حفظ ومشاركة ← تثبيت.')}
               </span>
             </li>
-          </ol>
+          </ol>}
         </div>
         {addr.https && addr.https !== main && (
           <div className="join-cert">
@@ -108,7 +111,7 @@ export default async function JoinPage() {
       </section>
 
       <p className="join-noprint join-actions">
-        <PrintButton label={L('Print this page', 'اطبع الصفحة')} />
+        {!small && <PrintButton label={L('Print this page', 'اطبع الصفحة')} />}
         <a className="button primary" href="/login">{L('Sign in', 'تسجيل الدخول')}</a>
       </p>
     </div>

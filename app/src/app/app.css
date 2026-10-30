@@ -203,3 +203,4 @@ button.danger { border-color: var(--bad); color: var(--bad); }
 @media (max-width: 640px) { .join-grid { grid-template-columns: 1fr; justify-items: center; } }
 @media print { .join-noprint { display: none !important; } .join { padding: 0; } .card { box-shadow: none; } }
 .join-sync .pill { min-height: 32px; padding: 0 12px; }
+.join-small { gap: 12px; padding-top: 8px; } .join-small .join-head .login-tag { display: none; } .join-small .join-url { font-size: 24px; font-weight: 600; }

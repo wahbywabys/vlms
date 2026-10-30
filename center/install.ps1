@@ -96,10 +96,19 @@ for ($i = 0; $i -lt 90; $i++) {
 }
 if (-not $ok) { Die 'The server did not answer. In this folder run: docker compose logs --tail 50' }
 
+# Desktop shortcuts: Start (address + QR window) and Stop
+$desk = [Environment]::GetFolderPath('Desktop')
+$sh = New-Object -ComObject WScript.Shell
+foreach ($n in @('Start VTC_LMS', 'Stop VTC_LMS')) {
+  $l = $sh.CreateShortcut((Join-Path $desk "$n.lnk"))
+  $l.TargetPath = Join-Path $PSScriptRoot "$n.cmd"; $l.WorkingDirectory = $PSScriptRoot
+  $l.IconLocation = "$env:SystemRoot\System32\shell32.dll," + $(if ($n -like 'Start*') { '137' } else { '131' })
+  $l.Save()
+}
+
 $addr = "http://$ip" + $(if ($port -ne '80') { ":$port" } else { '' })
 Say 'VTC_LMS is running.'
 Write-Host "`n  On every phone, tablet and laptop (connected to the centre Wi-Fi), open:`n`n      $addr`n" -ForegroundColor Green
 Write-Host "  Join poster with QR code: $addr/join"
-Write-Host '  It starts by itself with Windows once Docker Desktop is set to "Start when you sign in" (Docker Desktop > Settings > General).'
-Start-Process "$addr/join"
-Read-Host "`nPress Enter to close"
+Write-Host '  Next time, double-click "Start VTC_LMS" on the desktop: it shows the address and QR code.'
+& (Join-Path $PSScriptRoot 'start.ps1')
