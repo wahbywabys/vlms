@@ -34,7 +34,7 @@ export const cnc: Trade = {
     trainer: tx('Eng. Huda Kamal', 'م. هدى كمال'), trainerInitials: tx('HK', 'ه'),
     jobCards: 'JC-118, JC-121',
   },
-  learner: { name: tx('Omar Lotfy', 'عمر لطفي'), initials: tx('OL', 'ع') },
+  learner: { name: tx('Omar Lotfy', 'عمر لطفي'), initials: tx('OL', 'ع'), photo: new URL('./student-photo.jpg', import.meta.url).href },
   stations: (() => {
     const TURN = tx('Turn Ø25 h7 shaft, Ra 1.6', 'خراطة عمود Ø25 h7، خشونة Ra 1.6');
     const FACE = tx('Face & chamfer Ø40 flange', 'تسوية وشطف فلنجة Ø40');

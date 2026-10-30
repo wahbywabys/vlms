@@ -38,7 +38,7 @@ const SCREENS: Record<Role, { id: string; label: ReturnType<typeof tx>; el: () =
 /** The trainer and student follow the active trade; the director oversees all of them. */
 const roles = (t: Trade) => [
   { id: 'trainer' as Role, initials: t.bay.trainerInitials, label: tx('Trainer', 'المدرب'), who: t.bay.trainer, device: tx('Tablet', 'جهاز لوحي') },
-  { id: 'student' as Role, initials: t.learner.initials, label: tx('Student', 'الطالب'), who: t.learner.name, device: tx('Laptop', 'حاسوب محمول') },
+  { id: 'student' as Role, initials: t.learner.initials, photo: t.learner.photo, label: tx('Student', 'الطالب'), who: t.learner.name, device: tx('Laptop', 'حاسوب محمول') },
   { id: 'director' as Role, initials: tx('SR', 'س'), label: tx('Director', 'المدير'), who: tx('Dr. Samia Rashad', 'د. سامية رشاد'), device: tx('Desktop', 'حاسوب مكتبي') },
 ];
 
@@ -71,7 +71,9 @@ function Shell() {
             {ROLES.map((r) => (
               <button key={r.id} type="button" aria-pressed={role === r.id} onClick={() => setRole(r.id)}
                 title={`${pick(r.who)} · ${pick(r.device)}`}>
-                <span className={`avatar av-${r.id}`} aria-hidden="true">{pick(r.initials)}</span>
+                <span className={`avatar av-${r.id}${'photo' in r && r.photo ? ' has-photo' : ''}`} aria-hidden="true">
+                  {'photo' in r && r.photo ? <img src={r.photo} alt="" width={36} height={36} /> : pick(r.initials)}
+                </span>
                 <span className="role-text">
                   <span className="role-label">{pick(r.label)}</span>
                   <span className="role-who">{pick(r.who)}</span>

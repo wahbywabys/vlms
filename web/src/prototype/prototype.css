@@ -132,6 +132,8 @@ textarea { padding: 10px 12px; width: 100%; resize: vertical; }
 .roles button:hover:not([aria-pressed="true"]) { background: var(--sheet); }
 .roles button[aria-pressed="true"] { background: var(--sheet); box-shadow: inset 0 0 0 2px var(--blue); }
 .avatar { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font: 600 13px/1 var(--f-body); }
+.avatar.has-photo { overflow: hidden; padding: 0; background: var(--sheet, #fff); box-shadow: 0 0 0 2px var(--blue); }
+.avatar.has-photo img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; border-radius: 50%; display: block; }
 .av-trainer { background: var(--amber-soft); color: var(--amber); }
 .av-student { background: var(--blue-soft); color: var(--blue); }
 .av-director { background: var(--ok-soft); color: var(--ok); }

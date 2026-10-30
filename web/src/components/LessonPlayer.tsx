@@ -268,6 +268,19 @@ function useFull(ref: React.RefObject<HTMLElement | null>) {
   return { full: native || css, css, toggle, exitCss: () => setCss(false) };
 }
 
+/** One shared audio element for recorded voice-over, so only one lesson speaks at a time. */
+function voiceOver(): HTMLAudioElement {
+  const w = window as Window & { __vtcVo?: HTMLAudioElement };
+  return (w.__vtcVo ??= new Audio());
+}
+
+/** Recorded clips are named by the 32-bit FNV-1a hash of the caption text. */
+function voiceOverUrl(text: string) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619) >>> 0;
+  return new URL('vo/' + h.toString(16).padStart(8, '0') + '.mp3', import.meta.url).href;
+}
+
 /** The browser's speech voices (they load asynchronously). */
 function useVoices() {
   const [v, setV] = useState<SpeechSynthesisVoice[]>([]);
@@ -473,22 +486,38 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
   const frame = frameAt(lesson, time);
   const shotNo = frame.shot;
   // Spoken narration of each shot's caption, in the lesson language, while playing.
+  // A recorded voice-over (assets/vo/<fnv1a of the caption>.mp3) is used where one exists;
+  // otherwise the browser's speech voice reads the caption.
   useEffect(() => {
-    const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
-    if (!synth) return;
-    if (!voice || !playing || !started || filmed || !active || !canSpeak) { synth.cancel(); return; }
+    if (typeof window === 'undefined') return;
+    const synth = window.speechSynthesis ?? { cancel() {}, speak() {} };
+    const vo = voiceOver();
+    if (!voice || !playing || !started || filmed || !active || !canSpeak) { synth.cancel(); vo.pause(); return; }
     const text = lesson.shots[shotNo]?.caption[lang];
     if (!text) return;
     synth.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang === 'ar' ? 'ar-SA' : 'en-GB';
-    const v = voices.find((x) => x.lang.toLowerCase().startsWith(lang) && /natural|google|microsoft|premium|enhanced/i.test(x.name))
-      ?? voices.find((x) => x.lang.toLowerCase().startsWith(lang));
-    if (v) u.voice = v;
-    u.rate = Math.min(1.8, 1.05 * speed);
-    synth.speak(u);
+    const speak = () => {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = lang === 'ar' ? 'ar-SA' : 'en-GB';
+      const v = voices.find((x) => x.lang.toLowerCase().startsWith(lang) && /natural|google|microsoft|premium|enhanced/i.test(x.name))
+        ?? voices.find((x) => x.lang.toLowerCase().startsWith(lang));
+      if (v) u.voice = v;
+      u.rate = Math.min(1.8, 1.05 * speed);
+      synth.speak(u);
+    };
+    const play = () => {
+      vo.onended = null;
+      vo.onerror = speak;
+      vo.src = voiceOverUrl(text);
+      vo.playbackRate = Math.min(2, Math.max(0.5, speed));
+      vo.play().catch((e: Error) => { if (!(e && /NotAllowed|Abort/.test(e.name))) speak(); });
+    };
+    vo.onended = null;
+    // Let a clip that is about to finish end before the next shot's clip starts.
+    if (!vo.paused && !vo.ended && vo.duration - vo.currentTime < 3.2) vo.onended = play;
+    else play();
   }, [shotNo, playing, voice, lang, started, filmed, active, canSpeak]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => () => { if (typeof window !== 'undefined') window.speechSynthesis?.cancel(); }, []);
+  useEffect(() => () => { if (typeof window !== 'undefined') { window.speechSynthesis?.cancel(); voiceOver().pause(); } }, []);
   const chapter = chapterAt(lesson, time);
   const hotspot = lesson.hotspots.find((h) => h.id === hot) ?? null;
   const total = lesson.stops.length;
