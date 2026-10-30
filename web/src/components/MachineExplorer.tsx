@@ -42,6 +42,7 @@ import { applySection, createSection, CUT_MODES, sectionMaterial, sectionPlanes,
 import { newStudent, Student, STUDENT_EYE, tradePpe, Walker, angleTo, type Rect, type StudentState } from '../models/avatar';
 import type { ModelEnv, StationDef } from '../models/kit';
 import { ShopLighting, Workshop } from '../models/workshop';
+import { LockerButton } from './LockerButton';
 import './MachineExplorer.css';
 
 // ---------------------------------------------------------------------------
@@ -894,6 +895,8 @@ export function MachineExplorer({ title, assetTag, parts, onEvent, height = 560,
             )}
             {selected.hotspot?.safety && <p className="mx-safety">⚠ {selected.hotspot.safety}</p>}
             {selected.hotspot?.docUrl && <a href={selected.hotspot.docUrl} target="_blank" rel="noreferrer">{t.datasheet}</a>}
+            <LockerButton lang={lang} className="mx-save" drop={{ kind: 'part', title: { en: selected.name, ar: selected.name },
+              body: selected.brief ? `${selected.brief.what}\n${selected.brief.does}` : undefined, ref: { asset: assetTag ?? title, part: selected.id } }} />
           </div>
         ) : (
           <p className="mx-hint">{t.hint}</p>

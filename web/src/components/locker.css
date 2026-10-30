@@ -1,0 +1,17 @@
+/* "Save to my locker" button and its toast. Works on the light explorer card and the dark lesson / simulator overlays. */
+.lk-save { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 12px; border-radius: 8px; cursor: pointer;
+  border: 1px solid currentColor; background: transparent; color: inherit; font: inherit; font-size: 13px; font-weight: 600; opacity: .9; }
+.lk-save:hover { opacity: 1; }
+.lk-save.is-saved { border-color: #2fbf71; color: #2fbf71; }
+.lk-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
+.lk-toast { position: fixed; inset-block-end: 20px; inset-inline-start: 50%; transform: translateX(-50%); z-index: 1000; display: flex; gap: 10px; align-items: center;
+  max-width: min(440px, calc(100vw - 32px)); padding: 12px 16px; border-radius: 12px; background: #14234c; color: #fff; box-shadow: 0 12px 32px rgba(0, 0, 0, .3);
+  animation: lk-in .25s ease-out; }
+[dir="rtl"] .lk-toast { transform: translateX(50%); }
+.lk-toast span { display: grid; gap: 2px; }
+.lk-toast small { opacity: .8; }
+.lk-toast.is-bad { background: #b3261e; }
+@keyframes lk-in { from { opacity: 0; translate: 0 12px; } to { opacity: 1; translate: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .lk-toast { animation: none; } }
+.lk-row.lk-start { justify-content: flex-start; }
+.mx-card .mx-save { margin-top: 12px; }

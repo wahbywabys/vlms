@@ -36,6 +36,8 @@ import { Callouts, Dims, Flows, LessonStudent, type LessonCallout, type LessonDi
 import { toSection, type SectionSpec } from './section';
 import { newStudent, tradePpe, type PPE, type StudentState } from '../models/avatar';
 import { modelParts, type ModelDef, type Txt } from '../models/kit';
+import { LockerButton } from './LockerButton';
+import { recordAttempt } from './locker';
 import './LessonPlayer.css';
 
 // ---------------------------------------------------------------------------
@@ -352,6 +354,9 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
     const score = total ? Math.round((first / total) * 100) : 100;
     emit.current?.({ verb: 'lesson_completed', objectRef: lesson.id, value: { score, firstTry: first, total } });
     onComplete?.({ score, answered: Object.values(a).filter((x) => x.correct).length, total, hotspots: 0 });
+    // Kept privately so the student can compare runs of the same lesson.
+    recordAttempt({ kind: 'lesson', ref: lesson.id, title: lesson.title, score,
+      criteria: lesson.stops.map((s) => ({ key: s.id, label: s.question, score: a[s.id]?.firstCorrect ? 100 : 0 })) });
   }, [lesson, onComplete]);
 
   /** Move time forward, stopping at the first unanswered checkpoint crossed. */
@@ -629,7 +634,11 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
                   ))}
                 </ol>
                 <p className="lp-muted">{opened.length} / {lesson.hotspots.length} {t.found}</p>
-                <button type="button" className="lp-primary" onClick={play}>↺ {t.replay}</button>
+                <div className="lk-row">
+                  <button type="button" className="lp-primary" onClick={play}>↺ {t.replay}</button>
+                  <LockerButton lang={lang} drop={{ kind: 'lesson', title: lesson.title, body: lesson.summary, ref: { lesson: lesson.id },
+                    value: { score: total ? Math.round((firstRight / total) * 100) : 100 } }} />
+                </div>
               </div>
             </div>
           )}

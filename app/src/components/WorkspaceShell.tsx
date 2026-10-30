@@ -14,6 +14,7 @@ export const WORKSPACE: Record<WorkspaceKey, { role: Role; label: Txt; home: str
     role: 'student', label: tx('Student', 'الطالب'), home: '/student', trades: 'own',
     sections: [
       { href: '/student', label: tx('My progress', 'تقدّمي'), exact: true },
+      { href: '/student/private', label: tx('🔒 Private', '🔒 خاص') },
       { href: '/student/lab', label: tx('V-Lab', 'المعمل الافتراضي') },
       { href: '/student/machine', label: tx('Machine access', 'تشغيل الماكينة') },
       { href: '/student/quiz', label: tx('Theory quiz', 'اختبار نظري') },

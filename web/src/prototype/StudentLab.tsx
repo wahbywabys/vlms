@@ -4,6 +4,8 @@ import { FullscreenIcon, useFullscreen } from './fullscreen';
 import { MachineExplorer, type ExplorerEvent } from '../components/MachineExplorer';
 import { LessonPlayer, type LessonEvent } from '../components/LessonPlayer';
 import { SafetySim, type SimEvent } from '../components/SafetySim';
+import { LockerButton } from '../components/LockerButton';
+import { recordAttempt } from '../components/locker';
 import { modelParts } from '../models/kit';
 import { TradeIcon } from './TradeBar';
 import { tx, type Txt } from './i18n';
@@ -346,6 +348,8 @@ function FaultTest({ trade }: { trade: Trade }) {
     setResult(res);
     setVlab({ status: 'submitted' });
     addEval({ trade: trade.id, learner: LEARNER, mode: mode === 'Exam' ? 'Exam' : 'Guided', score: res.totalScore, passed: res.passed, gateFailures: res.gateFailures });
+    recordAttempt({ kind: 'vlab', ref: lab.code, title: lab.title, score: res.totalScore, passed: res.passed, mode: pick(MODE_LABEL[mode]),
+      criteria: res.criteria.map((c) => ({ key: c.key, label: lab.criterionLabels[c.key] ?? tx(c.label, c.label), score: c.score })), detail: fault.title });
   };
 
   // Guided step pointer: first step whose evidence is not in the stream yet.
@@ -464,7 +468,7 @@ const LEVELS: Record<string, Txt> = {
 };
 
 function Result({ lab, res, fault, onRetry }: { lab: Lab; res: EvaluationResult; fault: Txt; onRetry: () => void }) {
-  const { L, pick } = useL();
+  const { L, pick, lang } = useL();
   const level = res.gateFailures.length ? L('No credit (safety gate failed)', 'لا رصيد (رسوب في شرط أمان)') : pick(LEVELS[levelForScore(res.totalScore)]!);
   return (
     <section className="card result">
@@ -487,7 +491,11 @@ function Result({ lab, res, fault, onRetry }: { lab: Lab; res: EvaluationResult;
           ))}
         </tbody>
       </table>
-      <button type="button" onClick={onRetry}>{L('Start a new attempt', 'ابدأ محاولة جديدة')}</button>
+      <div className="lk-row lk-start">
+        <button type="button" onClick={onRetry}>{L('Start a new attempt', 'ابدأ محاولة جديدة')}</button>
+        <LockerButton lang={lang} drop={{ kind: 'result', title: lab.title, ref: { lab: lab.code }, body: `${L('Injected fault', 'العطل المزروع')}: ${pick(fault)}`,
+          value: { score: res.totalScore, passed: res.passed, criteria: res.criteria.map((c) => ({ key: c.key, label: lab.criterionLabels[c.key] ?? tx(c.label, c.label), score: c.score })) } }} />
+      </div>
     </section>
   );
 }

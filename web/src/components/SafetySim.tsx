@@ -26,6 +26,8 @@ import { newStudent, type PPE, type StudentState } from '../models/avatar';
 import { modelParts, type Txt } from '../models/kit';
 import type { Pictogram, SignKind } from '../models/textures';
 import { holds, type Outcome, type PpeKey, type Scenario, type SimAction, type SimView } from '../safety/types';
+import { LockerButton } from './LockerButton';
+import { recordAttempt } from './locker';
 import './SafetySim.css';
 
 type Lang = 'en' | 'ar';
@@ -256,6 +258,8 @@ export function SafetySim({ scenario, lang = 'en', active = true, height = 'min(
       setResult(r);
       emit.current?.({ verb: 'sim_completed', objectRef: scenario.id, value: { ...r } });
       onComplete?.(r);
+      recordAttempt({ kind: 'safety', ref: scenario.id, title: scenario.title, score: r.score, passed: r.incidents === 0,
+        detail: { en: `${r.stars}/3 stars · ${r.incidents} incidents · ${r.ppeErrors} PPE errors`, ar: `${r.stars}/3 نجوم · ${r.incidents} حوادث · ${r.ppeErrors} أخطاء وقاية` } });
       return lg;
     });
   };
@@ -390,7 +394,12 @@ export function SafetySim({ scenario, lang = 'en', active = true, height = 'min(
                 ))}
                 {!result.ppeErrors && <li className="is-ok"><b>✓ {t.allGood}</b></li>}
               </ul>
-              <button type="button" className="ss-primary" onClick={reset}>↺ {t.retry}</button>
+              <div className="lk-row">
+                <button type="button" className="ss-primary" onClick={reset}>↺ {t.retry}</button>
+                <LockerButton lang={lang} drop={{ kind: 'safety', title: scenario.title, body: scenario.brief, ref: { scenario: scenario.id },
+                  value: { score: result.score, stars: result.stars, incidents: result.incidents },
+                  tags: log.filter((o) => o.kind === 'incident').map((o) => o.title[lang]).slice(0, 3) }} />
+              </div>
             </div>
           </div>
         )}
