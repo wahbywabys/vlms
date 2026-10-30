@@ -40,6 +40,8 @@ interface AssetRow {
   institution_id: string; workshop: string; workshop_ar: string | null; trade_id: string | null;
   required_competency_id: string | null; competency_code: string | null; competency_title: string | null;
   precheck_id: string | null; controller_key_hash: string | null; digital_twin_lab_id: string | null;
+  brand: string | null; model_no: string | null; serial_no: string | null; photo_media_id: string | null; center: string | null;
+  type_name: string | null; type_name_ar: string | null; twin_id: string | null; twin_match: string | null;
 }
 interface PrecheckRow {
   id: string; code: string; title: string; title_ar: string | null; items: PrecheckItem[];
@@ -49,8 +51,11 @@ interface PrecheckRow {
 const ASSET_SQL = `
   SELECT a.id, a.asset_tag, a.name, NULL::text AS name_ar, a.status::text, a.category, w.institution_id,
          w.name AS workshop, w.name_ar AS workshop_ar, w.trade_id, a.required_competency_id,
-         c.code AS competency_code, c.title AS competency_title, a.precheck_id, a.controller_key_hash, a.digital_twin_lab_id
+         c.code AS competency_code, c.title AS competency_title, a.precheck_id, a.controller_key_hash, a.digital_twin_lab_id,
+         a.brand, a.model_no, a.serial_no, a.photo_media_id, ctr.name AS center,
+         mt.name AS type_name, mt.name_ar AS type_name_ar, mt.model_id AS twin_id, mt.twin_match
     FROM workshop_assets a JOIN workshops w ON w.id = a.workshop_id
+    LEFT JOIN centers ctr ON ctr.id = w.center_id LEFT JOIN machine_types mt ON mt.id = a.machine_type_id
     LEFT JOIN competencies c ON c.id = a.required_competency_id`;
 
 async function assetByCode(db: Db | Tx, code: string, p: Principal): Promise<AssetRow> {
@@ -162,7 +167,10 @@ export function safetyRouter(deps: { db: Db; realtime: Realtime }) {
     res.json({
       machine: { tag: a.asset_tag, name: a.name, status: a.status, workshop: a.workshop, workshopAr: a.workshop_ar, tradeId: a.trade_id,
         requiredCompetency: a.competency_code ? { code: a.competency_code, title: a.competency_title } : null,
-        controller: a.controller_key_hash ? 'hardware' : 'virtual' },
+        controller: a.controller_key_hash ? 'hardware' : 'virtual',
+        // The real machine, from the register, so the learner can check it is the one in front of them.
+        center: a.center, typeName: a.type_name, typeNameAr: a.type_name_ar, brand: a.brand, model: a.model_no, serial: a.serial_no,
+        photoId: a.photo_media_id, twin: a.twin_id ? { id: a.twin_id, match: a.twin_match } : null },
       precheck: pc ? { code: pc.code, title: pc.title, titleAr: pc.title_ar, questions: Math.max(pc.draw_count, pc.items.filter((i) => i.critical).length), unlockMinutes: pc.unlock_minutes } : null,
       eligible: why.length === 0, blockers: why,
       passport: passport ? { id: passport.id, validUntil: passport.valid_until } : null,
@@ -297,7 +305,7 @@ export function safetyRouter(deps: { db: Db; realtime: Realtime }) {
   router.get('/v1/safety/machines', async (req: Request, res) => {
     const p = req.principal!;
     if (!isStaff(p) && !p.roles.includes('director')) throw forbidden();
-    const trade = typeof req.query['trade'] === 'string' ? req.query['trade'] : null;
+    const trade = typeof req.query['trade'] === 'string' && req.query['trade'] !== 'all' ? req.query['trade'] : null;
     await deps.db.query('SELECT expire_machine_locks()');
     const { rows } = await deps.db.query(
       `SELECT a.asset_tag AS tag, a.name, a.status::text, a.qr_code AS "qrCode", w.trade_id AS "tradeId",
@@ -306,8 +314,11 @@ export function safetyRouter(deps: { db: Db; realtime: Realtime }) {
               l.id AS "lockId", l.state::text AS "lockState", l.session_ends_at AS "sessionEndsAt", l.unlocked_at AS "unlockedAt",
               u.id AS "learnerId", u.full_name AS "learnerName", u.full_name_ar AS "learnerNameAr",
               (SELECT count(*)::int FROM safety_passports sp WHERE sp.asset_id = a.id AND sp.revoked_at IS NULL AND sp.valid_until > now()) AS "validPassports",
-              (SELECT count(*)::int FROM safety_precheck_attempts x WHERE x.asset_id = a.id AND x.passed = false AND x.submitted_at::date = current_date) AS "failedToday"
+              (SELECT count(*)::int FROM safety_precheck_attempts x WHERE x.asset_id = a.id AND x.passed = false AND x.submitted_at::date = current_date) AS "failedToday",
+              ctr.code AS "centerCode", ctr.name AS center, ctr.name_ar AS "centerAr", w.name AS workshop, w.name_ar AS "workshopAr",
+              a.brand, a.model_no AS model, a.serial_no AS serial, mt.name AS "typeName", mt.name_ar AS "typeNameAr"
          FROM workshop_assets a JOIN workshops w ON w.id = a.workshop_id
+         LEFT JOIN centers ctr ON ctr.id = w.center_id LEFT JOIN machine_types mt ON mt.id = a.machine_type_id
          LEFT JOIN safety_prechecks pc ON pc.id = a.precheck_id
          LEFT JOIN competencies c ON c.id = a.required_competency_id
          LEFT JOIN machine_locks l ON l.asset_id = a.id AND l.state IN ('unlock_pending', 'unlocked')

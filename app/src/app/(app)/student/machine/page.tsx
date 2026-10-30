@@ -22,7 +22,7 @@ export default async function MachinePage({ searchParams }: { searchParams: Prom
     <div className="page">
       <PageHead eyebrow={L('Student · Workshop', 'الطالب · الورشة')} title={L('Machine access', 'تشغيل الماكينة')}
         sub={L('Scan the machine, pass its safety pre-check, and it unlocks for your session.', 'امسح الماكينة واجتز فحص السلامة المسبق، فتُفتح لك طوال جلستك.')} />
-      <MachineClient code={code ?? null} labels={labels} />
+      <MachineClient code={code ?? null} labels={labels} userId={s.userId} />
     </div>
   );
 }

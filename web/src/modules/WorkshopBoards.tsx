@@ -34,9 +34,11 @@ export function QrCode({ text, size = 120, label }: { text: string; size?: numbe
   );
 }
 
-export function MachineBoard({ ui, machines, onStop, scanUrl }: { ui: Ui; machines: MachineRow[]; onStop: (lockId: string, reason: string) => Promise<void>;
-  /** The link printed in the QR label: the learner's phone opens it and lands on the pre-check. */
-  scanUrl: (qrCode: string) => string }) {
+export function MachineBoard({ ui, machines, onStop, scanUrl, labels: canPrint = true }: { ui: Ui; machines: MachineRow[]; onStop: (lockId: string, reason: string) => Promise<void>;
+  /** What the QR label holds. Default: the machine's code alone, read by the scanner in the app (works on a local network or offline). */
+  scanUrl?: (qrCode: string) => string;
+  /** false: the parent has its own sticker sheet, so hide the label toggle. */
+  labels?: boolean }) {
   const { L } = ui;
   const [now, setNow] = useState(() => Date.now());
   const [labels, setLabels] = useState(false);
@@ -49,8 +51,8 @@ export function MachineBoard({ ui, machines, onStop, scanUrl }: { ui: Ui; machin
     <div className="flex flex-col gap-3 font-body text-ink">
       <div className="flex flex-wrap items-center gap-3">
         <p className="text-ink-2">{L(`${live} of ${machines.length} machines running · interlock follows the safety passport`, `${live} من ${machines.length} ماكينة تعمل · القفل يتبع تصريح السلامة`)}</p>
-        <button type="button" onClick={() => setLabels((x) => !x)} className="tw-reset ms-auto h-11 rounded-xl border-2 border-rule bg-sheet px-4 font-semibold">
-          {labels ? L('Back to the board', 'العودة إلى اللوحة') : L('Print QR labels', 'اطبع ملصقات QR')}</button>
+        {canPrint && <button type="button" onClick={() => setLabels((x) => !x)} className="tw-reset ms-auto h-11 rounded-xl border-2 border-rule bg-sheet px-4 font-semibold">
+          {labels ? L('Back to the board', 'العودة إلى اللوحة') : L('Print QR labels', 'اطبع ملصقات QR')}</button>}
         {labels && <button type="button" onClick={() => window.print()} className="tw-reset h-11 rounded-xl bg-navy px-4 font-semibold text-on-brand">{L('Print', 'طباعة')}</button>}
       </div>
       {labels ? (
@@ -58,7 +60,7 @@ export function MachineBoard({ ui, machines, onStop, scanUrl }: { ui: Ui; machin
           {machines.filter((m) => m.qrCode).map((m) => (
             <figure key={m.tag} className="m-0 flex flex-col items-center gap-1 rounded-xl border-2 border-dashed border-rule-strong bg-white p-3 text-center text-black">
               <p className="text-xs font-bold uppercase tracking-wider">{L('Scan before use', 'امسح قبل الاستخدام')} · امسح قبل الاستخدام</p>
-              <QrCode text={scanUrl(m.qrCode!)} size={132} label={m.tag} />
+              <QrCode text={scanUrl?.(m.qrCode!) ?? m.qrCode!} size={132} label={m.tag} />
               <figcaption><b className="font-mono">{m.tag}</b><br /><span className="text-xs">{m.name}</span><br /><span className="font-mono text-[10px]">{m.qrCode}</span></figcaption>
             </figure>
           ))}

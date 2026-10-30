@@ -48,10 +48,13 @@ export function mediaRouter(deps: { db: Db }) {
   router.get('/v1/media/:id', async (req: Request, res) => {
     const p = req.principal!;
     const id = z.string().uuid().parse(req.params['id']);
-    const { rows } = await deps.db.query<{ owner_id: string; mime: string; data: Buffer | null; storage_uri: string | null; sha256: string }>(
-      `SELECT owner_id, mime, data, storage_uri, sha256 FROM media_objects WHERE id = $1 AND institution_id = $2`, [id, p.institutionId]);
+    const { rows } = await deps.db.query<{ owner_id: string; mime: string; data: Buffer | null; storage_uri: string | null; sha256: string; machine_photo: boolean }>(
+      `SELECT owner_id, mime, data, storage_uri, sha256,
+              EXISTS (SELECT 1 FROM workshop_assets a WHERE a.photo_media_id = m.id) AS machine_photo
+         FROM media_objects m WHERE id = $1 AND institution_id = $2`, [id, p.institutionId]);
     const m = rows[0];
-    const canSee = m && (m.owner_id === p.userId || isStaff(p) || p.roles.includes('director') || p.roles.includes('industry_supervisor'));
+    // A machine's register photo is shown to anyone who scans it, so they can tell it is the right machine.
+    const canSee = m && (m.owner_id === p.userId || m.machine_photo || isStaff(p) || p.roles.includes('director') || p.roles.includes('industry_supervisor'));
     if (!m || !canSee) throw notFound('Media');
     if (!m.data) { res.redirect(302, m.storage_uri!); return; }
     res.setHeader('content-type', m.mime);

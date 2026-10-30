@@ -18,7 +18,7 @@ export default async function MachinesPage() {
     <div className="page">
       <PageHead eyebrow={L('Trainer · Workshop', 'المدرب · الورشة')} title={L('Machines & safety passports', 'الماكينات وتصاريح السلامة')}
         sub={L('A machine unlocks only for a learner with the competency and a passed pre-check. Stop any session remotely.', 'لا تُفتح الماكينة إلا لمتدرب لديه الجدارة واجتاز الفحص المسبق. أوقف أي جلسة عن بُعد.')} />
-      <MachinesClient key={trade} trade={trade} initial={machines} />
+      <MachinesClient key={trade} trade={trade} initial={machines} userId={s.userId} />
     </div>
   );
 }

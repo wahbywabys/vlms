@@ -1,0 +1,5 @@
+﻿Programme code,Programme name,Programme name (Arabic),Skill code,Level,Parent code,Skill title,Skill title (Arabic),Safety-critical,Hours
+PLMB,Plumbing,السباكة,,,,,,,
+PLMB,,,PLMB-U01,Unit,,Install water supply pipework,تركيب شبكات تغذية المياه,No,40
+PLMB,,,PLMB-U01-E1,Element,PLMB-U01,Cut and join copper pipe,قطع ووصل المواسير النحاس,No,12
+PLMB,,,PLMB-U01-E1-PC1,Criterion,PLMB-U01-E1,Uses the blowtorch safely,يستخدم لمبة اللحام بأمان,Yes,

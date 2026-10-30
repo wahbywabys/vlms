@@ -16,7 +16,8 @@ const ALLOWED = new RegExp('^(' + [
   'safety/scan/[A-Za-z0-9-]+(/precheck)?', `safety/prechecks/${ID}/submit`, `safety/locks/${ID}(/release)?`, 'safety/machines',
   'ojt/checkins', `ojt/attendance(/${ID}/confirm)?`, `wbl/logbook(/${ID}/signoff)?`, `media(/${ID})?`,
   `assessments(/${ID}/submit)?`, 'questions/preview', `analytics/early-warning(/${ID}/ack)?`, `analytics/skills(/learners/${ID})?`,
-  'sync', 'xapi/statements', 'private(/(items|history))?',
+  'sync', 'xapi/statements', 'private(/(items|history))?', 'safety/offline-pack',
+  'admin/(programs(/[a-z0-9_]+(/competencies)?|/import)?|machine-types|centers|machines(/import)?)',
 ].join('|') + ')$');
 /** Request headers the API reads besides auth: media metadata and idempotency keys. */
 const PASS_HEADERS = ['content-type', 'x-client-mutation-id', 'x-captured-at', 'x-kind', 'x-width', 'x-height', 'x-lat', 'x-lon'];

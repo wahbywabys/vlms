@@ -5,11 +5,13 @@ import { requireAuth } from './lib/auth.js';
 import type { Db } from './lib/db.js';
 import { HttpError } from './lib/errors.js';
 import type { Realtime } from './lib/redis.js';
+import { adminRouter } from './routes/admin.js';
 import { alertsRouter } from './routes/alerts.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { assessmentsRouter } from './routes/assessments.js';
 import { inventoryRouter } from './routes/inventory.js';
 import { logbookRouter } from './routes/logbook.js';
+import { machineOfflineRouter } from './routes/machineOffline.js';
 import { mediaRouter } from './routes/media.js';
 import { observationsRouter } from './routes/observations.js';
 import { privateRouter } from './routes/private.js';
@@ -21,10 +23,11 @@ import { vlabSessionsRouter } from './routes/vlabSessions.js';
 export function createApp(deps: { db: Db; realtime: Realtime; log: Logger; jwtSecret: string }) {
   const app = express();
   app.disable('x-powered-by');
-  // A student's Private space is saved whole and may hold a few photos, so it gets a larger body limit.
+  // A student's Private space is saved whole and may hold a few photos, and admin imports post a whole
+  // spreadsheet, so both get a larger body limit.
   const smallJson = express.json({ limit: '1mb' });
   const privateJson = express.json({ limit: '7mb' });
-  app.use((req, res, next) => (req.path.startsWith('/v1/private') ? privateJson : smallJson)(req, res, next));
+  app.use((req, res, next) => (req.path.startsWith('/v1/private') || req.path.startsWith('/v1/admin/') ? privateJson : smallJson)(req, res, next));
 
   app.get('/healthz', async (_req, res) => {
     await deps.db.query('SELECT 1');
@@ -47,6 +50,8 @@ export function createApp(deps: { db: Db; realtime: Realtime; log: Logger; jwtSe
   app.use(analyticsRouter(deps));
   app.use(syncRouter(deps));
   app.use(privateRouter(deps));
+  app.use(machineOfflineRouter(deps));
+  app.use(adminRouter(deps));
 
   const onError: ErrorRequestHandler = (err, req, res, _next) => {
     if (err instanceof ZodError) {

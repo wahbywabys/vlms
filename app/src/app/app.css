@@ -185,3 +185,18 @@ button.danger { border-color: var(--bad); color: var(--bad); }
 .demo-accounts .role-who { display: block; white-space: normal; }
 /* Phones: WABYS and the VTC_LMS mark carry the brand; the wordmark would crowd the tools. */
 @media (max-width: 640px) { .brand .brand-text { display: none; } .brand .org-logo { height: 28px; } .brand .logo-mark { width: 36px; height: 36px; } }
+
+/* Admin: programmes tree, machine register, QR sticker sheet */
+ul.plain { list-style: none; margin: 0 0 12px; padding: 0; }
+ul.plain li { padding: 4px 0; }
+.thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; background: var(--sunk); }
+.stickers { display: grid; grid-template-columns: repeat(auto-fill, minmax(62mm, 1fr)); gap: 4mm; }
+.sticker { break-inside: avoid; border: 1.5px dashed #9aa3b5; border-radius: 3mm; padding: 3mm; background: #fff; color: #000;
+  display: grid; grid-template-columns: auto 1fr; gap: 2mm 3mm; align-items: center; font-size: 10px; line-height: 1.25; }
+.sticker .s-head { grid-column: 1 / -1; display: flex; justify-content: space-between; font-weight: 700; color: #14234c; border-bottom: 2px solid #f06721; padding-bottom: 1mm; }
+.sticker .s-tag { font: 700 14px/1.1 ui-monospace, monospace; }
+.sticker .s-foot { grid-column: 1 / -1; font-size: 9px; text-align: center; font-weight: 700; }
+@media print {
+  .no-print, nav, header.topbar, aside { display: none !important; }
+  .stickers { grid-template-columns: repeat(3, 1fr); }
+}
