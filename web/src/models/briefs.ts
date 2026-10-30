@@ -50,6 +50,8 @@ export const BRIEFS: Record<string, Record<string, Brief>> = {
       'Turns the flywheel to crank the engine until it starts; the solenoid switches the heavy current and pushes the pinion in.', 'يدير الحدافة لتدوير المحرك حتى يعمل، والسولينويد يوصل التيار العالي ويدفع الترس للتعشيق.'),
     battery: b('A 12 V lead-acid battery and the heavy cable to the starter.', 'بطارية رصاص حمضية 12 فولت والكابل الغليظ إلى المارش.',
       'Stores energy to crank the engine and run the electrics when the engine is off. Can give 600 A on a short.', 'تخزن الطاقة لتدوير المحرك وتشغيل الكهرباء والمحرك متوقف، وقد تعطي 600 أمبير عند القصر.'),
+    testpanel: b('A control box on the engine test stand: ignition key switch, rev counter and voltmeter.', 'صندوق تحكم على منصة اختبار المحرك: مفتاح التشغيل وعداد اللفات ومقياس الجهد.',
+      'Starts and stops the engine on the stand. Taking the key out makes sure nobody can start it while you work.', 'يشغّل المحرك ويوقفه على المنصة. إخراج المفتاح يضمن ألا يشغّله أحد أثناء عملك.'),
     oil_pan: b('The steel or aluminium tray bolted under the engine.', 'حوض من الصلب أو الألومنيوم مثبت أسفل المحرك.',
       'Holds the engine oil; the oil pump draws from it and the oil drains back into it.', 'يحفظ زيت المحرك، تسحب منه طلمبة الزيت ويعود الزيت إليه.'),
     pistons: b('Four pistons with rings, joined to the crankshaft by connecting rods.', 'أربعة مكابس بشنابرها متصلة بعمود الكرنك بأذرع التوصيل.',

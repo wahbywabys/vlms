@@ -179,6 +179,8 @@ export interface SceneInfo {
 }
 const InfoCtx = createContext<SceneInfo | null>(null);
 export const useSceneInfo = () => useContext(InfoCtx)!;
+/** The group that holds the machine, the workshop and the student (model units). Lesson grip points are found inside it by name. */
+export const MODEL_SPACE = 'model-space';
 
 const STAGE_SPAN = 0.5; // each part travels over half the slider range
 const HIGHLIGHT = new THREE.Color('#ff9f1c');
@@ -376,7 +378,7 @@ export function ModelScene({
       {!shop && <hemisphereLight args={['#dbe7ff', '#1b2430', 0.6]} />}
       <directionalLight position={[-6, 3, -4]} intensity={0.45} />
       {/* In a headset the machine stands on the floor about two metres in front of you, at bench scale. */}
-      <group position={vr ? [0, 0.55, -2.4] : [0, 0, 0]} scale={vr ? 0.42 : 1}>
+      <group name={MODEL_SPACE} position={vr ? [0, 0.55, -2.4] : [0, 0, 0]} scale={vr ? 0.42 : 1}>
         <InfoCtx.Provider value={info}>
           <group ref={partsRef}>
             <SceneCtx.Provider value={ctx}>

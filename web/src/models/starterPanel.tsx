@@ -9,7 +9,7 @@
  *   trip  0..1  overload tripped (flag shows, trip lamp lit)
  */
 import * as THREE from 'three';
-import { Box, COLORS, Cyl, child, param, Sphere, Tube, tx, type ModelDef } from './kit';
+import { Box, COLORS, Cyl, child, Grip, param, Sphere, Tube, tx, type ModelDef } from './kit';
 
 const GREY = COLORS.ral7035;
 const DIN = '#b8bfc6';
@@ -46,7 +46,9 @@ const Isolator = () => (
     <group name="handle" position={[-0.45, 0.28, BACK + 0.27]}>
       <Cyl r={0.08} len={0.05} axis="z" color={COLORS.red} />
       <Box size={[0.28, 0.06, 0.06]} position={[0, 0, 0.04]} color={COLORS.red} />
+      <Grip name="grip-q1" at={[0.1, 0, 0.09]} />
     </group>
+    <Grip name="grip-hasp" at={[-0.28, 0.14, BACK + 0.3]} />
     <group name="padlock" position={[-0.28, 0.12, BACK + 0.27]}>
       <Box size={[0.09, 0.1, 0.04]} color={COLORS.red} metal={0.4} />
       <Cyl r={0.032} len={0.008} axis="z" position={[0, 0.06, 0]} color="#c0c6cc" metal={0.9} open />
@@ -77,6 +79,7 @@ const Contactor = () => (
     {/* Coil terminals A1/A2 */}
     <Cyl r={0.02} len={0.02} axis="z" position={[-0.47, -0.66, BACK + 0.255]} color={COLORS.brass} metal={0.8} />
     <Cyl r={0.02} len={0.02} axis="z" position={[-0.13, -0.66, BACK + 0.255]} color={COLORS.brass} metal={0.8} />
+    <Grip name="grip-km1" at={[-0.3, -0.7, BACK + 0.28]} />
   </group>
 );
 
@@ -84,6 +87,7 @@ const Overload = () => (
   <group>
     <Box size={[0.4, 0.26, 0.22]} position={[0.25, -0.53, BACK + 0.12]} color="#373c42" />
     <Cyl r={0.04} len={0.03} axis="z" position={[0.18, -0.5, BACK + 0.24]} color="#3a7bd5" />
+    <Grip name="grip-f2" at={[0.18, -0.5, BACK + 0.28]} />
     <group name="tripflag" position={[0.36, -0.5, BACK + 0.24]}>
       <Box size={[0.07, 0.05, 0.02]} color={COLORS.orange} />
     </group>
@@ -96,6 +100,7 @@ const Terminals = () => (
       <Box key={i} size={[0.05, 0.16, 0.14]} position={[-0.38 + i * 0.065, -0.98, BACK + 0.08]}
         color={i === 8 ? COLORS.green : i >= 6 ? COLORS.blue : '#8a9095'} />
     ))}
+    <Grip name="grip-x1" at={[-0.18, -0.98, BACK + 0.18]} />
     {/* Motor cable and supply cable down to the glands */}
     <Tube points={[[0.1, -1.05, BACK + 0.08], [0.0, -1.1, 0], [0, -1.15, 0]]} r={0.04} color="#333" />
     <Tube points={[[-0.45, 0.5, BACK + 0.1], [-0.82, 0.4, BACK + 0.1], [-0.82, -1.0, BACK + 0.1], [-0.5, -1.15, 0]]} r={0.035} color="#2b2b2b" />
@@ -136,6 +141,10 @@ const DoorLeaf = () => (
       <Box size={[0.3, 0.3, 0.015]} position={[-0.45, 0.28, 0.025]} color={COLORS.yellow} />
       <Box size={[0.26, 0.05, 0.05]} position={[-0.45, 0.28, 0.05]} color={COLORS.red} />
       <Cyl r={0.03} len={0.1} position={[W / 2 - 0.06, 0, 0.04]} color="#303438" />
+      <Grip name="grip-panel-door" at={[W / 2 - 0.06, 0, 0.09]} />
+      <Grip name="grip-s1" at={[0.3, -0.25, 0.08]} />
+      <Grip name="grip-s2" at={[0.55, -0.25, 0.08]} />
+      <Grip name="grip-q1door" at={[-0.35, 0.28, 0.09]} />
     </group>
   </group>
 );

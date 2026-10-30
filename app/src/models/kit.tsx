@@ -165,6 +165,13 @@ export function Box({ size, position = [0, 0, 0], rotation, name, shadow = true,
   );
 }
 
+/**
+ * A named, invisible point where a hand goes (a handle, a button, a valve).
+ * Put it inside the part (or the moving piece of it), so it travels with it;
+ * lessons send the student's hand to it by name.
+ */
+export const Grip = ({ name, at }: { name: `grip-${string}`; at: Vec3 }) => <group name={name} position={at} />;
+
 /** A flat printed plate (nameplate, rating plate, sticker) facing +z. */
 export function Plate({ lines, size, position = [0, 0, 0], rotation, ...o }: PlateOpts & { lines: string[]; size: [number, number]; position?: Vec3; rotation?: Vec3 }) {
   const tex = plateTex(lines, { w: 512, h: Math.round((512 * size[1]) / size[0]), ...o });

@@ -8,7 +8,7 @@
  *   defects 0..1  show porosity and undercut on the finished bead
  */
 import * as THREE from 'three';
-import { Box, COLORS, Cyl, child, param, Sphere, Tube, tx, type ModelDef } from './kit';
+import { Box, COLORS, Cyl, child, Grip, param, Sphere, Tube, tx, type ModelDef } from './kit';
 
 const BODY = '#1f5aa6';
 const X0 = 0.45, X1 = 1.85; // weld start and end along the joint
@@ -21,6 +21,9 @@ const PowerSource = () => (
     <Box size={[0.42, 0.16, 0.02]} position={[-1.45, -0.3, 0.525]} color="#0b2b16" emissive="#33ff88" glow={0.8} />
     {[-1.05, -0.85].map((x) => <Cyl key={x} r={0.06} len={0.05} axis="z" position={[x, -0.32, 0.54]} color="#d9dde1" metal={0.3} />)}
     <Cyl r={0.05} len={0.06} axis="z" position={[-1.55, -0.85, 0.53]} color={COLORS.red} />
+    <Grip name="grip-mains" at={[-1.55, -0.85, 0.6]} />
+    <Grip name="grip-volts" at={[-1.05, -0.32, 0.6]} />
+    <Grip name="grip-wirespeed" at={[-0.85, -0.32, 0.6]} />
     <Cyl r={0.05} len={0.06} axis="z" position={[-1.05, -0.85, 0.53]} color="#222" />
     {[[-1.8, 0.4], [-0.8, 0.4], [-1.8, -0.4], [-0.8, -0.4]].map(([x, z]) => <Cyl key={`${x}${z}`} r={0.07} len={0.06} axis="z" position={[x!, -1.18, z!]} color={COLORS.rubber} />)}
   </group>
@@ -33,6 +36,8 @@ const Feeder = () => (
     <Box size={[1.1, 0.03, 0.9]} position={[-1.3, 0.485, -0.02]} color="#2a2f35" metal={0.3} rough={0.5} />
     <Box size={[1.1, 0.55, 0.03]} position={[-1.3, 0.225, -0.46]} color="#2a2f35" metal={0.3} rough={0.5} />
     {[-1.835, -0.765].map((x) => <Box key={x} size={[0.03, 0.55, 0.9]} position={[x, 0.225, -0.02]} color="#2a2f35" metal={0.3} rough={0.5} />)}
+    <Grip name="grip-spool" at={[-1.48, 0.24, 0.25]} />
+    <Grip name="grip-rolls" at={[-0.98, 0.35, 0.26]} />
     <group name="spool" position={[-1.48, 0.24, 0.12]}>
       <Cyl r={0.24} len={0.2} axis="z" color="#9aa3ab" metal={0.6} rough={0.4} />
       <Cyl r={0.2} len={0.21} axis="z" color={COLORS.copper} metal={0.8} rough={0.3} />
@@ -61,6 +66,8 @@ const Gas = () => (
     <Cyl r={0.2} len={1.7} position={[-2.25, -0.38, -0.25]} color="#7a7f84" metal={0.4} rough={0.5} />
     <Sphere r={0.2} position={[-2.25, 0.47, -0.25]} color="#3e9a4f" metal={0.3} rough={0.5} />
     <Cyl r={0.05} len={0.12} position={[-2.25, 0.7, -0.25]} color={COLORS.brass} metal={0.8} />
+    <Grip name="grip-valve" at={[-2.25, 0.73, -0.19]} />
+    <Grip name="grip-flow" at={[-2.18, 0.9, -0.03]} />
     {/* Regulator and flowmeter, gauge facing the operator */}
     <Box size={[0.16, 0.12, 0.12]} position={[-2.25, 0.8, -0.18]} color={COLORS.brass} metal={0.8} rough={0.3} />
     <group position={[-2.25, 0.86, -0.07]}>
@@ -75,9 +82,10 @@ const Bench = () => (
   <group>
     <Box size={[2.2, 0.08, 1.0]} position={[1.2, -0.3, 0]} color="#59616a" metal={0.6} rough={0.4} />
     {[[0.2, 0.42], [2.2, 0.42], [0.2, -0.42], [2.2, -0.42]].map(([x, z]) => <Box key={`${x}${z}`} size={[0.08, 0.9, 0.08]} position={[x!, -0.8, z!]} color="#3a4048" />)}
-    {/* Earth clamp and return lead to the power source's − socket */}
-    <Box size={[0.12, 0.08, 0.1]} position={[1.95, -0.22, -0.25]} color={COLORS.brass} metal={0.8} />
-    <Tube points={[[1.95, -0.2, -0.3], [1.6, -0.5, -0.6], [0, -0.9, -0.2], [-1.05, -0.85, 0.6]]} r={0.02} color="#202326" />
+    {/* Earth clamp on the clean end of the base plate, and the return lead to the power source's − socket */}
+    <Box size={[0.12, 0.08, 0.1]} position={[1.85, -0.16, 0.24]} color={COLORS.brass} metal={0.8} />
+    <Tube points={[[1.85, -0.14, 0.3], [2.1, -0.4, 0.55], [1.0, -0.9, 0.7], [-1.05, -0.85, 0.6]]} r={0.02} color="#202326" />
+    <Grip name="grip-clamp" at={[1.85, -0.1, 0.28]} />
   </group>
 );
 
@@ -108,6 +116,7 @@ const Torch = () => (
         <Tube points={[[0, 0.12, 0], [0, 0.3, 0], [0.05, 0.42, 0], [0.18, 0.5, 0]]} r={0.022} color={COLORS.black} />
         <Cyl r={0.045} len={0.34} axis="x" position={[0.34, 0.52, 0]} color="#1e2327" rough={0.7} />
         <Box size={[0.04, 0.06, 0.03]} position={[0.28, 0.47, 0]} color={COLORS.red} />
+        <Grip name="grip-torch" at={[0.3, 0.52, 0.0]} />
       </group>
       <Sphere name="arc" r={0.03} color="#cfe8ff" emissive="#bfe3ff" glow={0} opacity={0} />
       <pointLight name="arcLight" color="#b9dcff" intensity={0} distance={3} decay={2} />
@@ -218,7 +227,7 @@ export const migWelder: ModelDef = {
     {
       id: 'bench', name: tx('Welding bench & earth clamp', 'طاولة اللحام وماسك الأرضي'), explode: [0.6, -0.6, 0], stage: 0.35,
       render: () => <Bench />,
-      hotspot: { position: [1.95, -0.1, -0.25], title: tx('Earth (work) clamp', 'ماسك الأرضي (الشغلة)'), specs: [[tx('Connect to', 'التوصيل بـ'), tx('Clean metal, close to the weld', 'معدن نظيف قريب من اللحام')], [tx('Polarity (MIG)', 'القطبية (MIG)'), tx('Work −, torch + (DCEP)', 'الشغلة −، المسدس + ‏(DCEP)')]] },
+      hotspot: { position: [1.85, -0.05, 0.24], title: tx('Earth (work) clamp', 'ماسك الأرضي (الشغلة)'), specs: [[tx('Connect to', 'التوصيل بـ'), tx('Clean metal, close to the weld', 'معدن نظيف قريب من اللحام')], [tx('Polarity (MIG)', 'القطبية (MIG)'), tx('Work −, torch + (DCEP)', 'الشغلة −، المسدس + ‏(DCEP)')]] },
     },
     {
       id: 'power', name: tx('Inverter power source', 'مصدر القدرة (إنفرتر)'), explode: [0, 0, 0],

@@ -6,7 +6,7 @@
  *   door  0..1  guard door slid open
  */
 import * as THREE from 'three';
-import { Box, COLORS, Cyl, child, param, Radial, Tube, tx, type ModelDef } from './kit';
+import { Box, COLORS, Cyl, child, Grip, param, Radial, Tube, tx, type ModelDef } from './kit';
 
 const PAINT = '#e8ebee';
 const TRIM = '#2b3a4a';
@@ -30,6 +30,9 @@ const Headstock = () => (
     <Box size={[0.97, 0.12, 0.97]} position={[-1.75, 0.86, 0]} color={ACCENT} metal={0.2} rough={0.5} />
     {/* Spindle nose bearing housing */}
     <Cyl r={0.34} len={0.14} axis="x" position={[-1.22, 0, 0]} color={COLORS.darkSteel} metal={0.7} rough={0.3} />
+    {/* Chuck-key holder: the key lives here, never in the chuck */}
+    <Box size={[0.12, 0.05, 0.06]} position={[-1.45, 0.5, 0.5]} color={COLORS.darkSteel} metal={0.6} rough={0.4} />
+    <Grip name="grip-keyholder" at={[-1.45, 0.56, 0.53]} />
   </group>
 );
 
@@ -42,6 +45,9 @@ const Chuck = () => (
           color={COLORS.darkSteel} metal={0.8} rough={0.3} />
       )}
     </Radial>
+    {/* Square socket for the chuck key, on the rim */}
+    <Box size={[0.05, 0.05, 0.03]} position={[-1.0, 0.24, 0.35]} rotation={[0.6, 0, 0]} color="#30363c" metal={0.7} rough={0.4} />
+    <Grip name="grip-chuck" at={[-1.0, 0.26, 0.37]} />
   </group>
 );
 
@@ -83,6 +89,7 @@ const GuardDoor = () => (
     <Box size={[2.24, 0.08, 0.06]} position={[-0.25, -0.37, 0.78]} color={TRIM} />
     {[-1.35, 0.85].map((x) => <Box key={x} size={[0.08, 1.38, 0.06]} position={[x, 0.3, 0.78]} color={TRIM} />)}
     <Box size={[0.06, 0.4, 0.06]} position={[0.65, 0.3, 0.84]} color={ACCENT} />
+    <Grip name="grip-door" at={[0.65, 0.3, 0.88]} />
   </group>
 );
 
@@ -92,6 +99,13 @@ const Controls = () => (
     <Box size={[0.48, 0.32, 0.02]} position={[0, 0.17, 0.09]} color="#0c2b3f" emissive="#1b6fa8" glow={0.9} />
     <Cyl r={0.06} len={0.05} axis="z" position={[0.18, -0.25, 0.1]} color={COLORS.red} emissive="#6a0c08" glow={0.4} />
     <Box size={[0.26, 0.14, 0.02]} position={[-0.1, -0.2, 0.09]} color="#3b4856" />
+    {/* Cycle start (green) and feed hold (amber) */}
+    <Cyl r={0.025} len={0.03} axis="z" position={[-0.17, -0.34, 0.1]} color={COLORS.green} emissive="#0d4a22" glow={0.4} />
+    <Cyl r={0.025} len={0.03} axis="z" position={[-0.04, -0.34, 0.1]} color={COLORS.yellow} emissive="#5a4300" glow={0.3} />
+    <Grip name="grip-estop" at={[0.18, -0.25, 0.15]} />
+    <Grip name="grip-keypad" at={[-0.1, -0.2, 0.12]} />
+    <Grip name="grip-cycle" at={[-0.17, -0.34, 0.13]} />
+    <Grip name="grip-feedhold" at={[-0.04, -0.34, 0.16]} />
   </group>
 );
 
@@ -99,6 +113,7 @@ const Coolant = () => (
   <group>
     <Tube points={[[-1.2, 0.9, -0.3], [-0.9, 0.85, -0.25], [-0.55, 0.4, -0.1], [-0.45, 0.17, 0]]} r={0.022} color="#2e3c4b" metal={0.3} />
     <Cyl r={0.025} r2={0.012} len={0.08} position={[-0.45, 0.13, 0]} color={COLORS.brass} metal={0.8} rough={0.3} />
+    <Grip name="grip-coolant" at={[-0.5, 0.25, -0.05]} />
   </group>
 );
 
@@ -115,6 +130,7 @@ export const cncLathe: ModelDef = {
       { id: 'controls', label: tx('Control panel', 'لوحة التحكم'), pos: [1.8, 1.4], face: 2.64, pose: 'operate', reach: [2.15, 0.38, 0.66] },
       { id: 'chuck', label: tx('Chuck', 'الظرف'), pos: [-0.85, 1.5], face: Math.PI, pose: 'reach', reach: [-0.85, 0.08, 0.32] },
       { id: 'tailstock', label: tx('Tailstock', 'الغراب المتحرك'), pos: [1.5, 1.5], face: Math.PI, pose: 'inspect', reach: [1.35, 0.1, 0.35] },
+      { id: 'door', label: tx('Guard door, open', 'باب الحماية مفتوحًا'), pos: [1.75, 1.55], face: Math.PI, pose: 'operate' },
       { id: 'ppe', label: tx('PPE station', 'محطة الوقاية'), pos: [-3.9, 2.7], face: -Math.PI / 2, pose: 'idle' },
     ],
   },

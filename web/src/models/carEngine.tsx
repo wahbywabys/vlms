@@ -8,7 +8,7 @@
  *   crank 0..1  starter cranking (battery cable and solenoid glow)
  */
 import * as THREE from 'three';
-import { Box, COLORS, Cyl, child, param, Tube, tx, type ModelDef } from './kit';
+import { Box, COLORS, Cyl, child, Grip, param, Tube, tx, type ModelDef } from './kit';
 import type { AnimateState } from '../components/MachineExplorer';
 
 const CY = -0.35;           // crank axis height
@@ -121,6 +121,28 @@ const OilPan = () => (
   <group>
     <Box size={[1.9, 0.26, 0.86]} position={[0, -0.66, 0]} color={COLORS.black} metal={0.3} rough={0.6} />
     <Cyl r={0.04} len={0.06} axis="z" position={[0.6, -0.72, 0.44]} color={COLORS.steel} metal={0.9} />
+    {/* Dipstick: tube up the side of the block, yellow pull ring on top */}
+    <Tube points={[[0.75, -0.5, 0.46], [0.76, 0.0, 0.5], [0.76, 0.38, 0.54]]} r={0.018} color={COLORS.black} />
+    <mesh position={[0.76, 0.44, 0.55]}><torusGeometry args={[0.05, 0.014, 8, 18]} /><meshStandardMaterial color={COLORS.yellow} roughness={0.5} /></mesh>
+    <Grip name="grip-dipstick" at={[0.76, 0.46, 0.58]} />
+  </group>
+);
+
+/** The test stand's control box: ignition key switch, rev counter and voltmeter, on a post by the engine. */
+const TestPanel = () => (
+  <group position={[1.35, 0, 1.55]} rotation={[0, -0.35, 0]}>
+    <Cyl r={0.045} len={2.62} position={[0, -1.44, 0]} color="#3a4048" metal={0.5} rough={0.5} />
+    <Box size={[0.6, 0.06, 0.6]} position={[0, -2.72, 0]} color="#3a4048" metal={0.5} rough={0.5} />
+    <group rotation={[-0.5, 0, 0]}>
+      <Box size={[0.72, 0.46, 0.14]} color="#22262b" />
+      {[-0.2, 0.03].map((x) => <Cyl key={x} r={0.09} len={0.02} axis="z" position={[x, 0.06, 0.075]} color="#f2f2ee" rough={0.6} />)}
+      <Cyl r={0.06} len={0.04} axis="z" position={[0.24, -0.08, 0.08]} color="#9aa3ab" metal={0.8} rough={0.3} />
+      <group name="ignkey" position={[0.24, -0.08, 0.11]}>
+        <Box size={[0.03, 0.09, 0.03]} color="#c9cfd5" metal={0.8} rough={0.3} />
+        <Box size={[0.09, 0.07, 0.025]} position={[0, 0.07, 0]} color={COLORS.black} />
+      </group>
+      <Grip name="grip-ignition" at={[0.24, -0.06, 0.17]} />
+    </group>
   </group>
 );
 
@@ -152,6 +174,7 @@ const Alternator = () => (
   <group position={[-0.9, 0.15, 0.7]}>
     <Cyl r={0.17} len={0.3} axis="x" color={COLORS.alu} metal={0.8} rough={0.3} />
     <Cyl r={0.07} len={0.06} axis="x" position={[-0.18, 0, 0]} color={COLORS.black} />
+    <Grip name="grip-alternator" at={[0.0, -0.17, 0.12]} />
   </group>
 );
 
@@ -170,6 +193,8 @@ const Battery = () => (
       <Box size={[0.43, 0.04, 0.63]} position={[0, 0.17, 0]} color={COLORS.black} />
       <Cyl r={0.035} len={0.06} position={[0, 0.22, 0.2]} color={COLORS.red} metal={0.5} />
       <Cyl r={0.035} len={0.06} position={[0, 0.22, -0.2]} color="#333" metal={0.5} />
+      <Grip name="grip-batt-pos" at={[0, 0.27, 0.2]} />
+      <Grip name="grip-batt-neg" at={[0, 0.27, -0.2]} />
       <Box size={[0.3, 0.14, 0.01]} position={[0.215, 0, 0]} rotation={[0, Math.PI / 2, 0]} color={COLORS.orange} shadow={false} />
     </group>
     <group name="cable">
@@ -183,7 +208,7 @@ export const carEngine: ModelDef = {
   title: tx('1.6 L petrol engine & starting system', 'محرك بنزين 1.6 لتر ونظام البدء'),
   assetTag: 'AUTO1-ENG-R3',
   view: { camera: [4.4, 2.8, 5.6], target: [0.2, 0.1, 0] },
-  params: { crank: 0 },
+  params: { crank: 0, key: 1 },
   env: {
     unitsPerM: 3.2, floorY: -2.75, stand: 'engine-stand', bay: 'auto',
     stations: [
@@ -283,6 +308,11 @@ export const carEngine: ModelDef = {
         specs: [[tx('Capacity', 'السعة'), '60 Ah, 540 A CCA'], [tx('Rest voltage', 'جهد السكون'), '12.6 V'], [tx('While cranking', 'أثناء التدوير'), tx('≥ 9.6 V', '≥ 9.6 فولت')]],
         safety: tx('Hydrogen gas: no sparks. Remove the negative first, refit it last.', 'غاز الهيدروجين: لا شرر. افصل السالب أولًا وأعده آخرًا.'),
       },
+    },
+    {
+      id: 'testpanel', name: tx('Test-stand panel & ignition key', 'لوحة منصة الاختبار ومفتاح التشغيل'), explode: [0.8, 0, 1.2], stage: 0.34,
+      animate: (g, s) => { const k = child(g, 'ignkey'); if (k) k.visible = param(s, 'key', 1) > 0.5; },
+      render: () => <TestPanel />,
     },
     {
       id: 'oil_pan', name: tx('Oil pan (sump)', 'حوض الزيت (الكارتير)'), explode: [0, -1.1, 0], stage: 0.4,
