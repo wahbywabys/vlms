@@ -53,7 +53,7 @@ export interface Trade {
   framework: { code: string; title: Txt };
   units: Unit[];
   bay: { name: Txt; cohort: Txt; trainer: Txt; trainerInitials: Txt; jobCards: string };
-  learner: { name: Txt; initials: Txt };
+  learner: { name: Txt; initials: Txt; photo?: string };
   stations: Station[];
   obsRubric: ObsCriterion[];
   obsNote: Txt;
