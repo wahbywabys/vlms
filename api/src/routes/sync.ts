@@ -19,7 +19,7 @@ import { forbidden, HttpError } from '../lib/errors.js';
 import { toStatements } from '../services/xapi.js';
 import { syncHandlers } from './syncHandlers.js';
 
-export const Mutations = z.array(z.object({ type: z.enum(['observation', 'checkin', 'logbook', 'consumable']), payload: z.record(z.unknown()) })).min(1).max(100);
+export const Mutations = z.array(z.object({ type: z.enum(['observation', 'checkin', 'logbook', 'consumable', 'machine_scan']), payload: z.record(z.unknown()) })).min(1).max(100);
 const Batch = z.object({ deviceId: z.string().max(80).optional(), mutations: Mutations });
 
 export interface MutationResult {

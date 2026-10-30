@@ -457,3 +457,6 @@ SELECT q, (SELECT id FROM competencies WHERE code = c) FROM (VALUES
   ('00000000-0000-0000-0000-0000000006f1'::uuid, 'ELEC-L3-U04-E1'), ('00000000-0000-0000-0000-0000000006f2'::uuid, 'AUTO-L3-U04-E1'),
   ('00000000-0000-0000-0000-0000000006f3'::uuid, 'WELD-L3-U06-E1')) AS x(q, c)
  WHERE EXISTS (SELECT 1 FROM competencies WHERE code = c);
+
+-- Machine register: a type (and 3D twin) for every demo machine.
+SELECT assign_machine_types();

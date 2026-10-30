@@ -53,6 +53,8 @@ export const WORKSPACE: Record<WorkspaceKey, { role: Role; label: Txt; home: str
       { href: '/director/learners', label: tx('Learners', 'المتدربون') },
       { href: '/director/skills', label: tx('Skills heatmap', 'خريطة المهارات') },
       { href: '/director/risk', label: tx('Early warning', 'الإنذار المبكر') },
+      { href: '/director/programs', label: tx('Programmes & skills', 'التخصصات والمهارات') },
+      { href: '/director/machines', label: tx('Machine register', 'سجل الماكينات') },
     ],
   },
 };

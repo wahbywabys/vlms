@@ -19,9 +19,9 @@
  * token the phone picked up on the centre Wi-Fi (see saveRelay); the centre
  * applies them, still idempotent, the next time it is online.
  *
- * The same mutation types as /v1/sync: observation, checkin, logbook, consumable.
+ * The same mutation types as /v1/sync: observation, checkin, logbook, consumable, machine_scan.
  */
-export type MutationType = 'observation' | 'checkin' | 'logbook' | 'consumable';
+export type MutationType = 'observation' | 'checkin' | 'logbook' | 'consumable' | 'machine_scan';
 export interface QueuedMedia { localId: string; blob: Blob; capturedAt: string; width?: number; height?: number;
   kind?: 'photo' | 'video' | 'signature'; lat?: number; lon?: number; serverId?: string }
 export interface QueuedMutation {

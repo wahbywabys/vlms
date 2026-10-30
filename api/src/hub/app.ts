@@ -58,7 +58,7 @@ const Snapshot = z.object({
 });
 const RelayBody = z.object({
   centerId: z.string().max(48),
-  mutations: z.array(z.object({ type: z.enum(['observation', 'checkin', 'logbook', 'consumable']), payload: z.record(z.unknown()) })).min(1).max(100),
+  mutations: z.array(z.object({ type: z.enum(['observation', 'checkin', 'logbook', 'consumable', 'machine_scan']), payload: z.record(z.unknown()) })).min(1).max(100),
 });
 const ExportQuery = z.object({
   center: z.string().max(48).optional(), format: z.enum(['json', 'csv']).default('json'),
