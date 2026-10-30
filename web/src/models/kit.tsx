@@ -9,6 +9,7 @@
 import { useMemo, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { BRIEFS } from './briefs';
 import { brushedTex, castTex, noiseTex, plateTex, signTex, type Pictogram, type PlateOpts, type SignKind } from './textures';
 import type { AnimateState, PartSpec, Vec3 } from '../components/MachineExplorer';
 
@@ -72,7 +73,16 @@ export interface ModelEnv {
   stations: StationDef[];
 }
 
-export const modelParts = (m: ModelDef, lang: 'en' | 'ar') => m.specs?.(lang) ?? localize(m.parts, lang);
+/** The model's parts in one language, each with its briefing (what it is, what it does). */
+export function modelParts(m: ModelDef, lang: 'en' | 'ar'): PartSpec[] {
+  const parts = m.specs?.(lang) ?? localize(m.parts, lang);
+  const briefs = BRIEFS[m.id];
+  if (!briefs) return parts;
+  return parts.map((p) => {
+    const b = briefs[p.id];
+    return b && !p.brief ? { ...p, brief: { what: b.what[lang], does: b.does[lang] } } : p;
+  });
+}
 
 export function localize(parts: BiPart[], lang: 'en' | 'ar'): PartSpec[] {
   const p = (t: Txt) => t[lang];

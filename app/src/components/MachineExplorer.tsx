@@ -74,6 +74,8 @@ export interface PartSpec {
   /** Per-frame hook for moving sub-parts (pistons, gauges, a growing weld bead). */
   animate?: (g: THREE.Group, s: AnimateState) => void;
   hotspot?: Hotspot;
+  /** Briefing shown when the part is pressed: what it is and what it does. */
+  brief?: { what: string; does: string };
   render: () => ReactNode;
 }
 
@@ -93,11 +95,12 @@ export interface ExplorerStrings {
   views?: string; viewIso?: string; viewFront?: string; viewSide?: string; viewTop?: string;
   workshop?: string; studio?: string; student?: string; studentOff?: string; third?: string; first?: string;
   walkTo?: string; keysHint?: string; sectionHint?: string;
+  labels?: string; whatItIs?: string; whatItDoes?: string; specs?: string;
 }
 const EN: Required<ExplorerStrings> = {
   digitalTwin: 'Digital twin', viewModes: 'View modes', xray: 'X-ray', cutaway: 'Section', run: 'Run', stop: 'Stop',
   assemble: 'Assemble', explode: 'Explode', explodedView: 'Exploded view', component: 'Component',
-  datasheet: 'Open datasheet →', hint: 'Tap a numbered pin or a part to see its specification.',
+  datasheet: 'Open datasheet →', hint: 'Tap any part, its label or its numbered pin for a briefing: what it is, what it does and its specification.',
   vr: 'Enter VR', vrExit: 'Exit VR',
   vrStereoNote: 'No VR headset found, so this is the stereo view: put the phone in a VR viewer (Cardboard-style) and drag to look around.',
   vrHeadset: 'Immersive VR on your headset. Take it off or press Exit VR to come back.',
@@ -105,11 +108,12 @@ const EN: Required<ExplorerStrings> = {
   cutOffset: 'Plane position', cutAngle: 'Plane angle', views: 'Camera', viewIso: 'Iso', viewFront: 'Front', viewSide: 'Side', viewTop: 'Top',
   workshop: 'Workshop', studio: 'Studio', student: 'WABYS student', studentOff: 'Off', third: '3rd person', first: '1st person',
   walkTo: 'Walk to', keysHint: 'W A S D or arrows to walk · drag to look', sectionHint: 'Hatched faces are where the plane cuts solid metal.',
+  labels: 'Labels', whatItIs: 'What it is', whatItDoes: 'What it does', specs: 'Specification',
 };
 const AR: Required<ExplorerStrings> = {
   digitalTwin: 'التوأم الرقمي', viewModes: 'أوضاع العرض', xray: 'أشعة', cutaway: 'مقطع', run: 'تشغيل', stop: 'إيقاف',
   assemble: 'تجميع', explode: 'تفكيك', explodedView: 'العرض المفكك', component: 'المكوّن',
-  datasheet: 'افتح ورقة البيانات ←', hint: 'اضغط دبوسًا مرقّمًا أو قطعة لعرض مواصفاتها.',
+  datasheet: 'افتح ورقة البيانات ←', hint: 'اضغط أي قطعة أو اسمها أو دبوسها المرقّم لعرض نبذة عنها: ما هي ووظيفتها ومواصفاتها.',
   vr: 'دخول الواقع الافتراضي', vrExit: 'خروج من الواقع الافتراضي',
   vrStereoNote: 'لا توجد نظارة واقع افتراضي، لذا هذا عرض مجسم مزدوج: ضع الهاتف في نظارة من نوع Cardboard واسحب للنظر حولك.',
   vrHeadset: 'واقع افتراضي غامر على نظارتك. انزعها أو اضغط الخروج للعودة.',
@@ -117,6 +121,7 @@ const AR: Required<ExplorerStrings> = {
   cutOffset: 'موضع المستوى', cutAngle: 'زاوية المستوى', views: 'الكاميرا', viewIso: 'منظور', viewFront: 'أمامي', viewSide: 'جانبي', viewTop: 'علوي',
   workshop: 'الورشة', studio: 'استوديو', student: 'متدرب WABYS', studentOff: 'إخفاء', third: 'منظور ثالث', first: 'بعيني المتدرب',
   walkTo: 'اذهب إلى', keysHint: 'W A S D أو الأسهم للمشي · اسحب للنظر', sectionHint: 'الأوجه المخططة هي حيث يقطع المستوى المعدن المصمت.',
+  labels: 'الأسماء', whatItIs: 'ما هو', whatItDoes: 'وظيفته', specs: 'المواصفات',
 };
 export const explorerStrings = (lang: 'en' | 'ar') => (lang === 'ar' ? AR : EN);
 
@@ -153,6 +158,8 @@ interface SceneState {
   selectedId: string | null;
   hoveredId: string | null;
   pins: boolean;
+  /** Name labels next to every part's pin. */
+  labels: boolean;
   params: React.RefObject<Record<string, number>>;
   clock: React.RefObject<number>;
   section: SectionState;
@@ -183,12 +190,22 @@ function partProgress(explode: number, stage = 0) {
 }
 
 function ExplodablePart({ spec, index }: { spec: PartSpec; index: number }) {
-  const { explode, xray, running, selectedId, hoveredId, pins, params, clock, section, setHovered, select } = useScene();
+  const { explode, xray, running, selectedId, hoveredId, pins, labels, params, clock, section, setHovered, select } = useScene();
   const outer = useRef<THREE.Group>(null!);
   const inner = useRef<THREE.Group>(null!);
   const target = useMemo(() => new THREE.Vector3(), []);
   const selected = selectedId === spec.id;
   const hovered = hoveredId === spec.id;
+  // Parts without a hand-placed pin get one at the centre of their shape, in the part's own space so it travels with it.
+  const [auto, setAuto] = useState<Vec3 | null>(null);
+  useLayoutEffect(() => {
+    if (spec.hotspot) return;
+    outer.current.updateWorldMatrix(true, true);
+    const c = new THREE.Box3().setFromObject(inner.current).getCenter(new THREE.Vector3());
+    outer.current.worldToLocal(c);
+    setAuto(c.toArray() as Vec3);
+  }, [spec.hotspot]);
+  const pinAt = spec.hotspot?.position ?? auto;
 
   // Damped motion toward the slider target keeps dragging smooth on tablets.
   useFrame((_, dt) => {
@@ -235,15 +252,20 @@ function ExplodablePart({ spec, index }: { spec: PartSpec; index: number }) {
       >
         {spec.render()}
       </group>
-      {pins && spec.hotspot && (
-        <Html position={spec.hotspot.position} center zIndexRange={[20, 0]}>
-          <button
-            className={`mx-pin${selected ? ' is-active' : ''}`}
-            aria-label={`Hotspot ${index + 1}: ${spec.hotspot.title}`}
-            onClick={(e) => { e.stopPropagation(); select(spec.id, 'pin'); }}
-          >
-            {index + 1}
-          </button>
+      {pins && pinAt && (
+        <Html position={pinAt} center zIndexRange={[3, 0]}>
+          <div className={`mx-pinwrap${labels ? ' has-label' : ''}${selected ? ' is-active' : ''}`}
+            onMouseEnter={() => setHovered(spec.id)} onMouseLeave={() => setHovered(null)}>
+            <button
+              className={`mx-pin${selected ? ' is-active' : ''}`}
+              aria-label={`${index + 1}: ${spec.name}`}
+              onClick={(e) => { e.stopPropagation(); select(spec.id, 'pin'); }}
+            >
+              {index + 1}
+            </button>
+            <button type="button" className="mx-label" tabIndex={-1} style={{ display: labels || selected || hovered ? undefined : 'none' }}
+              onClick={(e) => { e.stopPropagation(); select(spec.id, 'pin'); }}>{spec.name}</button>
+          </div>
         </Html>
       )}
     </group>
@@ -293,6 +315,8 @@ export interface ModelSceneProps {
   selectedId?: string | null;
   hoveredId?: string | null;
   pins?: boolean;
+  /** Name labels beside the pins. */
+  labels?: boolean;
   params?: Record<string, number>;
   setHovered?: (id: string | null) => void;
   select?: (id: string | null, via: 'pin' | 'mesh' | 'list') => void;
@@ -309,7 +333,7 @@ export interface ModelSceneProps {
 
 /** Lights, setting and the parts. Place inside a <Canvas>. */
 export function ModelScene({
-  parts, explode, xray = false, cutaway = false, running = false, rate = 1, selectedId = null, hoveredId = null, pins = true,
+  parts, explode, xray = false, cutaway = false, running = false, rate = 1, selectedId = null, hoveredId = null, pins = true, labels = false,
   params = {}, setHovered = () => {}, select = () => {}, env, workshop = true, lang = 'en', student, children,
 }: ModelSceneProps) {
   const paramsRef = useRef(params);
@@ -323,7 +347,7 @@ export function ModelScene({
   const [measured, setMeasured] = useState(0);
   const spec: SectionSpec = cutaway === true ? { mode: 'long' } : cutaway || { mode: 'off' };
   const specKey = `${spec.mode}:${(spec.offset ?? 0).toFixed(3)}:${(spec.angle ?? 0).toFixed(3)}`;
-  const ctx: SceneState = { explode, xray, running, selectedId, hoveredId, pins: pins && !vr, params: paramsRef, clock, section, setHovered, select };
+  const ctx: SceneState = { explode, xray, running, selectedId, hoveredId, pins: pins && !vr, labels, params: paramsRef, clock, section, setHovered, select };
   const info = useMemo<SceneInfo>(() => ({ env, box, section }), [env, section]);
   const shop = !!env && workshop;
 
@@ -679,6 +703,7 @@ export function MachineExplorer({ title, assetTag, parts, onEvent, height = 560,
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHovered] = useState<string | null>(null);
   const [shop, setShop] = useState(true);
+  const [labels, setLabels] = useState(true);
   const [sview, setSview] = useState<StudentView | 'off'>('off');
   const [go, setGo] = useState<{ id: string; n: number } | null>(null);
   const [preset, setPreset] = useState<{ pos: THREE.Vector3; tgt: THREE.Vector3; n: number } | null>(null);
@@ -752,7 +777,7 @@ export function MachineExplorer({ title, assetTag, parts, onEvent, height = 560,
           <ModelScene parts={parts} explode={explode} xray={xray} cutaway={cut} running={running}
             params={running ? { ...params, ...runParams } : params} env={env} workshop={shop} lang={lang}
             student={env ? student : undefined}
-            selectedId={selectedId} hoveredId={hoveredId} setHovered={setHovered} select={select}>
+            selectedId={selectedId} hoveredId={hoveredId} setHovered={setHovered} select={select} labels={labels}>
             {env && <StudentRig state={student} view={walking ? sview : 'orbit'} go={go} keys={keys} />}
           </ModelScene>
           <FitToAspect />
@@ -782,6 +807,9 @@ export function MachineExplorer({ title, assetTag, parts, onEvent, height = 560,
             {(['iso', 'front', 'side', 'top'] as Preset[]).map((p) => (
               <button key={p} type="button" onClick={() => goPreset(p)}>{({ iso: t.viewIso, front: t.viewFront, side: t.viewSide, top: t.viewTop })[p]}</button>
             ))}
+          </div>
+          <div className="mx-seg">
+            <button type="button" aria-pressed={labels} onClick={() => { setLabels(!labels); toggle('labels', labels ? 'off' : 'on'); }}>🏷 {t.labels}</button>
           </div>
           {env && (
             <>
@@ -845,17 +873,28 @@ export function MachineExplorer({ title, assetTag, parts, onEvent, height = 560,
       </div>
 
       <aside className="mx-panel" aria-live="polite">
-        {selected?.hotspot ? (
+        {selected ? (
           <div className="mx-card">
-            <p className="mx-eyebrow">{t.component} {parts.indexOf(selected) + 1}</p>
-            <h3>{selected.hotspot.title}</h3>
-            <dl>
-              {Object.entries(selected.hotspot.specs).map(([k, v]) => (
-                <div key={k}><dt>{k}</dt><dd>{v}</dd></div>
-              ))}
-            </dl>
-            {selected.hotspot.safety && <p className="mx-safety">⚠ {selected.hotspot.safety}</p>}
-            {selected.hotspot.docUrl && <a href={selected.hotspot.docUrl} target="_blank" rel="noreferrer">{t.datasheet}</a>}
+            <p className="mx-eyebrow">{t.component} {parts.indexOf(selected) + 1} · {selected.name}</p>
+            <h3>{selected.hotspot?.title ?? selected.name}</h3>
+            {selected.brief && (
+              <div className="mx-brief">
+                <h4>{t.whatItIs}</h4><p>{selected.brief.what}</p>
+                <h4>{t.whatItDoes}</h4><p>{selected.brief.does}</p>
+              </div>
+            )}
+            {selected.hotspot && Object.keys(selected.hotspot.specs).length > 0 && (
+              <>
+                <h4 className="mx-spec-h">{t.specs}</h4>
+                <dl>
+                  {Object.entries(selected.hotspot.specs).map(([k, v]) => (
+                    <div key={k}><dt>{k}</dt><dd>{v}</dd></div>
+                  ))}
+                </dl>
+              </>
+            )}
+            {selected.hotspot?.safety && <p className="mx-safety">⚠ {selected.hotspot.safety}</p>}
+            {selected.hotspot?.docUrl && <a href={selected.hotspot.docUrl} target="_blank" rel="noreferrer">{t.datasheet}</a>}
           </div>
         ) : (
           <p className="mx-hint">{t.hint}</p>
