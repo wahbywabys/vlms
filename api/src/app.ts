@@ -12,6 +12,7 @@ import { inventoryRouter } from './routes/inventory.js';
 import { logbookRouter } from './routes/logbook.js';
 import { mediaRouter } from './routes/media.js';
 import { observationsRouter } from './routes/observations.js';
+import { privateRouter } from './routes/private.js';
 import { ojtRouter } from './routes/ojt.js';
 import { machineControllerRouter, safetyRouter } from './routes/safety.js';
 import { syncRouter } from './routes/sync.js';
@@ -20,7 +21,10 @@ import { vlabSessionsRouter } from './routes/vlabSessions.js';
 export function createApp(deps: { db: Db; realtime: Realtime; log: Logger; jwtSecret: string }) {
   const app = express();
   app.disable('x-powered-by');
-  app.use(express.json({ limit: '1mb' }));
+  // A student's Private space is saved whole and may hold a few photos, so it gets a larger body limit.
+  const smallJson = express.json({ limit: '1mb' });
+  const privateJson = express.json({ limit: '7mb' });
+  app.use((req, res, next) => (req.path.startsWith('/v1/private') ? privateJson : smallJson)(req, res, next));
 
   app.get('/healthz', async (_req, res) => {
     await deps.db.query('SELECT 1');
@@ -42,6 +46,7 @@ export function createApp(deps: { db: Db; realtime: Realtime; log: Logger; jwtSe
   app.use(assessmentsRouter(deps));
   app.use(analyticsRouter(deps));
   app.use(syncRouter(deps));
+  app.use(privateRouter(deps));
 
   const onError: ErrorRequestHandler = (err, req, res, _next) => {
     if (err instanceof ZodError) {

@@ -25,6 +25,7 @@ export default async function StudentHome() {
     <div className="page">
       <PageHead eyebrow={`${L('Student', 'الطالب')} · ${ar(me?.cohort, me?.cohort_ar)}`} title={L(`Welcome back, ${first}`, `أهلًا بعودتك يا ${first}`)}
         sub={L('Your competency record across virtual labs, the workshop floor and your placement.', 'سجل جداراتك عبر المعامل الافتراضية وأرضية الورشة وموقع التدريب.')}>
+        <Link className="button" href="/student/private">🔒 {L('My private space', 'مساحتي الخاصة')}</Link>
         <Link className="button primary" href="/student/lab">{L('Open the V-Lab', 'افتح المعمل الافتراضي')}</Link>
       </PageHead>
 

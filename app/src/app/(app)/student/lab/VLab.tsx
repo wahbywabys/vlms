@@ -12,6 +12,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useL } from '@/components/LangProvider';
+import { LockerButton } from '@/components/LockerButton';
 import { tx, type Txt } from '@/lib/i18n';
 import { LEARNING_META } from '@/lib/learningMeta';
 import { stepDone, type PublicLab, type RigState, type TestPoint } from '@/lib/lab';
@@ -348,7 +349,7 @@ function FaultTest({ lab, sessionId, onNew }: { lab: PublicLab; sessionId: strin
               <button type="button" className="primary btn-submit" onClick={() => void submit()} disabled={events.length === 0 || busy || result !== null}>{L('Submit for scoring', 'أرسل للتقييم')}</button>
             </div>
           ) : (
-            <ResultCard res={result} faults={injected} labels={lab.criterionLabels} pass={lab.passThreshold} onRetry={onNew} />
+            <ResultCard res={result} faults={injected} lab={lab} onRetry={onNew} />
           )}
         </aside>
       </div>
@@ -373,8 +374,9 @@ const LEVELS: Record<string, Txt> = {
 };
 const levelForScore = (s: number) => (s >= 85 ? 'autonomous' : s >= 70 ? 'intermediate' : s >= 50 ? 'novice' : 'not_yet');
 
-function ResultCard({ res, faults, labels, pass, onRetry }: { res: Evaluation; faults: Txt[]; labels: Record<string, Txt>; pass: number; onRetry: () => void }) {
-  const { L, pick } = useL();
+function ResultCard({ res, faults, lab, onRetry }: { res: Evaluation; faults: Txt[]; lab: PublicLab; onRetry: () => void }) {
+  const { L, pick, lang } = useL();
+  const labels = lab.criterionLabels, pass = lab.passThreshold;
   const level = res.gateFailures.length ? L('No credit (safety gate failed)', 'لا رصيد (رسوب في شرط أمان)') : pick(LEVELS[levelForScore(res.totalScore)]!);
   return (
     <div className="result">
@@ -398,7 +400,12 @@ function ResultCard({ res, faults, labels, pass, onRetry }: { res: Evaluation; f
         </tbody>
       </table>
       <p className="muted small">{L('Saved to your record and your competency profile.', 'حُفظت في سجلك وملف جداراتك.')}</p>
-      <button type="button" onClick={onRetry}>{L('Start a new attempt', 'ابدأ محاولة جديدة')}</button>
+      <div className="lk-row lk-start">
+        <button type="button" onClick={onRetry}>{L('Start a new attempt', 'ابدأ محاولة جديدة')}</button>
+        <LockerButton lang={lang} drop={{ kind: 'result', title: lab.title, ref: { lab: lab.code },
+          body: faults.length ? `${L('Injected fault', 'العطل المزروع')}: ${faults.map(pick).join(' · ')}` : undefined,
+          value: { score: res.totalScore, passed: res.passed, criteria: res.criteria.map((c) => ({ key: c.key, label: labels[c.key] ?? tx(c.label, c.label), score: c.score })) } }} />
+      </div>
     </div>
   );
 }

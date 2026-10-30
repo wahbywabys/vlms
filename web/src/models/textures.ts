@@ -279,8 +279,10 @@ export function signTex(kind: SignKind, pic: Pictogram, caption: string, rtl = f
 }
 
 /** The WABYS logo as cloth print: a patch for the chest and a print for the back. */
-export function wabysTex(variant: 'patch' | 'back' | 'banner', sub = '') {
+export function wabysTex(variant: 'patch' | 'back' | 'banner' | 'chest' | 'name', sub = '') {
   if (!canDraw()) return null;
+  if (variant === 'chest') return chestLogo();
+  if (variant === 'name') return embroidery(sub);
   const [w, h] = variant === 'banner' ? [1024, 256] : variant === 'back' ? [512, 256] : [256, 128];
   return canvasTex(`wabys:${variant}:${sub}`, w, h, (ctx) => {
     if (variant !== 'back') { ctx.fillStyle = '#14234c'; ctx.fillRect(0, 0, w, h); }
@@ -305,6 +307,32 @@ export function wabysTex(variant: 'patch' | 'back' | 'banner', sub = '') {
         ctx.fillStyle = '#f06721'; ctx.fillRect(0, h - 10 * s, w, 10 * s);
       }
     }
+  }, { srgb: true });
+}
+
+/** The WABYS logo as embroidered on the coverall's chest: the W's two strokes (white, orange) running into ABYS. */
+function chestLogo() {
+  return canvasTex('wabys:chest', 256, 102, (ctx) => {
+    ctx.clearRect(0, 0, 256, 102);
+    ctx.lineCap = 'butt';
+    ctx.strokeStyle = '#e9eef6'; ctx.lineWidth = 13;
+    ctx.beginPath(); ctx.moveTo(14, 22); ctx.lineTo(40, 84); ctx.stroke();
+    ctx.strokeStyle = '#f06721'; ctx.lineWidth = 15;
+    ctx.beginPath(); ctx.moveTo(44, 22); ctx.lineTo(70, 84); ctx.stroke();
+    ctx.fillStyle = '#ffffff'; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+    ctx.font = `800 58px ${FONT}`; ctx.fillText('ABYS', 74, 84);
+    ctx.fillStyle = '#c9d3e6'; ctx.font = `600 11px ${FONT}`; ctx.fillText('FOR TRAINING AND EDUCATION', 78, 18);
+  }, { srgb: true });
+}
+
+/** White embroidered capitals, one or two lines. */
+function embroidery(text: string) {
+  return canvasTex(`wabys:name:${text}`, 256, 102, (ctx) => {
+    ctx.clearRect(0, 0, 256, 102);
+    const lines = text.split('\n');
+    ctx.fillStyle = '#f2f4f8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `800 ${lines.length > 1 ? 34 : 42}px ${FONT}`;
+    lines.forEach((l, i) => ctx.fillText(l, 128, 51 + (i - (lines.length - 1) / 2) * 40));
   }, { srgb: true });
 }
 

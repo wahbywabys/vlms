@@ -18,8 +18,10 @@
  *
  * Learner controls: play/pause, ±10 s, scrub bar with chapter and checkpoint
  * markers, speed 0.5–2×, zoom (buttons, slider, mouse wheel), drag to look
- * around while paused, captions, chapters list, full screen and keyboard
- * (Space, ←/→, +/−, C, F).
+ * from any angle at any time (playing or paused), the director's camera, a
+ * free camera that keeps the learner's angle and follows the action, the
+ * student's own eyes, captions, chapters list, full screen and keyboard
+ * (Space, ←/→, +/−, C, F, V to change the camera).
  *
  * Checkpoints pause the lesson and must be answered before it continues; the
  * first answer is what counts towards the score. Telemetry uses the same
@@ -32,10 +34,12 @@ import * as THREE from 'three';
 import type { OrbitControls as OrbitImpl } from 'three-stdlib';
 import { ModelScene, type Vec3 } from './MachineExplorer';
 import { CardStack, type LessonCard } from './Infographics';
-import { Callouts, Dims, Flows, LessonStudent, type LessonCallout, type LessonDim, type LessonFlow, type ShotStudent } from './LessonFx';
+import { Callouts, Dims, Flows, LessonStudent, type LessonCallout, type LessonDim, type LessonFlow, type ShotStudent, type StudentTiming } from './LessonFx';
 import { toSection, type SectionSpec } from './section';
-import { newStudent, tradePpe, type PPE, type StudentState } from '../models/avatar';
+import { newStudent, STUDENT_HEAD, tradePpe, type PPE, type StudentState } from '../models/avatar';
 import { modelParts, type ModelDef, type Txt } from '../models/kit';
+import { LockerButton } from './LockerButton';
+import { recordAttempt } from './locker';
 import './LessonPlayer.css';
 
 // ---------------------------------------------------------------------------
@@ -60,8 +64,16 @@ export interface LessonShot {
   params?: Record<string, number>;
   /** Params that sweep across the shot, from → to. */
   sweep?: Record<string, [number, number]>;
-  /** The WABYS student in this shot (carries on until changed). */
-  avatar?: ShotStudent;
+  /**
+   * The WABYS student in this shot (carries on until changed). A list is a
+   * sequence of moves, each `after` seconds into the shot.
+   */
+  avatar?: ShotStudent | ShotStudent[];
+  /**
+   * Which of the student's moves the machine waits for (default the first):
+   * running, params and sweeps start once that move has the hand on the control.
+   */
+  cue?: number;
   caption: Txt;
 }
 export interface LessonChapter { at: number; title: Txt }
@@ -108,10 +120,11 @@ const S = {
     chapters: 'Chapters', checkpoints: 'Checkpoints', fullscreen: 'Full screen', exitFull: 'Exit full screen',
     checkpoint: 'Checkpoint', answerToGo: 'Answer to continue the lesson.', correct: 'Correct', notQuite: 'Not quite',
     continue: 'Continue', tryAgain: 'Try again', rewatch: 'Rewatch this chapter', hotspot: 'Hotspot', found: 'hotspots opened',
-    pausedLook: 'Paused: drag to look around, scroll or use the slider to zoom.', complete: 'Lesson complete', score: 'Checkpoint score',
+    pausedLook: 'Paused: drag to look around, scroll or use the slider to zoom.', dragHint: 'Drag to look from any angle, even while it plays.',
+    camera: 'Camera', director: 'Director', free: 'Free look', eyes: "Student's eyes", complete: 'Lesson complete', score: 'Checkpoint score',
     firstTry: 'right first time', replay: 'Watch again', review: 'Review', min: 'min', stopsN: 'checkpoints', chaptersN: 'chapters',
     hotspotsN: 'hotspots', rendered: 'Rendered lesson on the 3D digital twin', filmed: 'Filmed lesson', locked: 'Answer the checkpoint first',
-    answered: 'answered', pending: 'to do', time: 'Time', of: 'of', keys: 'Keys: Space play/pause · ←/→ 10 s · +/− zoom · C captions · N narration · F full screen',
+    answered: 'answered', pending: 'to do', time: 'Time', of: 'of', keys: 'Keys: Space play/pause · ←/→ 10 s · +/− zoom · C captions · N narration · V camera · F full screen',
     chapter: 'Chapter', narration: 'Narration', narrationOff: 'Narration off', brand: 'WABYS Technical Training', student: 'WABYS student',
   },
   ar: {
@@ -120,10 +133,11 @@ const S = {
     chapters: 'الفصول', checkpoints: 'نقاط التحقق', fullscreen: 'ملء الشاشة', exitFull: 'الخروج من ملء الشاشة',
     checkpoint: 'نقطة تحقق', answerToGo: 'أجب لمتابعة الدرس.', correct: 'إجابة صحيحة', notQuite: 'ليست صحيحة',
     continue: 'متابعة', tryAgain: 'حاول مرة أخرى', rewatch: 'أعد مشاهدة هذا الفصل', hotspot: 'نقطة معلومات', found: 'نقاط معلومات مفتوحة',
-    pausedLook: 'متوقف مؤقتًا: اسحب للنظر حولك، ومرّر العجلة أو استخدم الشريط للتكبير.', complete: 'اكتمل الدرس', score: 'درجة نقاط التحقق',
+    pausedLook: 'متوقف مؤقتًا: اسحب للنظر حولك، ومرّر العجلة أو استخدم الشريط للتكبير.', dragHint: 'اسحب للنظر من أي زاوية، حتى أثناء التشغيل.',
+    camera: 'الكاميرا', director: 'المخرج', free: 'نظرة حرة', eyes: 'بعيني المتدرب', complete: 'اكتمل الدرس', score: 'درجة نقاط التحقق',
     firstTry: 'صحيحة من أول مرة', replay: 'شاهد مرة أخرى', review: 'مراجعة', min: 'دقيقة', stopsN: 'نقاط تحقق', chaptersN: 'فصول',
     hotspotsN: 'نقاط معلومات', rendered: 'درس مُصيَّر على التوأم الرقمي ثلاثي الأبعاد', filmed: 'درس مصوَّر', locked: 'أجب عن نقطة التحقق أولًا',
-    answered: 'تمت الإجابة', pending: 'متبقية', time: 'الوقت', of: 'من', keys: 'المفاتيح: المسافة تشغيل/إيقاف · ←/→ ‏10 ث · +/− تكبير · C الترجمة · N التعليق الصوتي · F ملء الشاشة',
+    answered: 'تمت الإجابة', pending: 'متبقية', time: 'الوقت', of: 'من', keys: 'المفاتيح: المسافة تشغيل/إيقاف · ←/→ ‏10 ث · +/− تكبير · C الترجمة · N التعليق الصوتي · V الكاميرا · F ملء الشاشة',
     chapter: 'الفصل', narration: 'التعليق الصوتي', narrationOff: 'إيقاف التعليق الصوتي', brand: 'WABYS للتدريب التقني', student: 'متدرب WABYS',
   },
 };
@@ -161,23 +175,38 @@ export interface Frame {
   highlight: string | null; params: Record<string, number>; caption: Txt; shot: number;
 }
 
-export function frameAt(lesson: Lesson, t: number): Frame {
+/**
+ * The lesson at time t. `timing` (from the student's plan) holds each shot's
+ * action back until the student has walked over and has a hand on the
+ * control, so the machine responds to the student, not to the narration.
+ */
+export function frameAt(lesson: Lesson, t: number, timing?: StudentTiming | null): Frame {
+  const delays = timing?.delays;
   const i = shotIndex(lesson.shots, t);
   const s = lesson.shots[i]!;
   const end = lesson.shots[i + 1]?.at ?? lesson.duration;
-  const u = THREE.MathUtils.clamp((t - s.at) / Math.max(0.001, end - s.at), 0, 1);
+  const act = s.at + (delays?.[i] ?? 0);
+  const u = THREE.MathUtils.clamp((t - act) / Math.max(0.001, end - act), 0, 1);
   const p = lesson.shots[i - 1];
   const k = p ? ease(THREE.MathUtils.clamp((t - s.at) / (s.move ?? 1.6), 0, 1)) : 1;
+  const acting = !p || t >= act;
+  const kp = p ? ease(THREE.MathUtils.clamp((t - act) / (act > s.at ? 0.8 : s.move ?? 1.6), 0, 1)) : 1;
   const params = shotParams(lesson, i, u);
-  if (p && k < 1) {
+  if (p && kp < 1) {
     const prev = shotParams(lesson, i - 1, 1);
-    for (const key of Object.keys(params)) if (key in prev && !(key in (s.sweep ?? {}))) params[key] = prev[key]! + (params[key]! - prev[key]!) * k;
+    for (const key of Object.keys(params)) if (key in prev && !(key in (s.sweep ?? {}))) params[key] = prev[key]! + (params[key]! - prev[key]!) * kp;
+  }
+  // What the student's hand does in the middle of a shot (a switch turned, a key taken out).
+  for (const d of timing?.does ?? []) {
+    if (t < d.at || t >= d.until) continue;
+    const kd = ease(THREE.MathUtils.clamp((t - d.at) / 0.6, 0, 1));
+    for (const [key, v] of Object.entries(d.params)) params[key] = (params[key] ?? v) + (v - (params[key] ?? v)) * kd;
   }
   return {
     camera: p ? lerp3(p.camera, s.camera, k) : s.camera,
     target: p ? lerp3(p.target, s.target, k) : s.target,
     explode: p ? (p.explode ?? 0) + ((s.explode ?? 0) - (p.explode ?? 0)) * k : s.explode ?? 0,
-    xray: !!s.xray, cutaway: toSection(s.cutaway), running: !!s.running, rate: s.rate ?? 1,
+    xray: !!s.xray, cutaway: toSection(s.cutaway), running: acting ? !!s.running : !!p?.running, rate: (acting ? s.rate : p?.rate) ?? 1,
     highlight: s.highlight ?? null, params, caption: s.caption, shot: i,
   };
 }
@@ -198,28 +227,64 @@ function Ticker({ playing, speed, onTick }: { playing: boolean; speed: number; o
   return null;
 }
 
-/** Flies the camera along the timeline while playing; the learner may orbit while paused. */
-function CameraRig({ lesson, timeRef, follow, zoom, params }: {
-  lesson: Lesson; timeRef: React.RefObject<number>; follow: boolean; zoom: number; params: Record<string, number>;
+/**
+ * How the lesson is watched. Director: the lesson's own camera. Free: the
+ * learner's angle (drag to orbit at any time, even while playing), still
+ * following the action. Eyes: through the student's eyes, at what their
+ * hands are doing.
+ */
+export type ViewMode = 'director' | 'free' | 'eyes';
+
+function CameraRig({ lesson, timeRef, mode, zoom, params, timing, student }: {
+  lesson: Lesson; timeRef: React.RefObject<number>; mode: ViewMode; zoom: number; params: Record<string, number>;
+  timing: React.RefObject<StudentTiming | null>; student?: React.RefObject<StudentState | null>;
 }) {
-  const { camera, size, controls } = useThree();
-  const want = useMemo(() => ({ pos: new THREE.Vector3(), tgt: new THREE.Vector3() }), []);
-  const snapped = useRef(false);
-  useFrame((_, dt) => {
-    const f = frameAt(lesson, timeRef.current);
+  const { camera, size, controls, scene } = useThree();
+  const v = useMemo(() => ({ pos: new THREE.Vector3(), tgt: new THREE.Vector3(), off: new THREE.Vector3(), eye: new THREE.Vector3(), at: new THREE.Vector3(), look: new THREE.Vector3() }), []);
+  const snapped = useRef<ViewMode | null>(null);
+  const head = useRef<THREE.Object3D | null>(null);
+  useFrame((_, rawDt) => {
+    const dt = Math.min(rawDt, 0.1);
+    const f = frameAt(lesson, timeRef.current, timing.current);
     // Per-frame params so a growing bead or opening door moves smoothly.
     for (const k of Object.keys(params)) delete params[k];
     Object.assign(params, f.params);
     const cam = camera as THREE.PerspectiveCamera;
     const z = zoom * Math.min(1, size.width / size.height / 1.5);
     if (Math.abs(cam.zoom - z) > 1e-3) { cam.zoom += (z - cam.zoom) * Math.min(1, dt * 10); cam.updateProjectionMatrix(); }
-    if (!follow) { snapped.current = false; return; }
-    want.pos.set(...f.camera); want.tgt.set(...f.target);
-    const a = snapped.current ? 1 - Math.exp(-7 * dt) : 1;
-    snapped.current = true;
-    cam.position.lerp(want.pos, a);
     const oc = controls as unknown as OrbitImpl | null;
-    if (oc) { oc.target.lerp(want.tgt, a); oc.update(); } else cam.lookAt(want.tgt);
+    if (oc) oc.enabled = mode !== 'eyes';
+    const s = student?.current;
+    if (s) s.firstPerson = mode === 'eyes';
+    v.tgt.set(...f.target);
+    const fresh = snapped.current !== mode;
+    snapped.current = mode;
+    const a = fresh && mode === 'director' ? 1 - Math.exp(-4 * dt) : 1 - Math.exp(-7 * dt);
+    if (mode === 'eyes' && s) {
+      // From between the student's eyes, towards the work in hand (or straight ahead).
+      if (!head.current?.parent) head.current = scene.getObjectByName(STUDENT_HEAD) ?? null;
+      if (head.current) head.current.getWorldPosition(v.eye); else v.eye.set(s.pos.x, 0.4, s.pos.z);
+      v.eye.x += Math.sin(s.yaw) * 0.1; v.eye.z += Math.cos(s.yaw) * 0.1; v.eye.y += 0.02;
+      const aim = s.reach ?? s.look;
+      if (aim) v.look.copy(aim); else v.look.set(v.eye.x + Math.sin(s.yaw) * 2, v.eye.y - 0.6, v.eye.z + Math.cos(s.yaw) * 2);
+      cam.position.lerp(v.eye, fresh ? 1 : 1 - Math.exp(-14 * dt));
+      v.at.lerp(v.look, fresh ? 1 : 1 - Math.exp(-5 * dt));
+      cam.lookAt(v.at);
+      return;
+    }
+    if (fresh && mode !== 'eyes' && oc) v.at.copy(oc.target);
+    if (mode === 'free') {
+      // Keep the learner's angle and distance, and carry it along with the action.
+      if (!oc) return;
+      v.off.copy(cam.position).sub(oc.target);
+      oc.target.lerp(v.tgt, 1 - Math.exp(-3 * dt));
+      cam.position.copy(oc.target).add(v.off);
+      oc.update();
+      return;
+    }
+    v.pos.set(...f.camera);
+    cam.position.lerp(v.pos, a);
+    if (oc) { oc.target.lerp(v.tgt, a); oc.update(); } else cam.lookAt(v.tgt);
   });
   return null;
 }
@@ -325,7 +390,9 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
   const [speed, setSpeed] = useState(1);
   const [zoom, setZoom] = useState(1);
   const [cc, setCc] = useState(true);
-  const [follow, setFollow] = useState(true);
+  const [view, setView] = useState<ViewMode>('director');
+  const [dragged, setDragged] = useState(false);
+  const timing = useRef<StudentTiming | null>(null);
   const [stop, setStop] = useState<LessonStop | null>(null);
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [hot, setHot] = useState<string | null>(null);
@@ -354,7 +421,7 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
   // Reset when the lesson changes.
   useEffect(() => {
     timeRef.current = 0; setTime(0); setPlaying(false); setStarted(false); setEnded(false); setStop(null); setAnswers({});
-    setOpened([]); setHot(null); setZoom(1); setFollow(true); chapterRef.current = -1;
+    setOpened([]); setHot(null); setZoom(1); setView('director'); timing.current = null; chapterRef.current = -1;
   }, [lesson]);
 
   const finish = useCallback(() => {
@@ -365,6 +432,9 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
     const score = total ? Math.round((first / total) * 100) : 100;
     emit.current?.({ verb: 'lesson_completed', objectRef: lesson.id, value: { score, firstTry: first, total } });
     onComplete?.({ score, answered: Object.values(a).filter((x) => x.correct).length, total, hotspots: 0 });
+    // Kept privately so the student can compare runs of the same lesson.
+    recordAttempt({ kind: 'lesson', ref: lesson.id, title: lesson.title, score,
+      criteria: lesson.stops.map((s) => ({ key: s.id, label: s.question, score: a[s.id]?.firstCorrect ? 100 : 0 })) });
   }, [lesson, onComplete]);
 
   /** Move time forward, stopping at the first unanswered checkpoint crossed. */
@@ -408,7 +478,7 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
     if (stop) return;
     if (ended) { seek(0, true); setEnded(false); }
     if (!started) { setStarted(true); emit.current?.({ verb: 'lesson_started', objectRef: lesson.id }); }
-    setHot(null); setFollow(true); setPlaying(true);
+    setHot(null); setPlaying(true);
   };
   const pause = () => setPlaying(false);
   const toggle = () => (playing ? pause() : play());
@@ -418,7 +488,7 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
     const target = THREE.MathUtils.clamp(to, 0, lesson.duration);
     if (target > timeRef.current) advanceTo(target);
     else { timeRef.current = target; if (videoRef.current) videoRef.current.currentTime = target; }
-    setTime(timeRef.current); setFollow(true); setEnded(false);
+    setTime(timeRef.current); setEnded(false);
     if (!quiet) emit.current?.({ verb: 'seeked', objectRef: lesson.id, value: { to: Math.round(timeRef.current) } });
   };
 
@@ -441,7 +511,7 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
     setAnswers((a) => ({ ...a, [s.id]: { ...a[s.id]!, picked: -1 } }));
     const ch = lesson.chapters[chapterAt(lesson, s.at - 0.5)]!;
     setStop(null);
-    timeRef.current = ch.at; setTime(ch.at); setFollow(true); setPlaying(true);
+    timeRef.current = ch.at; setTime(ch.at); setPlaying(true);
   };
 
   const openHot = (id: string) => {
@@ -481,10 +551,11 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
     else if (k === 'c' || k === 'C') setCc((c) => !c);
     else if (k === 'n' || k === 'N') setVoice((v) => !v);
     else if (k === 'f' || k === 'F') void fs.toggle();
+    else if ((k === 'v' || k === 'V') && !filmed) setView((m) => (m === 'director' ? 'free' : m === 'free' && withStudent ? 'eyes' : 'director'));
     else if (k === 'Escape' && fs.css) fs.exitCss();
   };
 
-  const frame = frameAt(lesson, time);
+  const frame = frameAt(lesson, time, timing.current);
   const shotNo = frame.shot;
   // Spoken narration of each shot's caption, in the lesson language, while playing.
   // A recorded voice-over (assets/vo/<fnv1a of the caption>.mp3) is used where one exists;
@@ -547,16 +618,16 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
               <ModelScene parts={parts} explode={frame.explode} xray={frame.xray} cutaway={frame.cutaway}
                 running={frame.running && playing} rate={frame.rate * speed} selectedId={frame.highlight} pins={false} params={params}
                 env={env} lang={lang} student={withStudent ? studentRef : undefined}>
-                {withStudent && <LessonStudent state={studentRef} shots={lesson.shots} timeRef={timeRef} ppe={ppe} />}
+                {withStudent && <LessonStudent state={studentRef} shots={lesson.shots} timeRef={timeRef} ppe={ppe} timing={timing} duration={lesson.duration} />}
                 {lesson.callouts && <Callouts items={lesson.callouts} time={started ? time : -1} lang={lang} />}
                 {lesson.dims && <Dims items={lesson.dims} time={started ? time : -1} />}
                 {lesson.flows && <Flows items={lesson.flows} time={started ? time : -1} lang={lang} />}
               </ModelScene>
               <HotspotPins lesson={lesson} time={time} lang={lang} opened={opened} onOpen={openHot} />
-              <CameraRig lesson={lesson} timeRef={timeRef} follow={follow} zoom={zoom} params={params} />
+              <CameraRig lesson={lesson} timeRef={timeRef} mode={view} zoom={zoom} params={params} timing={timing} student={withStudent ? studentRef : undefined} />
               <Ticker playing={playing} speed={speed} onTick={onTick} />
-              <OrbitControls makeDefault enableDamping enableZoom={false} enablePan={false} enabled={!playing}
-                onStart={() => setFollow(false)} target={lesson.shots[0]!.target} />
+              <OrbitControls makeDefault enableDamping enableZoom={false} enablePan={false}
+                onStart={() => { setView((m) => (m === 'eyes' ? m : 'free')); setDragged(true); }} target={lesson.shots[0]!.target} />
             </Canvas>
           )}
 
@@ -580,6 +651,7 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
           )}
           {cc && started && !ended && <p className="lp-caption" aria-live="polite">{p(frame.caption)}</p>}
           {started && !playing && !stop && !ended && !hot && !filmed && <p className="lp-paused">{t.pausedLook}</p>}
+          {started && playing && !dragged && view === 'director' && !filmed && time > 3 && time < 14 && <p className="lp-paused lp-hint">{t.dragHint}</p>}
 
           {!started && (
             <div className="lp-cover">
@@ -658,7 +730,11 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
                   ))}
                 </ol>
                 <p className="lp-muted">{opened.length} / {lesson.hotspots.length} {t.found}</p>
-                <button type="button" className="lp-primary" onClick={play}>↺ {t.replay}</button>
+                <div className="lk-row">
+                  <button type="button" className="lp-primary" onClick={play}>↺ {t.replay}</button>
+                  <LockerButton lang={lang} drop={{ kind: 'lesson', title: lesson.title, body: lesson.summary, ref: { lesson: lesson.id },
+                    value: { score: total ? Math.round((firstRight / total) * 100) : 100 } }} />
+                </div>
               </div>
             </div>
           )}
@@ -688,7 +764,16 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
               <button type="button" onClick={() => setZ(zoom + 0.25)} aria-label={t.zoomIn} disabled={zoom >= ZMAX}>+</button>
               <span className="lp-zv" dir="ltr">{zoom.toFixed(1)}×</span>
             </div>
-            {(!follow || zoom !== 1) && <button type="button" onClick={() => { setFollow(true); setZoom(1); }}>{t.resetView}</button>}
+            {!filmed && (
+              <div className="lp-views" role="group" aria-label={t.camera}>
+                {(['director', 'free', ...(withStudent ? ['eyes' as const] : [])] as ViewMode[]).map((m) => (
+                  <button key={m} type="button" aria-pressed={view === m} onClick={() => setView(m)} title={t[m]}>
+                    <span aria-hidden="true">{m === 'director' ? '🎬' : m === 'free' ? '⟲' : '👁'}</span><span className="lp-vl">{t[m]}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {zoom !== 1 && <button type="button" onClick={() => setZoom(1)}>{t.resetView}</button>}
             <label className="lp-speed">
               <span className="lp-sr">{t.speed}</span>
               <select value={speed} onChange={(e) => { const v = Number(e.target.value); setSpeed(v); emit.current?.({ verb: 'speed_changed', objectRef: lesson.id, value: { speed: v } }); }}>

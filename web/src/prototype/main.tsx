@@ -9,13 +9,15 @@ import { StoreProvider, useL, useStore, type Role } from './store';
 import { TradeBar } from './TradeBar';
 import type { Trade } from './trades';
 import { StudentLab } from './StudentLab';
+import { StudentPrivate } from './StudentPrivate';
+import { LockerToast } from '../components/LockerButton';
 import { TrainerFloor } from './TrainerFloor';
 import wabysLogoDark from './assets/wabys-logo-dark.png';
 import wabysLogo from './assets/wabys-logo.png';
 import './prototype.css';
 
 /** Screens inside each role. The first is the role's home; all stay mounted so work in progress survives switching. */
-const SCREENS: Record<Role, { id: string; label: ReturnType<typeof tx>; el: () => ReactNode }[]> = {
+const SCREENS: Record<Role, { id: string; label: ReturnType<typeof tx>; el: (visible: boolean) => ReactNode }[]> = {
   trainer: [
     { id: 'floor', label: tx('Workshop floor', 'أرضية الورشة'), el: () => <TrainerFloor /> },
     { id: 'machines', label: tx('Machines', 'الماكينات'), el: () => <TrainerMachines /> },
@@ -27,6 +29,7 @@ const SCREENS: Record<Role, { id: string; label: ReturnType<typeof tx>; el: () =
     { id: 'machine', label: tx('Machine access', 'تشغيل الماكينة'), el: () => <StudentMachine /> },
     { id: 'assess', label: tx('Applied assessment', 'تقييم تطبيقي'), el: () => <StudentAssess /> },
     { id: 'ojt', label: tx('OJT logbook · phone', 'سجل التدريب الميداني · الهاتف'), el: () => <ApprenticePhone /> },
+    { id: 'private', label: tx('🔒 Private', '🔒 خاص'), el: (on) => <StudentPrivate active={on} /> },
   ],
   director: [
     { id: 'overview', label: tx('Overview', 'نظرة عامة'), el: () => <DirectorDashboard /> },
@@ -110,9 +113,10 @@ function Shell() {
       <main className="screen">
         {/* Every role and screen stays mounted so a half-finished V-Lab attempt, rubric or pre-check survives switching. */}
         {(Object.keys(SCREENS) as Role[]).map((r) => SCREENS[r].map((sc) => (
-          <div key={`${r}-${sc.id}`} hidden={role !== r || screens[r] !== sc.id}>{sc.el()}</div>
+          <div key={`${r}-${sc.id}`} hidden={role !== r || screens[r] !== sc.id}>{sc.el(role === r && screens[r] === sc.id)}</div>
         )))}
       </main>
+      <LockerToast lang={lang} />
       <footer className="app-foot">
         <img className="org-logo org-light" src={wabysLogo} alt="" width={78} height={24} />
         <img className="org-logo org-dark" src={wabysLogoDark} alt="" width={78} height={24} />
