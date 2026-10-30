@@ -2,6 +2,7 @@ import { pino } from 'pino';
 import { createApp } from './app.js';
 import { createPool } from './lib/db.js';
 import { createRealtime } from './lib/redis.js';
+import { startUplink, uplinkFromEnv } from './services/uplink.js';
 
 const log = pino({ level: process.env.LOG_LEVEL ?? 'info' });
 const jwtSecret = process.env.JWT_SECRET;
@@ -12,3 +13,7 @@ const realtime = createRealtime(process.env.REDIS_URL, log);
 const port = Number(process.env.PORT ?? 4000);
 
 createApp({ db, realtime, log, jwtSecret }).listen(port, () => log.info({ port }, 'VTC_LMS API listening'));
+
+// A training-centre server with CLOUD_HUB_URL, CENTER_ID and CENTER_KEY set uploads to the cloud hub whenever it has internet.
+const uplink = uplinkFromEnv();
+if (uplink) startUplink(db, uplink, log);

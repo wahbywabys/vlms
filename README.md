@@ -26,7 +26,11 @@ flows, DDL and screens) is in [docs/modules.md](docs/modules.md).
 | `web/` | The clickable prototype and the 3D `MachineExplorer` it shares with the app |
 | `app/src/components/modules/` | The module screens (React + Tailwind), shared with the prototype through `scripts/sync-modules.sh` |
 
-## Run it
+## Run it in a training centre (local network, no internet needed)
+
+[SETUP.md](SETUP.md) is the ready-to-use guide: one computer runs the server (`center/`, one-click installer for Windows, Linux and macOS), every phone, tablet and PC joins it over the centre Wi-Fi through `http://<server>/join`, and the server syncs to your own online hub (`hub/`) whenever it has internet, where any dashboard reads it through a REST/CSV/xAPI export API and webhooks.
+
+## Run it for development
 
 Prerequisites: Node 20+, PostgreSQL 15+, Redis 7 (optional; alerts are also stored in Postgres).
 

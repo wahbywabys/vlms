@@ -185,3 +185,21 @@ button.danger { border-color: var(--bad); color: var(--bad); }
 .demo-accounts .role-who { display: block; white-space: normal; }
 /* Phones: WABYS and the VTC_LMS mark carry the brand; the wordmark would crowd the tools. */
 @media (max-width: 640px) { .brand .brand-text { display: none; } .brand .org-logo { height: 28px; } .brand .logo-mark { width: 36px; height: 36px; } }
+
+/* ---------- Join page (/join): the centre's connect poster ---------- */
+.join { min-height: 100vh; display: grid; align-content: start; justify-items: center; gap: 20px; padding: 24px 16px 48px; }
+.join-head { display: grid; justify-items: center; gap: 8px; text-align: center; }
+.join-card { width: 100%; max-width: 900px; display: grid; gap: 16px; }
+.join-card h1 { font: 700 28px/1.2 var(--f-display); margin: 0; }
+.join-card h2 { font: 700 20px/1.2 var(--f-display); margin: 0; }
+.join-grid { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px; align-items: start; }
+.join-qr { display: grid; justify-items: center; gap: 8px; text-align: center; }
+.join-url { font-size: 20px; padding: 4px 10px; word-break: break-all; }
+.join-steps { margin: 0; padding-inline-start: 22px; display: grid; gap: 14px; }
+.join-steps li span { display: block; font-size: 14px; }
+.join-cert { margin: 0; display: grid; gap: 8px; padding: 12px; border-radius: 8px; background: var(--sunk); }
+.join-err { font-family: var(--f-mono); font-size: 12px; }
+.join-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+@media (max-width: 640px) { .join-grid { grid-template-columns: 1fr; justify-items: center; } }
+@media print { .join-noprint { display: none !important; } .join { padding: 0; } .card { box-shadow: none; } }
+.join-sync .pill { min-height: 32px; padding: 0 12px; }

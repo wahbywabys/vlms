@@ -1,0 +1,78 @@
+# Builds the VTC_LMS images, publishes them to GitHub Container Registry and,
+# for a version tag (v1.0.0…), attaches two ready-to-send packages to the
+# GitHub release:
+#   vtc-lms-center-<ver>.zip          centre server installer (downloads images once)
+#   vtc-lms-center-offline-<ver>.zip  the same plus all images: installs with no internet
+#   vtc-lms-hub-<ver>.zip             the online hub for your own server
+name: Centre server release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version
+        id: v
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then echo "tag=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"; else echo "tag=latest" >> "$GITHUB_OUTPUT"; fi
+          echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: '${{ github.actor }}', password: '${{ secrets.GITHUB_TOKEN }}' }
+      - name: API image (also runs the hub)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: api/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ steps.v.outputs.owner }}/vtc-lms-api:${{ steps.v.outputs.tag }}
+            ghcr.io/${{ steps.v.outputs.owner }}/vtc-lms-api:latest
+      - name: App image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: app/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ steps.v.outputs.owner }}/vtc-lms-app:${{ steps.v.outputs.tag }}
+            ghcr.io/${{ steps.v.outputs.owner }}/vtc-lms-app:latest
+
+  packages:
+    needs: images
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the packages
+        run: |
+          ver="${GITHUB_REF_NAME#v}"; owner="${GITHUB_REPOSITORY_OWNER,,}"
+          for d in center hub; do
+            sed -i "s|^VTC_VERSION=.*|VTC_VERSION=$ver|; s|^VTC_REGISTRY=.*|VTC_REGISTRY=ghcr.io/$owner|" $d/.env.example
+            sed -i "s|ghcr.io/wahbywabys|ghcr.io/$owner|g" $d/docker-compose.yml
+          done
+          cp SETUP.md center/ && cp SETUP.md hub/
+          mkdir -p dist
+          (cp -r center vtc-lms-center && zip -qr "dist/vtc-lms-center-$ver.zip" vtc-lms-center)
+          (cp -r hub vtc-lms-hub && zip -qr "dist/vtc-lms-hub-$ver.zip" vtc-lms-hub)
+          # Offline bundle: amd64 images saved next to the installer (most centre PCs are x86-64).
+          imgs="ghcr.io/$owner/vtc-lms-api:$ver ghcr.io/$owner/vtc-lms-app:$ver postgres:16-alpine redis:7-alpine caddy:2-alpine"
+          for i in $imgs; do docker pull --platform linux/amd64 "$i"; done
+          mkdir -p vtc-lms-center/images && docker save $imgs | gzip > vtc-lms-center/images/vtc-lms-images.tar.gz
+          zip -qr "dist/vtc-lms-center-offline-$ver.zip" vtc-lms-center
+          ls -lh dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip

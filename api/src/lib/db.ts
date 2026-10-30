@@ -3,8 +3,8 @@ import pg from 'pg';
 export type Db = pg.Pool;
 export type Tx = pg.PoolClient;
 
-export function createPool(connectionString = process.env.DATABASE_URL): Db {
-  return new pg.Pool({ connectionString, max: 20, options: '-c search_path=vtc,public' });
+export function createPool(connectionString = process.env.DATABASE_URL, searchPath = 'vtc,public'): Db {
+  return new pg.Pool({ connectionString, max: 20, options: `-c search_path=${searchPath}` });
 }
 
 /** Run `fn` inside a transaction; rolls back on any thrown error. */

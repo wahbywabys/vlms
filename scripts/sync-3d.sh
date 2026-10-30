@@ -11,6 +11,9 @@ mkdir -p $A/components/private
 for f in MachineExplorer LessonPlayer LessonFx Infographics SafetySim fx LockerButton private/PrivateSpace private/Desk private/Study private/Practice private/Compare private/Locker; do
   { echo "'use client';"; cat "$W/components/$f.tsx"; } > "$A/components/$f.tsx"
 done
+# The app serves recorded voice-over from public/vo/ (a missing clip falls back to the speech voice);
+# the prototype's bundler-relative new URL(..., import.meta.url) does not build under Next.
+sed -i "s#new URL('vo/' + \(.*\) + '.mp3', import.meta.url).href#'/vo/' + \1 + '.mp3'#" $A/components/LessonPlayer.tsx
 cp $W/components/{MachineExplorer,LessonPlayer,SafetySim}.css $W/components/{section,sfx,locker}.ts $W/components/locker.css $A/components/
 cp $W/components/private/{model,store,ctx}.ts $W/components/private/PrivateSpace.css $A/components/private/
 cp $W/models/*.tsx $W/models/textures.ts $W/models/briefs.ts $A/models/

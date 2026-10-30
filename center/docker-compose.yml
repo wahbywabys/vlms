@@ -1,0 +1,80 @@
+# VTC_LMS training-centre server: everything one computer in the centre needs
+# to serve every phone, tablet and PC on the centre Wi-Fi, with no internet.
+# Start with install.sh / "Install VTC_LMS.cmd"; settings live in .env.
+name: vtc-lms
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  db:
+    <<: *restart
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: vtc_lms
+      POSTGRES_USER: vtc
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?run the installer to create .env}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vtc -d vtc_lms"]
+      interval: 5s
+      retries: 30
+
+  redis:
+    <<: *restart
+    image: redis:7-alpine
+
+  api:
+    <<: *restart
+    image: ${VTC_REGISTRY:-ghcr.io/wahbywabys}/vtc-lms-api:${VTC_VERSION:-latest}
+    # Bring the database up to date, then serve. The uplink to the online hub starts when CLOUD_HUB_URL, CENTER_ID and CENTER_KEY are set.
+    command: ["sh", "-c", "npx tsx src/migrate.ts && exec npx tsx src/server.ts"]
+    environment:
+      DATABASE_URL: postgres://vtc:${DB_PASSWORD}@db:5432/vtc_lms
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      SEED_DEMO: ${SEED_DEMO:-false}
+      CLOUD_HUB_URL: ${CLOUD_HUB_URL:-}
+      CENTER_ID: ${CENTER_ID:-}
+      CENTER_KEY: ${CENTER_KEY:-}
+      UPLINK_INTERVAL_S: ${UPLINK_INTERVAL_S:-60}
+      VTC_VERSION: ${VTC_VERSION:-latest}
+    depends_on:
+      db: { condition: service_healthy }
+
+  app:
+    <<: *restart
+    image: ${VTC_REGISTRY:-ghcr.io/wahbywabys}/vtc-lms-app:${VTC_VERSION:-latest}
+    environment:
+      DATABASE_URL: postgres://vtc:${DB_PASSWORD}@db:5432/vtc_lms
+      SESSION_SECRET: ${SESSION_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      API_URL: http://api:4000
+      CENTER_NAME: ${CENTER_NAME:-}
+      CENTER_WIFI: ${CENTER_WIFI:-}
+      CENTER_URL: http://${CENTER_IP}${HTTP_PORT_SUFFIX:-}
+      CENTER_HTTPS_URL: ${CENTER_HTTPS_URL:-}
+      CLOUD_HUB_URL: ${CLOUD_HUB_URL:-}
+      CENTER_ID: ${CENTER_ID:-}
+      CENTER_KEY: ${CENTER_KEY:-}
+    depends_on: [api]
+
+  # The front door on ports 80 (http) and 443 (https with the centre's own certificate).
+  proxy:
+    <<: *restart
+    image: caddy:2-alpine
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    environment:
+      CENTER_IP: ${CENTER_IP}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [app]
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
