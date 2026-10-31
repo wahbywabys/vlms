@@ -239,8 +239,13 @@ function PpeStation({ lang, trade }: { lang: Lang; trade: string }) {
     ['mandatory', 'boots', 'Safety boots', 'حذاء السلامة'],
     trade === 'weld' ? ['mandatory', 'welding', 'Welding helmet', 'خوذة اللحام'] : trade === 'elec' ? ['mandatory', 'gloves', 'Insulated gloves', 'قفازات عازلة']
       : trade === 'rmg' ? ['mandatory', 'hairnet', 'Tie back long hair', 'اربط الشعر الطويل'] : trade === 'ait' ? ['mandatory', 'exclaim', 'Respect the light curtain', 'احترم الستارة الضوئية']
-      : trade === 'prt' ? ['mandatory', 'gloves', 'Nitrile gloves for washes', 'قفازات نيتريل للمنظفات'] : ['mandatory', 'ear', 'Ear protection', 'واقي السمع'],
-    trade === 'cnc' || trade === 'eim' || trade === 'prt' ? ['prohibition', 'gloves', 'No gloves at rotating machines', 'ممنوع القفازات عند الماكينات الدوارة'] : trade === 'weld' ? ['mandatory', 'apron', 'Leather apron', 'مريلة جلدية'] : ['prohibition', 'noJewel', 'No jewellery', 'ممنوع الحلي'],
+      : trade === 'prt' ? ['mandatory', 'gloves', 'Nitrile gloves for washes', 'قفازات نيتريل للمنظفات']
+      : trade === 'iel' || trade === 'ave' || trade === 'csn' ? ['mandatory', 'exclaim', 'Wear the ESD wrist strap', 'ارتدِ سوار التفريغ']
+      : trade === 'rac' ? ['mandatory', 'gloves', 'Gloves for refrigerant and brazing', 'قفازات لوسيط التبريد واللحام']
+      : trade === 'iem' ? ['mandatory', 'lockout', 'Lock out before you work', 'اقفل قبل العمل']
+      : trade === 'ham' || trade === 'oeq' ? ['mandatory', 'electric', 'Unplug before you open', 'افصل القابس قبل الفتح'] : ['mandatory', 'ear', 'Ear protection', 'واقي السمع'],
+    trade === 'rac' ? ['prohibition', 'noFlame', 'No flames near A3 refrigerant', 'ممنوع اللهب قرب وسيط التبريد A3'] : trade === 'oeq' ? ['warning', 'hot', 'Hot fuser', 'وحدة تثبيت ساخنة']
+      : trade === 'cnc' || trade === 'eim' || trade === 'prt' || trade === 'iem' ? ['prohibition', 'gloves', 'No gloves at rotating machines', 'ممنوع القفازات عند الماكينات الدوارة'] : trade === 'weld' ? ['mandatory', 'apron', 'Leather apron', 'مريلة جلدية'] : ['prohibition', 'noJewel', 'No jewellery', 'ممنوع الحلي'],
   ];
   return (
     <group>
@@ -507,9 +512,142 @@ function AitBay() {
   );
 }
 
+/** Electronics benches: scopes, supplies, soldering stations (IEL) or TVs and rework stations (AVE). */
+function BenchBay({ kind }: { kind: 'iel' | 'ave' }) {
+  const bench = (pos: Vec3, i: number) => (
+    <group key={i} position={pos}>
+      <B size={[1.6, 0.04, 0.75]} position={[0, 0.9, 0]} color="#3d6f8f" rough={0.7} />
+      {[[-0.75, -0.33], [0.75, -0.33], [-0.75, 0.33], [0.75, 0.33]].map(([x, z]) => <B key={`${x}${z}`} size={[0.05, 0.9, 0.05]} position={[x!, 0.45, z!]} color="#5b6670" metal={0.6} />)}
+      <B size={[1.6, 0.5, 0.04]} position={[0, 1.2, -0.36]} color="#d5d8d6" rough={0.6} />
+      {kind === 'iel' ? <>
+        <B size={[0.36, 0.2, 0.16]} position={[-0.45, 1.02, -0.2]} color="#e9ecef" metal={0.2} />
+        <B size={[0.2, 0.13, 0.01]} position={[-0.5, 1.03, -0.115]} color="#0c2b3f" emissive="#2fbf6a" glow={0.6} cast={false} />
+        <B size={[0.26, 0.12, 0.18]} position={[0.05, 0.98, -0.2]} color="#2b2f36" />
+        <C r={0.05} h={0.04} position={[0.5, 0.94, 0]} color="#2b2f36" />
+      </> : <>
+        <B size={[1.0, 0.03, 0.6]} position={[0, 0.94, 0.02]} color="#14171b" rough={0.3} />
+        <B size={[0.22, 0.12, 0.18]} position={[0.62, 0.98, -0.2]} color="#c8312b" metal={0.2} />
+      </>}
+    </group>
+  );
+  return (
+    <group>
+      {[[-8.5, 0, -6], [-6.6, 0, -6], [6.6, 0, -6], [8.5, 0, -6], [-9, 0, 2], [9, 0, 2]].map((p, i) => bench(p as Vec3, i))}
+    </group>
+  );
+}
+
+/** Network lab: racks with blinking switches and a row of PCs. */
+function CsnBay() {
+  return (
+    <group>
+      {[-9, -8.2, 8.2, 9].map((x, i) => (
+        <group key={i} position={[x, 0, -6.4]}>
+          <B size={[0.6, 2.0, 0.8]} position={[0, 1.0, 0]} color="#1f2328" metal={0.4} />
+          {Array.from({ length: 10 }, (_, k) => <B key={k} size={[0.5, 0.02, 0.01]} position={[0, 0.35 + k * 0.15, 0.41]} color="#2fff80" emissive="#2fff80" glow={0.6 + (k % 3) * 0.2} cast={false} />)}
+        </group>
+      ))}
+      {[-8, -6.5, 6.5, 8].map((x) => (
+        <group key={x} position={[x, 0, 2.5]}>
+          <B size={[1.2, 0.04, 0.6]} position={[0, 0.75, 0]} color="#c9b48a" rough={0.7} />
+          <B size={[0.5, 0.32, 0.03]} position={[0, 1.0, -0.15]} color="#14171b" emissive="#1b6fa8" glow={0.4} />
+          <B size={[0.18, 0.4, 0.4]} position={[0.45, 0.2, 0]} color="#2b2f36" />
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/** RAC workshop: domestic fridges, a cold-room panel and refrigerant cylinders. */
+function RacBay() {
+  return (
+    <group>
+      {[-9, -8.1, -7.2].map((x) => (
+        <group key={x} position={[x, 0, -6.3]}>
+          <B size={[0.6, 1.7, 0.6]} position={[0, 0.85, 0]} color="#eef1f3" metal={0.2} rough={0.4} />
+          <B size={[0.02, 0.3, 0.02]} position={[0.25, 1.2, 0.31]} color="#9aa5b0" metal={0.8} />
+        </group>
+      ))}
+      <group position={[8, 0, -6.4]}>
+        <B size={[3, 2.4, 0.12]} position={[0, 1.2, 0]} color="#d9dee3" metal={0.3} />
+        <B size={[0.9, 2.0, 0.04]} position={[-0.6, 1.0, 0.08]} color="#c3cbd3" metal={0.5} />
+      </group>
+      {[[-10, 2], [-10, 2.5], [-9.5, 2.25]].map(([x, z], i) => (
+        <group key={i} position={[x!, 0, z!]}>
+          <C r={0.13} h={0.5} position={[0, 0.25, 0]} color={['#2f9e57', '#9aa5b0', '#5ab0e8'][i]!} metal={0.4} />
+          <C r={0.05} h={0.08} position={[0, 0.54, 0]} color="#9aa5b0" metal={0.8} />
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/** Appliance workshop: fridges, cookers and small appliances on shelves. */
+function HamBay() {
+  return (
+    <group>
+      {[-9, -8.2, -7.4, 7.4, 8.2, 9].map((x, i) => (
+        <group key={x} position={[x, 0, -6.3]}>
+          <B size={[0.6, i % 2 ? 0.85 : 1.6, 0.6]} position={[0, i % 2 ? 0.425 : 0.8, 0]} color={i % 3 === 2 ? '#9aa5b0' : '#eef1f3'} metal={0.3} rough={0.4} />
+          {i % 2 ? <C r={0.18} h={0.02} position={[0, 0.5, 0.31]} rotation={[Math.PI / 2, 0, 0]} color="#2b2f36" /> : null}
+        </group>
+      ))}
+      <group position={[-10, 0, 2.5]}>
+        {[0.5, 1.1, 1.7].map((y) => <B key={y} size={[0.5, 0.03, 2]} position={[0, y, 0]} color="#5b6670" metal={0.5} />)}
+        {[-0.7, -0.2, 0.3, 0.7].map((z, k) => <B key={z} size={[0.25, 0.25, 0.25]} position={[0, 0.65 + (k % 3) * 0.6, z]} color={['#c8312b', '#2f5f93', '#e9ecef', '#f2c230'][k]!} />)}
+      </group>
+    </group>
+  );
+}
+
+/** Office equipment lab: copiers, a POS counter and printers on trolleys. */
+function OeqBay() {
+  return (
+    <group>
+      {[-9, -7.8, 7.8, 9].map((x) => (
+        <group key={x} position={[x, 0, -6.2]}>
+          <B size={[0.7, 1.0, 0.65]} position={[0, 0.5, 0]} color="#e9ecef" metal={0.2} rough={0.4} />
+          <B size={[0.7, 0.12, 0.6]} position={[0, 1.08, -0.02]} color="#d5d8d6" />
+          <B size={[0.2, 0.1, 0.02]} position={[0.2, 1.0, 0.33]} color="#0c2b3f" emissive="#1b6fa8" glow={0.6} cast={false} />
+        </group>
+      ))}
+      <group position={[-9.5, 0, 2.5]}>
+        <B size={[1.8, 1.0, 0.6]} position={[0, 0.5, 0]} color="#8a6a4a" rough={0.7} />
+        <B size={[0.35, 0.25, 0.3]} position={[-0.4, 1.12, 0]} color="#22262b" />
+        <B size={[0.25, 0.1, 0.3]} position={[0.4, 1.05, 0]} color="#2b2f36" />
+      </group>
+    </group>
+  );
+}
+
+/** Machines and rewinding workshop: motors on test beds, a varnish oven and a transformer trainer. */
+function IemBay() {
+  return (
+    <group>
+      {[-9, -7.4].map((x) => (
+        <group key={x} position={[x, 0, -6]}>
+          <B size={[1.2, 0.5, 0.7]} position={[0, 0.25, 0]} color="#3e4650" metal={0.5} />
+          <C r={0.25} h={0.6} position={[0, 0.8, 0]} rotation={[0, 0, Math.PI / 2]} color="#2f5f93" metal={0.4} />
+        </group>
+      ))}
+      <group position={[8.5, 0, -6.2]}>
+        <B size={[1.4, 1.6, 1.0]} position={[0, 0.8, 0]} color="#8f9aa3" metal={0.4} />
+        <B size={[1.0, 1.0, 0.02]} position={[0, 0.9, 0.51]} color="#5b6670" metal={0.5} />
+        <B size={[0.2, 0.1, 0.02]} position={[0.5, 1.45, 0.52]} color="#c8312b" emissive="#ff5a3a" glow={0.6} cast={false} />
+      </group>
+      <group position={[-9.8, 0, 2.5]}>
+        <B size={[0.8, 1.0, 0.8]} position={[0, 0.5, 0]} color="#5b6670" metal={0.4} />
+        {[-0.25, 0, 0.25].map((x) => <C key={x} r={0.05} h={0.3} position={[x, 1.15, 0]} color="#c9a54a" metal={0.6} />)}
+      </group>
+    </group>
+  );
+}
+
 const BAYS: Record<string, () => ReactNode> = {
   cnc: () => <CncBay />, auto: () => <AutoBay />, elec: () => <ElecBay />, weld: () => <WeldBay />,
   rmg: () => <RmgBay />, eim: () => <EimBay />, prt: () => <PrtBay />, ait: () => <AitBay />,
+  iel: () => <BenchBay kind="iel" />, ave: () => <BenchBay kind="ave" />, csn: () => <CsnBay />, rac: () => <RacBay />,
+  ham: () => <HamBay />, oeq: () => <OeqBay />, iem: () => <IemBay />,
 };
 
 // ---------------------------------------------------------------------------
@@ -549,6 +687,21 @@ export function MachineStand({ env }: { env: ModelEnv }) {
         <B size={[0.16, 2.3 - floor, 0.16]} position={[-3.3, (2.3 + floor) / 2, -0.38]} color="#3e4650" metal={0.5} />
         <B size={[0.16, 2.3 - floor, 0.16]} position={[3.3, (2.3 + floor) / 2, -0.38]} color="#3e4650" metal={0.5} />
         <B size={[0.14, 1.7 - 1.1, 0.14]} position={[0, 1.4, -0.3]} color="#3a3f45" />
+      </group>
+    );
+  }
+  if (env.stand === 'bench') {
+    // A workbench whose top is just under the model's origin, with an ESD mat.
+    const top = -0.03;
+    const u = env.unitsPerM;
+    return (
+      <group>
+        <B size={[1.9 * u, 0.04 * u, 0.85 * u]} position={[0, top - 0.02 * u, 0]} color="#c9b48a" rough={0.7} />
+        <B size={[1.7 * u, 0.006 * u, 0.6 * u]} position={[0, top + 0.004 * u, 0.05 * u]} color="#3d6f8f" rough={0.8} />
+        {[[-0.88, -0.36], [0.88, -0.36], [-0.88, 0.36], [0.88, 0.36]].map(([x, z]) => (
+          <B key={`${x}${z}`} size={[0.05 * u, top - floor, 0.05 * u]} position={[x! * u, (top + floor) / 2, z! * u]} color="#5b6670" metal={0.6} />
+        ))}
+        <B size={[1.8 * u, 0.03 * u, 0.7 * u]} position={[0, floor + 0.15 * u, 0]} color="#5b6670" metal={0.5} />
       </group>
     );
   }

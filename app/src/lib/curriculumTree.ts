@@ -17,7 +17,25 @@ export interface CoreAttitude { code: string; name: string; nameAr: string | nul
 export interface ProgramProfile {
   eqf?: string; hours?: number; source?: Txt; occupation?: Txt; occupations?: Txt; overview?: Txt; equipment?: Txt;
   standards?: string; tracks?: Txt[]; capstone?: Txt;
+  // Revision 1.1
+  duration?: Txt; pvtd?: string | null; adopts?: Txt | null; revision?: string;
+  /** System B training-unit plan rows: [year, semester, no., unit, unit (Arabic), mapped codes, hours]; the first row is the header. */
+  system_b?: string[][] | null;
 }
+
+/** The manual's two study systems (section 1.4). */
+export const STUDY_SYSTEMS: { id: 'A' | 'B'; pct: number; name: Txt; settings: Txt; pass: Txt; hours: Txt; exams: Txt }[] = [
+  { id: 'A', pct: 60, name: { en: 'System A: Competence Standard', ar: 'النظام (أ): معيار الجدارة' },
+    settings: { en: 'Applied Technology Schools, GIZ-supported technical schools, dual-track institutes', ar: 'مدارس التكنولوجيا التطبيقية، والمدارس الفنية المدعومة من GIZ، والمعاهد ذات المسار المزدوج' },
+    pass: { en: '60% or more in each of K, S and A separately, no compensation', ar: '60% أو أكثر في كل من المعارف والمهارات والاتجاهات منفصلة، دون تعويض' },
+    hours: { en: '1,600 h a year; institute 640 / 480 / 320 h', ar: '1600 ساعة سنويًا؛ بالمعهد 640 / 480 / 320 ساعة' },
+    exams: { en: 'Intermediate exam at the end of Year 2; final exam with capstone at the end of Year 3', ar: 'امتحان وسيط نهاية السنة الثانية؛ وامتحان نهائي مع مشروع التخرج نهاية السنة الثالثة' } },
+  { id: 'B', pct: 80, name: { en: 'System B: Mastery Standard', ar: 'النظام (ب): معيار الإتقان' },
+    settings: { en: 'PVTD centres, apprenticeship and dual learning', ar: 'مراكز مصلحة الكفاية الإنتاجية، والتلمذة الصناعية، والتعلم المزدوج' },
+    pass: { en: '80% or more on every task form and Training Unit; up to 3 attempts per task; attitudes are a gate', ar: '80% أو أكثر في كل نموذج مهمة ووحدة تدريبية؛ حتى 3 محاولات لكل مهمة؛ والاتجاهات شرط للعبور' },
+    hours: { en: 'Centre 576 / 864 / 864 h (2, 3, 3 days a week)', ar: 'بالمركز 576 / 864 / 864 ساعة (يومان ثم 3 أيام أسبوعيًا)' },
+    exams: { en: 'Centre exam every year; final trade test with capstone', ar: 'امتحان مركز كل سنة؛ واختبار مهني نهائي مع مشروع التخرج' } },
+];
 export interface CurriculumItem { code: string; title: Txt; ksa: Ksa; year: number; hours: number | null; level: string | null; core: string | null; safety: boolean; criteria: { code: string; text: Txt }[] }
 export interface CurriculumUnit { code: string; title: Txt; year: number; ksa: Ksa; items: CurriculumItem[] }
 
