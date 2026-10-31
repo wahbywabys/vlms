@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import { useL } from '@/components/LangProvider';
-import { DOMAINS, LEVELS, YEARS, type CoreAttitude, type CurriculumUnit, type Ksa, type ProgramProfile } from '@/lib/curriculumTree';
+import { DOMAINS, LEVELS, STUDY_SYSTEMS, YEARS, type CoreAttitude, type CurriculumUnit, type Ksa, type ProgramProfile } from '@/lib/curriculumTree';
 import type { Txt } from '@/lib/i18n';
 
 /**
@@ -47,13 +47,51 @@ export function CurriculumView({ name, code, accent, profile, units, attitudes, 
           </header>
           {profile.overview && <p>{pick(profile.overview)}</p>}
           <dl className="cur-facts">
+            {profile.duration && <><dt>{L('Duration', 'المدة')}</dt><dd>{pick(profile.duration)}</dd></>}
+            {profile.pvtd && <><dt>{L('PVTD reference occupation', 'المهنة المرجعية بمصلحة الكفاية الإنتاجية')}</dt><dd>{profile.pvtd}</dd></>}
+            {profile.adopts && <><dt>{L('Shared units adopted', 'الوحدات المشتركة المعتمدة')}</dt><dd>{pick(profile.adopts)}</dd></>}
             {profile.occupations && <><dt>{L('Jobs after graduation', 'الوظائف بعد التخرج')}</dt><dd>{pick(profile.occupations)}</dd></>}
             {profile.tracks?.length ? <><dt>{L('Year 3 tracks', 'مسارات السنة الثالثة')}</dt><dd className="chips">{profile.tracks.map((t) => <span key={t.en} className="cur-tag">{pick(t)}</span>)}</dd></> : null}
-            {profile.equipment && <><dt>{L('Workshop equipment', 'تجهيزات الورشة')}</dt><dd>{pick(profile.equipment)}</dd></>}
+            {profile.equipment && <><dt>{L('Training requirements: core equipment', 'مستلزمات التدريب: المعدات الأساسية')}</dt><dd>{pick(profile.equipment)}</dd></>}
             {profile.standards && <><dt>{L('Standards', 'المعايير')}</dt><dd dir="ltr" className="small">{profile.standards}</dd></>}
             {profile.capstone && <><dt>{L('Capstone project', 'مشروع التخرج')}</dt><dd>{pick(profile.capstone)}</dd></>}
           </dl>
           {profile.source && <p className="muted small">{L('Source', 'المصدر')}: {pick(profile.source)}</p>}
+        </section>
+      )}
+
+      {profile?.revision && !compact && (
+        <section className="panel">
+          <header className="panel-head"><h2>{L('Two study systems', 'نظاما الدراسة')}</h2></header>
+          <p className="muted small">{L('Every programme can run under either system. The modules are the same; the pass rule and the hours differ.',
+            'يمكن تقديم كل تخصص وفق أي من النظامين. الوحدات واحدة، ويختلف شرط النجاح وعدد الساعات.')}</p>
+          <div className="cur-systems">
+            {STUDY_SYSTEMS.map((s) => (
+              <article key={s.id} className={`cur-system sys-${s.id}`}>
+                <p className="cur-pct">{num(s.pct)}%</p>
+                <h3>{pick(s.name)}</h3>
+                <dl className="cur-facts">
+                  <dt>{L('Where', 'أين')}</dt><dd>{pick(s.settings)}</dd>
+                  <dt>{L('Pass rule', 'شرط النجاح')}</dt><dd>{pick(s.pass)}</dd>
+                  <dt>{L('Hours', 'الساعات')}</dt><dd>{pick(s.hours)}</dd>
+                  <dt>{L('Exams', 'الامتحانات')}</dt><dd>{pick(s.exams)}</dd>
+                </dl>
+              </article>
+            ))}
+          </div>
+          {profile.system_b && profile.system_b.length > 1 && (
+            <details className="cur-sysb">
+              <summary><b>{L('System B training-unit plan', 'خطة الوحدات التدريبية وفق النظام (ب)')}</b> <span className="muted small">({L(`${num(profile.system_b.length - 1)} rows`, `${num(profile.system_b.length - 1)} صف`)})</span></summary>
+              <div className="cur-table">
+                <table className="comp">
+                  <thead><tr><th>{L('Year', 'السنة')}</th><th>{L('Sem.', 'الفصل')}</th><th>#</th><th>{L('Training unit', 'الوحدة التدريبية')}</th><th>{L('Codes', 'الرموز')}</th><th>{L('Hours', 'الساعات')}</th></tr></thead>
+                  <tbody>{profile.system_b.slice(1).map((r, i) => (
+                    <tr key={i}><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td>{ar(r[3], r[4])}</td><td className="mono small" dir="ltr">{r[5]}</td><td>{r[6]}</td></tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            </details>
+          )}
         </section>
       )}
 
@@ -88,6 +126,7 @@ export function CurriculumView({ name, code, accent, profile, units, attitudes, 
                       {i.hours ? <span className="cur-tag">{L(`${i.hours} h`, `${i.hours} س`)}</span> : null}
                       {i.level && <span className="cur-tag" title={pick(LEVELS[i.level] ?? { en: i.level, ar: i.level })}>{pick(LEVELS[i.level] ?? { en: i.level, ar: i.level })}</span>}
                       {i.core && <span className="cur-tag" title={ar(att.get(i.core)?.indicators, att.get(i.core)?.indicatorsAr)}>{i.core} · {ar(att.get(i.core)?.name ?? i.core, att.get(i.core)?.nameAr)}</span>}
+                      {/^(ETF|CPM)-/.test(i.code) && <span className="cur-tag cur-shared" title={L('Shared unit: assessed once, credited to every programme that adopts it', 'وحدة مشتركة: تُقيَّم مرة واحدة وتُحتسب لكل تخصص يعتمدها')}>{L('Shared unit', 'وحدة مشتركة')}</span>}
                       {i.safety && <span className="chip chip-danger">{L('Safety-critical', 'سلامة حرجة')}</span>}
                     </summary>
                     <p className="muted small">{u.ksa === 'K' ? L('Learning outcomes', 'نواتج التعلم') : u.ksa === 'S' ? L('Performance criteria', 'معايير الأداء') : L('Observable behaviours', 'سلوكيات ملحوظة')}</p>

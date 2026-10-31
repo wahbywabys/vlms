@@ -281,3 +281,13 @@ ul.plain li { padding: 4px 0; }
 .cur-criteria { margin: 0 0 12px; padding-inline-start: 22px; display: grid; gap: 4px; }
 .cur-attitudes { display: grid; gap: 8px; }
 .cur-attitudes .ksa-badge { background: #1f7a4d; }
+/* Revision 1.1: study systems and the System B plan */
+.cur-systems { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.cur-system { border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px; display: grid; gap: 6px; }
+.cur-system h3 { margin: 0; font-size: 16px; }
+.cur-system .cur-pct { margin: 0; font-size: 28px; font-weight: 800; color: var(--accent, #14234c); }
+.cur-system.sys-B .cur-pct { color: #1f7a4d; }
+.cur-sysb { margin-top: 12px; }
+.cur-sysb summary { cursor: pointer; padding: 6px 0; }
+.cur-shared { background: #fff4e0; border-color: #f0c27a; }
+.cur-table { overflow-x: auto; }
