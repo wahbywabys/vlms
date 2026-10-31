@@ -13816,7 +13816,7 @@
    ],
    "capstone": {
     "en": "IEL Capstone: \"Design, Build and Commission an Automated Measurement & Control Unit\". From a customer brief (e.g., tank level, oven temperature or conveyor sorting), the learner (1) selects sensors and designs signal conditioning; (2) designs and fabricates a PCB for the control or interface stage; (3) programs a microcontroller or PLC including a PID or sequence function; (4) builds the power stage with correct protection; (5) prepares the estimate (مقايسة) and documentation pack; (6) commissions, demonstrates and defends the project in a 30-minute technical interview. Duration: 80 hours (System A) / 192 hours centre time (System B). Weighting: 40% of the final examination.",
-    "ar": "مشروع التخرج: تصميم وبناء وتشغيل وحدة قياس وتحكم مؤتمتة. مشروع التخرج: تصميم وبناء وتشغيل وحدة قياس وتحكم مؤتمتة"
+    "ar": "مشروع التخرج: تصميم وبناء وتشغيل وحدة قياس وتحكم مؤتمتة. انطلاقًا من طلب عميل (مثل منسوب خزان أو حرارة فرن أو فرز على سير ناقل) يقوم المتدرب بما يلي: (1) يختار الحساسات ويصمم دوائر تهيئة الإشارة؛ (2) يصمم ويصنع لوحة دوائر مطبوعة لمرحلة التحكم أو الواجهة؛ (3) يبرمج متحكمًا دقيقًا أو PLC بما في ذلك وظيفة PID أو تسلسل؛ (4) يبني مرحلة القدرة بالحماية الصحيحة؛ (5) يعد المقايسة وملف التوثيق؛ (6) يشغّل المشروع ويعرضه ويدافع عنه في مقابلة فنية مدتها 30 دقيقة. المدة: 80 ساعة (النظام أ) / 192 ساعة بالمركز (النظام ب). الوزن: 40٪ من الامتحان النهائي."
    },
    "pvtd": "الإلكترونيات الصناعية",
    "new": true,
@@ -16006,7 +16006,7 @@
    ],
    "capstone": {
     "en": "CSN Capstone: \"Design, Deploy and Secure the IT Infrastructure of a Small Enterprise\". For a real or simulated client (20–50 users), the learner (1) surveys requirements; (2) designs the network, IP plan and security zones; (3) installs and certifies cabling and wireless; (4) configures switching, routing, firewall and VPN; (5) deploys directory, file and backup services (on-premises or cloud); (6) hands over documentation and trains users; (7) defends the project in a 30-minute technical interview. Duration: 80 h (System A) / 192 h (System B). Weighting: 40% of the final examination.",
-    "ar": "مشروع التخرج: تصميم ونشر وتأمين البنية التقنية لمنشأة صغيرة. مشروع التخرج: تصميم ونشر وتأمين البنية التقنية لمنشأة صغيرة"
+    "ar": "مشروع التخرج: تصميم ونشر وتأمين البنية التقنية لمنشأة صغيرة. لعميل حقيقي أو افتراضي (20–50 مستخدمًا) يقوم المتدرب بما يلي: (1) يحصر المتطلبات؛ (2) يصمم الشبكة وخطة العناوين ومناطق الأمان؛ (3) يركب الكابلات والشبكة اللاسلكية ويعتمدها بالاختبار؛ (4) يهيئ التحويل والتوجيه والجدار الناري وVPN؛ (5) ينشر خدمات الدليل والملفات والنسخ الاحتياطي (محليًا أو سحابيًا)؛ (6) يسلم التوثيق ويدرب المستخدمين؛ (7) يدافع عن المشروع في مقابلة فنية مدتها 30 دقيقة. المدة: 80 ساعة (النظام أ) / 192 ساعة (النظام ب). الوزن: 40٪ من الامتحان النهائي."
    },
    "pvtd": "صيانة وتشغيل أنظمة وشبكات الحاسوب",
    "new": true,
@@ -18199,7 +18199,7 @@
    ],
    "capstone": {
     "en": "RAC Capstone: \"Install, Commission and Hand Over a Refrigeration or AC System Using a Low-GWP Refrigerant\". The learner (1) calculates the load and selects equipment; (2) draws the refrigeration and electrical control circuits; (3) installs piping, brazes with nitrogen, pressure-tests and evacuates; (4) wires and commissions controls; (5) charges by weight and records performance (superheat, subcooling, currents, EER); (6) prepares the estimate and hand-over pack; (7) defends the project. Duration: 80 h (System A) / 216 h (System B). Weighting: 40% of the final examination.",
-    "ar": "مشروع التخرج: تركيب وتشغيل وتسليم نظام تبريد أو تكييف بوسيط منخفض الاحترار. مشروع التخرج: تركيب وتشغيل وتسليم نظام تبريد أو تكييف بوسيط منخفض الاحترار"
+    "ar": "مشروع التخرج: تركيب وتشغيل وتسليم نظام تبريد أو تكييف بوسيط منخفض الاحترار. يقوم المتدرب بما يلي: (1) يحسب الحمل ويختار المعدات؛ (2) يرسم دائرة التبريد ودائرة التحكم الكهربائي؛ (3) يركب المواسير ويلحم بالمونة مع النيتروجين ويختبر الضغط ويفرّغ؛ (4) يوصل دوائر التحكم ويشغلها؛ (5) يشحن بالوزن ويسجل الأداء (التحميص الزائد والتبريد الزائد والتيارات ومعامل كفاءة الطاقة)؛ (6) يعد المقايسة وملف التسليم؛ (7) يدافع عن المشروع. المدة: 80 ساعة (النظام أ) / 216 ساعة (النظام ب). الوزن: 40٪ من الامتحان النهائي."
    },
    "pvtd": "صيانة وإصلاح أجهزة التبريد وتكييف الهواء",
    "new": true,
@@ -20534,7 +20534,7 @@
    ],
    "capstone": {
     "en": "HAM Capstone: \"Run a Service Desk: Diagnose, Repair, Safety-Test and Hand Over Three Faulty Appliances\". The learner receives three customer complaints from different families (e.g., washing machine, microwave oven, refrigerator or smart appliance). For each, they (1) record the complaint and inspect; (2) diagnose using manuals, error codes and instruments; (3) quote and obtain approval; (4) repair; (5) perform and document the IEC 60335 safety test; (6) hand over with advice; then (7) present a cost and time analysis and defend the work. Duration: 80 h (System A) / 216 h (System B). Weighting: 40% of the final examination.",
-    "ar": "مشروع التخرج: تشغيل مكتب خدمة: تشخيص وإصلاح واختبار سلامة وتسليم ثلاثة أجهزة معطلة. مشروع التخرج: تشغيل مكتب خدمة: تشخيص وإصلاح واختبار سلامة وتسليم ثلاثة أجهزة معطلة"
+    "ar": "مشروع التخرج: تشغيل مكتب خدمة: تشخيص وإصلاح واختبار سلامة وتسليم ثلاثة أجهزة معطلة. يتلقى المتدرب ثلاث شكاوى عملاء من عائلات أجهزة مختلفة (مثل غسالة أو فرن ميكروويف أو ثلاجة أو جهاز ذكي). ولكل منها: (1) يسجل الشكوى ويفحص الجهاز؛ (2) يشخص العطل باستخدام الأدلة وأكواد الأعطال وأجهزة القياس؛ (3) يقدم عرض السعر ويحصل على الموافقة؛ (4) يصلح الجهاز؛ (5) يجري اختبار السلامة وفق IEC 60335 ويوثقه؛ (6) يسلم الجهاز مع النصائح؛ ثم (7) يعرض تحليل التكلفة والوقت ويدافع عن عمله. المدة: 80 ساعة (النظام أ) / 216 ساعة (النظام ب). الوزن: 40٪ من الامتحان النهائي."
    },
    "pvtd": "صيانة الأجهزة المنزلية",
    "new": true,
@@ -22656,7 +22656,7 @@
    ],
    "capstone": {
     "en": "OEQ Capstone: \"Commission and Hand Over an Office Device Fleet under a Service Contract\". For a real or simulated office of 30–100 users, the learner (1) audits existing devices and volumes; (2) recommends a fleet and service model with cost-per-page; (3) installs, networks and secures MFPs and printers; (4) sets up monitoring; (5) repairs two seeded faults; (6) trains key users and hands over; (7) defends the proposal and work. Duration: 80 h (System A) / 216 h (System B). Weighting: 40% of the final examination.",
-    "ar": "مشروع التخرج: تشغيل وتسليم أسطول أجهزة مكتبية وفق عقد خدمة. مشروع التخرج: تشغيل وتسليم أسطول أجهزة مكتبية وفق عقد خدمة"
+    "ar": "مشروع التخرج: تشغيل وتسليم أسطول أجهزة مكتبية وفق عقد خدمة. لمكتب حقيقي أو افتراضي من 30 إلى 100 مستخدم يقوم المتدرب بما يلي: (1) يحصر الأجهزة الحالية وأحجام الطباعة؛ (2) يوصي بأسطول ونموذج خدمة مع تكلفة الصفحة؛ (3) يركب الطابعات والأجهزة متعددة الوظائف ويربطها بالشبكة ويؤمنها؛ (4) يجهز المراقبة؛ (5) يصلح عطلين مزروعين؛ (6) يدرب المستخدمين الرئيسيين ويسلم؛ (7) يدافع عن المقترح والعمل. المدة: 80 ساعة (النظام أ) / 216 ساعة (النظام ب). الوزن: 40٪ من الامتحان النهائي."
    },
    "pvtd": "صيانة وإصلاح الأجهزة المكتبية",
    "new": true,
@@ -24688,7 +24688,7 @@
    ],
    "capstone": {
     "en": "AVE Capstone: \"Repair, Install and Hand Over a Home Entertainment & Security System\". The learner (1) repairs a faulty flat-panel TV at board level; (2) designs and installs a home entertainment setup (display, sound bar or amplifier, reception, streaming); (3) installs a 4-camera IP-CCTV system with intercom; (4) prepares the estimate and documentation; (5) hands over to the customer and defends the work. Duration: 80 h (System A) / 192 h (System B). Weighting: 40% of the final examination.",
-    "ar": "مشروع التخرج: إصلاح وتركيب وتسليم نظام ترفيه منزلي وأمن. مشروع التخرج: إصلاح وتركيب وتسليم نظام ترفيه منزلي وأمن"
+    "ar": "مشروع التخرج: إصلاح وتركيب وتسليم نظام ترفيه منزلي وأمن. يقوم المتدرب بما يلي: (1) يصلح شاشة مسطحة معطلة على مستوى اللوحات؛ (2) يصمم ويركب منظومة ترفيه منزلي (شاشة ومكبر صوت أو سماعة شريطية واستقبال وبث)؛ (3) يركب نظام مراقبة IP بأربع كاميرات مع إنتركم؛ (4) يعد المقايسة والتوثيق؛ (5) يسلم للعميل ويدافع عن العمل. المدة: 80 ساعة (النظام أ) / 192 ساعة (النظام ب). الوزن: 40٪ من الامتحان النهائي."
    },
    "pvtd": "راديو وتليفزيون وإلكترونيات",
    "new": true,
@@ -26691,7 +26691,7 @@
    ],
    "capstone": {
     "en": "IEM Capstone: \"Overhaul, Rewind and Recommission a Motor Drive System\". The learner receives a failed three-phase motor and its control panel. They (1) test and record the failure; (2) record winding data, rewind and test the motor; (3) redesign the starter as a VFD or soft-starter panel with PLC control; (4) build and test the panel; (5) recommission the drive under load with energy measurements before and after; (6) prepare the cost comparison (rewind vs. replace with IE3) and documentation; (7) defend the project. Duration: 80 h (System A) / 168 h (System B). Weighting: 40% of the final examination.",
-    "ar": "مشروع التخرج: عَمرة وإعادة لف وإعادة تشغيل منظومة قيادة محرك. مشروع التخرج: عَمرة وإعادة لف وإعادة تشغيل منظومة قيادة محرك"
+    "ar": "مشروع التخرج: عَمرة وإعادة لف وإعادة تشغيل منظومة قيادة محرك. يتلقى المتدرب محركًا ثلاثي الأوجه معطلًا ولوحة التحكم الخاصة به، ثم: (1) يختبر العطل ويسجله؛ (2) يسجل بيانات اللف ويعيد لف المحرك ويختبره؛ (3) يعيد تصميم البادئ كلوحة مغير سرعة أو بادئ ناعم بتحكم PLC؛ (4) يبني اللوحة ويختبرها؛ (5) يعيد تشغيل المنظومة تحت الحمل مع قياسات الطاقة قبل وبعد؛ (6) يعد مقارنة التكلفة (إعادة اللف مقابل الاستبدال بمحرك IE3) والتوثيق؛ (7) يدافع عن المشروع. المدة: 80 ساعة (النظام أ) / 168 ساعة (النظام ب). الوزن: 40٪ من الامتحان النهائي."
    },
    "pvtd": "الكهرباء الصناعية",
    "new": true,

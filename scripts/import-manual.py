@@ -159,10 +159,12 @@ def parse_program(sec):
             elif h4['en'].startswith('Capstone'):
                 bq = b4.find('blockquote')
                 ps = bq.find_all('p')
+                ar_ps = [x for x in ps if 'ar' in (x.get('class') or [])]
                 p['capstone'] = {
-                    'title': {'en': txt(ps[0]), 'ar': txt(bq.find('p', class_='ar'))},
+                    'title': {'en': txt(ps[0]), 'ar': txt(ar_ps[0]) if ar_ps else ''},
                     'en': ' '.join(txt(x) for x in ps[1:] if 'ar' not in (x.get('class') or [])),
-                    'ar': ' '.join(txt(x) for x in ps[1:] if 'ar' in (x.get('class') or [])),
+                    # The manual gives only the Arabic title; the body comes from criteria-ar.json.
+                    'ar': ' '.join(txt(x) for x in ar_ps[1:]),
                 }
             elif 'sysB' in b4.get('class', []):
                 sysb = parse_sysb(b4)
@@ -259,7 +261,8 @@ def main():
             'eqf': re.search(r'EQF \d', a['Qualification level']['en']).group(0), 'hours': 4800,
             'occupations': a['Target occupations'], 'standards': next(v for k, v in a.items() if 'standard' in k.lower())['en'],
             'equipment': a['Core equipment'], 'tracks': [{'en': ws(re.sub(r'^\([a-z]\)', '', t['en'])), 'ar': t['ar']} for t in p['tracks']],
-            'capstone': {'en': f"{cap['title']['en']}. {cap['en']}", 'ar': f"{cap['title']['ar']}. {cap['ar']}"},
+            'capstone': {'en': f"{cap['title']['en']}. {cap['en']}",
+                         'ar': '. '.join(x for x in (cap['title']['ar'], cap['ar'] or ar.get(cap['en'], '')) if x)},
         }
         q.update(extra)
         items = []
