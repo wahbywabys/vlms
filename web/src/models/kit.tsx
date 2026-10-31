@@ -68,7 +68,7 @@ export interface ModelEnv {
   /** What the machine stands on. */
   stand?: 'floor' | 'bench' | 'engine-stand' | 'wall' | 'skid' | 'trolley';
   /** Which trade's equipment fills the rest of the bay. */
-  bay?: 'cnc' | 'auto' | 'elec' | 'weld';
+  bay?: 'cnc' | 'auto' | 'elec' | 'weld' | 'rmg' | 'eim' | 'prt' | 'ait';
   /** Where the student can go. The first is home; one called 'ppe' puts the PPE station there. */
   stations: StationDef[];
 }

@@ -54,7 +54,8 @@ async function api<T>(path: string, body?: unknown): Promise<{ ok: boolean; stat
 
 export interface RecentAttempt { id: string; mode: Mode; score: number | null; passed: boolean | null; at: string }
 
-export function VLab({ lab, trade, initialSessionId, examFromTrainer, recent }: { lab: PublicLab; trade: string; initialSessionId: string | null; examFromTrainer: boolean; recent: RecentAttempt[] }) {
+/** `lab` is null for a programme that has 3D twins and safety simulations but no V-Lab fault rig yet. */
+export function VLab({ lab, trade, initialSessionId, examFromTrainer, recent }: { lab: PublicLab | null; trade: string; initialSessionId: string | null; examFromTrainer: boolean; recent: RecentAttempt[] }) {
   const { L, pick } = useL();
   const learn = LEARNING_META[trade];
   const [tab, setTab] = useState<Tab>(learn ? '3d' : 'vlab');
@@ -64,21 +65,21 @@ export function VLab({ lab, trade, initialSessionId, examFromTrainer, recent }: 
   const [sessionId, setSessionId] = useState(initialSessionId);
   const TABS: { id: Tab; label: Txt; n?: number }[] = learn ? [
     { id: '3d', label: tx('3D & VR', 'ثلاثي الأبعاد والواقع الافتراضي'), n: learn.models },
-    { id: 'lessons', label: tx('Video lessons', 'دروس الفيديو'), n: learn.lessons },
+    ...(learn.lessons ? [{ id: 'lessons' as const, label: tx('Video lessons', 'دروس الفيديو'), n: learn.lessons }] : []),
     { id: 'safety', label: tx('Safety simulator', 'محاكي السلامة'), n: learn.safety },
-    { id: 'vlab', label: tx('V-Lab fault test', 'اختبار الأعطال الافتراضي') },
+    ...(lab ? [{ id: 'vlab' as const, label: tx('V-Lab fault test', 'اختبار الأعطال الافتراضي') }] : []),
   ] : [];
   const heading: Record<Tab, string> = {
     '3d': L('3D digital twins', 'التوائم الرقمية ثلاثية الأبعاد'),
     lessons: L('Video lessons', 'دروس الفيديو'),
     safety: L('Safety simulator', 'محاكي السلامة'),
-    vlab: `${pick(lab.rigTitle)} · ${pick(lab.title)}`,
+    vlab: lab ? `${pick(lab.rigTitle)} · ${pick(lab.title)}` : '',
   };
   return (
     <div className="lab" style={learn ? { ['--trade-accent' as string]: learn.accent } : undefined}>
       <div className="lab-head">
         <div>
-          <p className="eyebrow">{L('Student', 'الطالب')} · {L('Unit', 'الوحدة')} {lab.unit.code} · {pick(lab.unit.title)}</p>
+          <p className="eyebrow">{L('Student', 'الطالب')}{lab ? <> · {L('Unit', 'الوحدة')} {lab.unit.code} · {pick(lab.unit.title)}</> : null}</p>
           <h1>{heading[tab]}</h1>
         </div>
         {TABS.length > 0 && (
@@ -94,11 +95,11 @@ export function VLab({ lab, trade, initialSessionId, examFromTrainer, recent }: 
       {seen.includes('3d') && learn && <div hidden={tab !== '3d'}><Explore trade={trade} active={tab === '3d'} /></div>}
       {seen.includes('lessons') && learn && <div hidden={tab !== 'lessons'}><Lessons trade={trade} active={tab === 'lessons'} /></div>}
       {seen.includes('safety') && learn && <div hidden={tab !== 'safety'}><Safety trade={trade} active={tab === 'safety'} /></div>}
-      <div hidden={tab !== 'vlab'}>
+      {lab && <div hidden={tab !== 'vlab'}>
         {sessionId
           ? <FaultTest key={sessionId} lab={lab} sessionId={sessionId} onNew={() => setSessionId(null)} />
           : <StartPanel labCode={lab.code} intro={lab.intro} onStarted={setSessionId} examFromTrainer={examFromTrainer} recent={recent} />}
-      </div>
+      </div>}
     </div>
   );
 }

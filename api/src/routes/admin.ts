@@ -47,7 +47,10 @@ export const programId = (c: string) => {
 interface TradeRow { id: string; code: string; name: string; name_ar: string | null }
 
 async function upsertProgram(tx: Tx, c: string, name: string | undefined, nameAr: string | undefined): Promise<{ trade: TradeRow; created: boolean }> {
-  const found = await tx.query<TradeRow>(`SELECT id, code, name, name_ar FROM trades WHERE upper(code) = upper($1) OR id = $2`, [c, programId(c)]);
+  // A programme is found by its code, the curriculum manual's code ('ELI' for the electrical trade) or its id.
+  const found = await tx.query<TradeRow>(
+    `SELECT id, code, name, name_ar FROM trades WHERE upper(code) = upper($1) OR upper(program_code) = upper($1) OR id = $2
+      ORDER BY (upper(code) = upper($1)) DESC LIMIT 1`, [c, programId(c)]);
   if (found.rows[0]) {
     const t = found.rows[0];
     if ((name && name !== t.name) || (nameAr && nameAr !== t.name_ar)) {
@@ -77,10 +80,22 @@ async function frameworkOf(tx: Tx, t: TradeRow): Promise<string> {
   return n.rows[0]!.id;
 }
 
+/** Knowledge / skill / attitude, from 'K', 'Skill', 'معرفة'… */
+const KSA_WORDS: Record<string, 'K' | 'S' | 'A'> = {
+  k: 'K', knowledge: 'K', 'معرفة': 'K', 'معرفي': 'K', s: 'S', skill: 'S', skills: 'S', 'مهارة': 'S', 'مهاري': 'S',
+  a: 'A', attitude: 'A', attitudes: 'A', 'اتجاه': 'A', 'سلوك': 'A', 'سلوكي': 'A',
+};
+const ksa = z.preprocess((v) => {
+  const s = String(blank(v) ?? '').trim().toLowerCase();
+  return s ? (KSA_WORDS[s] ?? s) : undefined;
+}, z.enum(['K', 'S', 'A']).optional());
+
 const Competency = z.object({
   code: code(60), kind: z.preprocess((v) => (typeof v === 'string' ? v.trim().toLowerCase() : v), z.enum(KINDS)),
   parentCode: z.preprocess(blank, code(60).optional()), title: req(300), titleAr: str(300),
   safetyCritical: yes.default(false), hours: num(0, 9999),
+  ksa, year: num(1, 6), targetLevel: str(20), coreAttitude: z.preprocess(blank, z.string().trim().regex(/^A[0-9]$/, 'A1 to A7').optional()),
+  description: str(4000), descriptionAr: str(4000),
 });
 type CompetencyIn = z.infer<typeof Competency>;
 
@@ -95,13 +110,18 @@ async function upsertCompetency(tx: Tx, frameworkId: string, c: CompetencyIn): P
     parentId = p.rows[0].id;
   } else if (c.parentCode) throw new HttpError(400, 'unit_parent', 'A unit has no parent; leave Parent code empty');
   const { rows } = await tx.query<{ inserted: boolean }>(
-    `INSERT INTO competencies (framework_id, parent_id, code, title, title_ar, kind, is_safety_critical, nominal_hours)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO competencies (framework_id, parent_id, code, title, title_ar, kind, is_safety_critical, nominal_hours,
+                               ksa, year, target_level, core_attitude, description, description_ar)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
      ON CONFLICT (framework_id, code) DO UPDATE SET parent_id = EXCLUDED.parent_id, title = EXCLUDED.title,
        title_ar = COALESCE(EXCLUDED.title_ar, competencies.title_ar), kind = EXCLUDED.kind,
-       is_safety_critical = EXCLUDED.is_safety_critical, nominal_hours = COALESCE(EXCLUDED.nominal_hours, competencies.nominal_hours)
+       is_safety_critical = EXCLUDED.is_safety_critical, nominal_hours = COALESCE(EXCLUDED.nominal_hours, competencies.nominal_hours),
+       ksa = COALESCE(EXCLUDED.ksa, competencies.ksa), year = COALESCE(EXCLUDED.year, competencies.year),
+       target_level = COALESCE(EXCLUDED.target_level, competencies.target_level), core_attitude = COALESCE(EXCLUDED.core_attitude, competencies.core_attitude),
+       description = COALESCE(EXCLUDED.description, competencies.description), description_ar = COALESCE(EXCLUDED.description_ar, competencies.description_ar)
      RETURNING (xmax = 0) AS inserted`,
-    [frameworkId, parentId, c.code.toUpperCase(), c.title, c.titleAr ?? null, c.kind, c.safetyCritical, c.hours ?? null]);
+    [frameworkId, parentId, c.code.toUpperCase(), c.title, c.titleAr ?? null, c.kind, c.safetyCritical, c.hours ?? null,
+      c.ksa ?? null, c.year ?? null, c.targetLevel ?? null, c.coreAttitude ?? null, c.description ?? null, c.descriptionAr ?? null]);
   return rows[0]!.inserted ? 'created' : 'updated';
 }
 
@@ -110,6 +130,8 @@ const ProgramRow = z.object({
   competencyCode: z.preprocess(blank, code(60).optional()), level: z.preprocess(blank, z.string().optional()),
   parentCode: z.unknown().optional(), title: z.unknown().optional(), titleAr: z.unknown().optional(),
   safetyCritical: z.unknown().optional(), hours: z.unknown().optional(),
+  ksa: z.unknown().optional(), year: z.unknown().optional(), targetLevel: z.unknown().optional(), coreAttitude: z.unknown().optional(),
+  description: z.unknown().optional(), descriptionAr: z.unknown().optional(),
 });
 
 const MachineRow = z.object({
@@ -139,16 +161,23 @@ export function adminRouter(deps: { db: Db }) {
   router.get('/v1/admin/programs', async (req: Request, res) => {
     guard(req);
     const { rows: programs } = await deps.db.query(
-      `SELECT t.id, t.code, t.name, t.name_ar AS "nameAr", t.icon, t.sort_order AS "sortOrder",
+      `SELECT t.id, t.code, t.program_code AS "programCode", t.name, t.name_ar AS "nameAr", t.icon, t.sort_order AS "sortOrder",
+              t.accent, t.profile,
               (SELECT count(*)::int FROM cohorts c WHERE c.trade_id = t.id) AS cohorts,
               (SELECT count(*)::int FROM workshops w WHERE w.trade_id = t.id) AS workshops
          FROM trades t ORDER BY t.sort_order, t.name`);
     const { rows: comps } = await deps.db.query<{ trade_id: string } & Record<string, unknown>>(
       `SELECT f.trade_id, f.code AS framework, c.code, c.kind, p.code AS "parentCode", c.title, c.title_ar AS "titleAr",
-              c.is_safety_critical AS "safetyCritical", c.nominal_hours::float AS hours
+              c.is_safety_critical AS "safetyCritical", c.nominal_hours::float AS hours, c.ksa, c.year, c.target_level AS "targetLevel",
+              c.core_attitude AS "coreAttitude", c.description, c.description_ar AS "descriptionAr"
          FROM competencies c JOIN competency_frameworks f ON f.id = c.framework_id LEFT JOIN competencies p ON p.id = c.parent_id
-        WHERE f.trade_id IS NOT NULL ORDER BY c.code`);
-    res.json({ programs: programs.map((t) => ({ ...t, competencies: comps.filter((c) => c.trade_id === t['id']).map(({ trade_id: _, ...c }) => c) })) });
+        WHERE f.trade_id IS NOT NULL ORDER BY f.effective_from DESC, f.code, c.year NULLS LAST, c.sort_order NULLS LAST, c.code`);
+    const { rows: attitudes } = await deps.db.query(
+      `SELECT code, name, name_ar AS "nameAr", indicators, indicators_ar AS "indicatorsAr" FROM core_attitudes ORDER BY code`);
+    res.json({
+      attitudes,
+      programs: programs.map((t) => ({ ...t, competencies: comps.filter((c) => c.trade_id === t['id']).map(({ trade_id: _, ...c }) => c) })),
+    });
   });
 
   const Program = z.object({ code: code(24), name: req(120), nameAr: str(120) });
@@ -220,7 +249,8 @@ export function adminRouter(deps: { db: Db }) {
       const fw = await frameworkOf(tx, trade);
       if (!r.competencyCode) return { status: created ? 'created' : 'updated', program: trade.code };
       const c = Competency.parse({ code: r.competencyCode, kind: r.level ?? (r.parentCode ? undefined : 'unit'), parentCode: r.parentCode,
-        title: r.title, titleAr: r.titleAr, safetyCritical: r.safetyCritical ?? false, hours: r.hours });
+        title: r.title, titleAr: r.titleAr, safetyCritical: r.safetyCritical ?? false, hours: r.hours,
+        ksa: r.ksa, year: r.year, targetLevel: r.targetLevel, coreAttitude: r.coreAttitude, description: r.description, descriptionAr: r.descriptionAr });
       return { status: await upsertCompetency(tx, fw, c), program: trade.code, code: c.code.toUpperCase() };
     }, ProgramRow));
   });

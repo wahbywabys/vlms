@@ -45,8 +45,17 @@
 .mx-vr-note { position: absolute; inset: auto 12px 72px 12px; margin: 0; padding: 8px 12px; border-radius: 9px; z-index: 5;
   background: rgba(8, 12, 18, .82); color: #c9d6e4; font-size: 12.5px; text-align: center; pointer-events: none; }
 .mx-root.is-stereo .mx-pin { display: none; }
-.mx-root.is-stereo .mx-controls { opacity: .35; }
-.mx-root.is-stereo .mx-controls:hover { opacity: 1; }
+/* Stereo VR fills the phone screen for a Cardboard-style viewer: only Exit VR stays, and the note fades. */
+.mx-root.is-stereo { position: fixed; inset: 0; z-index: 1000; height: 100vh !important; height: 100dvh !important;
+  border-radius: 0; grid-template-columns: minmax(0, 1fr); }
+.mx-root.is-stereo .mx-panel, .mx-root.is-stereo .mx-dock, .mx-root.is-stereo .mx-controls, .mx-root.is-stereo .mx-cutbar,
+.mx-root.is-stereo .mx-walk, .mx-root.is-stereo .mx-pad, .mx-root.is-stereo .mx-header > div:first-child,
+.mx-root.is-stereo .mx-modes > :not(.mx-vr) { display: none !important; }
+.mx-root.is-stereo .mx-header { justify-content: center; }
+.mx-root.is-stereo .mx-vr-note { inset: auto 12px 16px 12px; animation: mx-fade .8s 9s forwards; }
+@keyframes mx-fade { to { opacity: 0; visibility: hidden; } }
+/* Phone held sideways: keep the header (with Enter VR) above the camera dock. */
+@media (max-height: 500px) { .mx-header { z-index: 5; } }
 /* Model switcher in the header */
 .mx-switch { display: inline-flex; border: 1px solid #2a3a4d; border-radius: 10px; overflow: hidden; }
 .mx-root .mx-switch button { border: 0; border-radius: 0; background: #16212d; }

@@ -7,5 +7,5 @@ cd "$(dirname "$0")"
 migrations=()
 for f in migrations/*.sql; do [ -e "$f" ] && migrations+=(-f "$f"); done
 psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -c 'DROP SCHEMA IF EXISTS vtc CASCADE' -c 'DROP TABLE IF EXISTS public.vtc_migrations' \
-  -f schema.sql -f seed.sql "${migrations[@]}" -f demo.sql -f demo_trades.sql -f demo_modules.sql
+  -f schema.sql -f seed.sql "${migrations[@]}" -f demo.sql -f demo_trades.sql -f demo_modules.sql -f demo_curricula.sql
 echo "VTC_LMS demo database ready."

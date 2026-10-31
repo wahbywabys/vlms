@@ -43,6 +43,7 @@ export function tradePpe(bay?: string): PPE {
     case 'weld': return { boots: true, glasses: true, helmet: 'welding', gloves: 'leather', apron: true };
     case 'elec': return { boots: true, glasses: true, gloves: 'insulated' };
     case 'auto': return { boots: true, glasses: true, gloves: 'nitrile' };
+    case 'rmg': case 'ait': return { boots: true, glasses: true };
     default: return { boots: true, glasses: true, earmuffs: true };
   }
 }

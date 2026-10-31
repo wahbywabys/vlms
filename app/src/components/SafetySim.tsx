@@ -46,7 +46,7 @@ export const PPE_INFO: Record<PpeKey, { label: Txt; sign: SignKind; pic: Pictogr
   mask: { label: tx('Respirator (FFP3)', 'كمامة تنفس FFP3'), sign: 'mandatory', pic: 'mask' },
   apron: { label: tx('Leather apron', 'مريلة جلدية'), sign: 'mandatory', pic: 'apron' },
   'no-jewellery': { label: tx('Take off watch and ring', 'اخلع الساعة والخاتم'), sign: 'prohibition', pic: 'noJewel' },
-  cuffs: { label: tx('Fasten cuffs, tuck in loose clothing', 'اربط الأكمام وأدخل الملابس الفضفاضة'), sign: 'warning', pic: 'rotating' },
+  cuffs: { label: tx('Fasten cuffs, tie back long hair, tuck in loose clothing', 'اربط الأكمام والشعر الطويل وأدخل الملابس الفضفاضة'), sign: 'warning', pic: 'rotating' },
 };
 const GLOVES: PpeKey[] = ['gloves-leather', 'gloves-nitrile', 'gloves-insulated'];
 const HEAD: PpeKey[] = ['helmet-welding', 'visor'];

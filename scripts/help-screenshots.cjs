@@ -36,6 +36,8 @@ const go = (p, path) => p.goto(base + path, { waitUntil: 'networkidle' }).catch(
     await go(p, '/student/quiz'); await shot(p, 'student-quiz');
     await go(p, '/student/logbook'); await shot(p, 'student-logbook');
     await go(p, '/student/private'); await shot(p, 'student-private');
+    await go(p, '/student/curriculum'); await shot(p, 'student-curriculum');
+    await p.locator('.cur-items details summary').first().click(); await shot(p, 'student-curriculum-open', { wait: 400 });
   });
   await as(b, 'trainer@vtc.example', async (p) => {
     await shot(p, 'trainer-floor', { wait: 1500 });
@@ -44,6 +46,7 @@ const go = (p, path) => p.goto(base + path, { waitUntil: 'networkidle' }).catch(
     await clickText(p, 'Scan a machine', 'امسح ماكينة'); await shot(p, 'trainer-scan');
     await clickText(p, 'QR stickers', 'ملصقات QR'); await shot(p, 'trainer-stickers', { wait: 1500 });
     await go(p, '/trainer/vlab'); await shot(p, 'trainer-vlab');
+    await go(p, '/trainer/curriculum'); await shot(p, 'trainer-curriculum');
     await go(p, '/trainer/risk'); await shot(p, 'trainer-risk');
   });
   await as(b, 'teacher@vtc.example', async (p) => { await shot(p, 'teacher-bank'); await go(p, '/teacher/new'); await shot(p, 'teacher-new'); });

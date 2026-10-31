@@ -1,21 +1,30 @@
 'use client';
 import { useState } from 'react';
 import { ImportBox } from '@/components/admin/ImportBox';
+import { CurriculumView } from '@/components/CurriculumView';
 import { useL } from '@/components/LangProvider';
 import { apiFetch } from '@/lib/browserApi';
+import { curriculumFramework, curriculumTree, type CoreAttitude, type CurriculumComp, type ProgramProfile } from '@/lib/curriculumTree';
 import { PROGRAM_COLUMNS } from '@/lib/sheetImport';
 
-export interface Competency { code: string; kind: 'unit' | 'element' | 'criterion'; parentCode: string | null; title: string; titleAr: string | null; safetyCritical: boolean; hours: number | null }
-export interface Program { id: string; code: string; name: string; nameAr: string | null; cohorts: number; workshops: number; competencies: Competency[] }
+export interface Competency extends CurriculumComp { safetyCritical: boolean; hours: number | null; description?: string | null; descriptionAr?: string | null }
+export interface Program {
+  id: string; code: string; programCode: string | null; name: string; nameAr: string | null; accent: string | null; profile: ProgramProfile | null;
+  cohorts: number; workshops: number; competencies: Competency[];
+}
 
 const KIND = { unit: ['Unit', 'وحدة'], element: ['Element', 'عنصر'], criterion: ['Criterion', 'معيار'] } as const;
 
-export function ProgramsClient({ initial }: { initial: Program[] }) {
+export function ProgramsClient({ initial, attitudes: initialAttitudes }: { initial: Program[]; attitudes: CoreAttitude[] }) {
   const { L, lang } = useL();
   const [programs, setPrograms] = useState(initial);
+  const [attitudes, setAttitudes] = useState(initialAttitudes);
   const [open, setOpen] = useState<string | null>(initial[0]?.id ?? null);
   const [err, setErr] = useState<string | null>(null);
-  const reload = async () => setPrograms((await apiFetch<{ programs: Program[] }>('/admin/programs')).programs);
+  const reload = async () => {
+    const r = await apiFetch<{ programs: Program[]; attitudes?: CoreAttitude[] }>('/admin/programs');
+    setPrograms(r.programs); if (r.attitudes) setAttitudes(r.attitudes);
+  };
   const fail = (e: unknown) => setErr((e as { message?: string })?.message ?? L('Could not save.', 'تعذر الحفظ.'));
   const name = (p: { name: string; nameAr: string | null }) => (lang === 'ar' && p.nameAr ? p.nameAr : p.name);
 
@@ -44,7 +53,7 @@ export function ProgramsClient({ initial }: { initial: Program[] }) {
         {err && <p className="notice notice-danger" role="alert">{err}</p>}
         <div className="tabs" role="tablist">
           {programs.map((p) => <button key={p.id} type="button" role="tab" aria-selected={open === p.id} className={open === p.id ? 'primary' : 'ghost'}
-            onClick={() => setOpen(p.id)}>{p.code} · {name(p)} <span className="muted small">({p.competencies.length})</span></button>)}
+            onClick={() => setOpen(p.id)}>{p.programCode ?? p.code} · {name(p)} <span className="muted small">({p.competencies.length})</span></button>)}
         </div>
         {programs.filter((p) => p.id === open).map((p) => {
           const units = p.competencies.filter((c) => c.kind === 'unit');
@@ -58,9 +67,13 @@ export function ProgramsClient({ initial }: { initial: Program[] }) {
               {kids(c.code).length > 0 && <ul className="plain">{kids(c.code).map((k) => row(k, 1))}</ul>}
             </li>
           );
+          const cur = curriculumTree(p.competencies, curriculumFramework(p.competencies));
           return (
             <div key={p.id}>
               <p className="muted small">{L(`${p.cohorts} cohort(s) · ${p.workshops} workshop(s)`, `${p.cohorts} مجموعة · ${p.workshops} ورشة`)}</p>
+              {cur.length > 0 && <CurriculumView name={{ en: p.name, ar: p.nameAr ?? p.name }} code={p.programCode} accent={p.accent} profile={p.profile} units={cur} attitudes={attitudes} />}
+              <details className="panel" open={cur.length === 0}>
+                <summary><b>{L('Edit skills (unit → element → criterion)', 'تعديل المهارات (وحدة ← عنصر ← معيار)')}</b></summary>
               {units.length ? <ul className="plain">{units.map((u) => row(u, 0))}</ul>
                 : <p className="notice">{L('No skills yet. Add a unit below or import the template.', 'لا توجد مهارات بعد. أضف وحدة بالأسفل أو استورد النموذج.')}</p>}
               <form className="form-row" action={(f) => void addSkill(p, f)}>
@@ -75,6 +88,7 @@ export function ProgramsClient({ initial }: { initial: Program[] }) {
                 <label className="field"><span>{L('Safety-critical', 'سلامة حرجة')}</span><input type="checkbox" name="safety" /></label>
                 <div className="form-actions"><button type="submit" className="primary">{L('Add skill', 'أضف مهارة')}</button></div>
               </form>
+              </details>
             </div>
           );
         })}
@@ -94,6 +108,12 @@ export function ProgramsClient({ initial }: { initial: Program[] }) {
 
       <ImportBox endpoint="/admin/programs/import" columns={PROGRAM_COLUMNS} sheet="Programmes" required={['programCode']}
         template={{ xlsx: '/templates/programmes-template.xlsx', csv: '/templates/programmes-template.csv' }} onDone={() => void reload()} />
+      <section className="panel">
+        <header className="panel-head"><h2>{L('WABYS curricula 2026', 'مناهج وابيز 2026')}</h2></header>
+        <p className="muted small">{L('All 8 programmes of the WABYS manual (knowledge, skills and attitudes, in Arabic and English) are already loaded. The same file is here to re-import or edit in Excel.',
+          'التخصصات الثمانية في دليل وابيز (المعارف والمهارات والاتجاهات، بالعربية والإنجليزية) محمّلة بالفعل. نفس الملف موجود هنا لإعادة الاستيراد أو التعديل في Excel.')}</p>
+        <p><a className="button" href="/templates/wabys-curricula-2026.xlsx" download>{L('Download curricula (Excel)', 'تنزيل المناهج (Excel)')}</a></p>
+      </section>
     </div>
   );
 }

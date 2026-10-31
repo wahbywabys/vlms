@@ -258,3 +258,26 @@ ul.plain li { padding: 4px 0; }
   .help-guide { break-inside: avoid; border: 1px solid #999; }
   .help-shot { width: 180px; }
 }
+
+/* Programme curriculum (WABYS manual): year → K/S/A → item → criteria */
+.curriculum { display: grid; gap: 16px; --accent: var(--blue); }
+.cur-profile { border-top: 4px solid var(--accent); display: grid; gap: 10px; }
+.cur-facts { display: grid; grid-template-columns: minmax(140px, max-content) 1fr; gap: 6px 16px; margin: 0; }
+.cur-facts dt { font-weight: 600; color: var(--ink-2); }
+.cur-facts dd { margin: 0; }
+@media (max-width: 640px) { .cur-facts { grid-template-columns: 1fr; } .cur-facts dd { margin-bottom: 6px; } }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chips button.chip { border: 1px solid var(--rule); background: var(--sheet); cursor: pointer; min-height: 36px; }
+.cur-filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 8px; }
+.cur-filters input[type=search] { flex: 1 1 220px; min-width: 0; }
+.cur-unit { margin-top: 14px; }
+.cur-unit h3 { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; font-size: 16px; margin: 0 0 6px; padding-bottom: 6px; border-bottom: 2px solid var(--rule); }
+.ksa-badge { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 4px; border-radius: 6px; font: 700 13px/1 var(--f-display); color: #fff; background: var(--accent); }
+.ksa-K .ksa-badge { background: #1f4386; } .ksa-S .ksa-badge { background: #f06721; } .ksa-A .ksa-badge { background: #1f7a4d; }
+.cur-items > li { border-bottom: 1px solid var(--rule); }
+.cur-items details > summary { cursor: pointer; padding: 10px 2px; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; list-style-position: inside; }
+.cur-items .code { color: var(--ink-3); }
+.cur-tag { display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 12px; background: var(--sunk); border: 1px solid var(--rule); white-space: nowrap; }
+.cur-criteria { margin: 0 0 12px; padding-inline-start: 22px; display: grid; gap: 4px; }
+.cur-attitudes { display: grid; gap: 8px; }
+.cur-attitudes .ksa-badge { background: #1f7a4d; }

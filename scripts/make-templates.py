@@ -7,7 +7,7 @@
   programmes-template.xlsx         programmes (specialisations) and their skills tree
 
 The machine types (and the 3D twin each maps to) are read from
-db/migrations/004_centers_programs_machines.sql, so the dropdown always
+db/migrations/004_centers_programs_machines.sql and 006_wabys_curricula.sql, so the dropdown always
 matches what the import accepts. Column headers are "English\nالعربية";
 the import reads either line, so a translated or reordered sheet still works.
 """
@@ -22,15 +22,22 @@ from openpyxl.worksheet.datavalidation import DataValidation
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'app' / 'public' / 'templates'
 NAVY, ORANGE, SOFT, GREY = '14234C', 'F06721', 'FDEBDD', 'F3F4F7'
-TRADES = {'cnc': 'CNC machining', 'auto': 'Automotive', 'elec': 'Electrical', 'weld': 'Welding', None: 'Any'}
+TRADES = {'cnc': 'CNC machining', 'auto': 'Automotive', 'elec': 'Electrical', 'weld': 'Welding', 'rmg': 'Garments',
+          'eim': 'Industrial maintenance', 'prt': 'Printing', 'ait': 'AI for technicians', 'cws': 'Work skills', None: 'Any'}
 
-sql = (ROOT / 'db' / 'migrations' / '004_centers_programs_machines.sql').read_text(encoding='utf-8')
 TYPES = []
-for m in re.finditer(r"\('([a-z_]+)',\s+(NULL|'[a-z]+'),\s+'([^']+)',\s+'([^']+)',\s+(NULL|'[a-z-]+'),\s+(NULL|'[a-z]+'),", sql):
-    tid, trade, en, ar, model, match = m.groups()
-    unq = lambda v: None if v == 'NULL' else v.strip("'")
-    TYPES.append({'id': tid, 'trade': unq(trade), 'en': en, 'ar': ar, 'model': unq(model), 'match': unq(match)})
-assert len(TYPES) >= 10, 'machine types not found in the migration'
+for mig in ['004_centers_programs_machines.sql', '006_wabys_curricula.sql']:
+    sql = (ROOT / 'db' / 'migrations' / mig).read_text(encoding='utf-8')
+    for m in re.finditer(r"\('([a-z_]+)',\s+(NULL|'[a-z]+'),\s+'([^']+)',\s+'([^']+)',\s+(NULL|'[a-z-]+'),\s+(NULL|'[a-z]+'),", sql):
+        tid, trade, en, ar, model, match = m.groups()
+        unq = lambda v: None if v == 'NULL' else v.strip("'")
+        TYPES.append({'id': tid, 'trade': unq(trade), 'en': en, 'ar': ar, 'model': unq(model), 'match': unq(match)})
+    # Later migrations point existing types at new 3D twins.
+    for m in re.finditer(r"UPDATE machine_types SET model_id = '([a-z-]+)', twin_match = '([a-z]+)' WHERE id = '([a-z_]+)'", sql):
+        for t in TYPES:
+            if t['id'] == m.group(3):
+                t['model'], t['match'] = m.group(1), m.group(2)
+assert len(TYPES) >= 24, 'machine types not found in the migrations'
 
 thin = Side(style='thin', color='C9CED8')
 BOX = Border(left=thin, right=thin, top=thin, bottom=thin)
@@ -184,12 +191,16 @@ P_COLS = [
     ('Skill title (Arabic)', 'عنوان المهارة بالعربية', 44, False, 'titleAr'),
     ('Safety-critical', 'سلامة حرجة', 12, False, 'safetyCritical'),
     ('Hours', 'الساعات', 10, False, 'hours'),
+    ('Domain (K/S/A)', 'المجال (معرفة/مهارة/اتجاه)', 12, False, 'ksa'),
+    ('Year', 'السنة', 8, False, 'year'),
+    ('Target level', 'مستوى الأداء المستهدف', 12, False, 'targetLevel'),
+    ('Core attitude', 'الاتجاه الأساسي', 12, False, 'coreAttitude'),
 ]
 P_EXAMPLES = [
-    ['PLMB', 'Plumbing', 'السباكة', '', '', '', '', '', '', ''],
-    ['PLMB', '', '', 'PLMB-U01', 'Unit', '', 'Install water supply pipework', 'تركيب شبكات تغذية المياه', 'No', 40],
-    ['PLMB', '', '', 'PLMB-U01-E1', 'Element', 'PLMB-U01', 'Cut and join copper pipe', 'قطع ووصل المواسير النحاس', 'No', 12],
-    ['PLMB', '', '', 'PLMB-U01-E1-PC1', 'Criterion', 'PLMB-U01-E1', 'Uses the blowtorch safely', 'يستخدم لمبة اللحام بأمان', 'Yes', ''],
+    ['PLMB', 'Plumbing', 'السباكة', '', '', '', '', '', '', '', '', '', '', ''],
+    ['PLMB', '', '', 'PLMB-Y1-S', 'Unit', '', 'Year 1 · Practical skills', 'السنة الأولى · المهارات العملية', 'No', '', 'S', 1, '', ''],
+    ['PLMB', '', '', 'PLMB-Y1-S-01', 'Element', 'PLMB-Y1-S', 'Cut and join copper pipe', 'قطع ووصل المواسير النحاس', 'No', 12, 'S', 1, 'L2', ''],
+    ['PLMB', '', '', 'PLMB-Y1-S-01.1', 'Criterion', 'PLMB-Y1-S-01', 'Uses the blowtorch safely', 'يستخدم لمبة اللحام بأمان', 'Yes', '', 'S', 1, '', ''],
 ]
 wb = Workbook()
 ins = wb.active
@@ -201,6 +212,8 @@ instructions(ins, 'VTC_LMS · Programmes and skills template · نموذج ال�
     ('Write each parent above its children: a Unit row before its Elements, an Element row before its Criteria. Parent code is '
      'empty for a Unit. Mark a skill Safety-critical "Yes" when failing it must stop the learner (it then gates machine access).', False),
     ('Importing the same file again updates titles and hours in place; nothing is duplicated.', False),
+    ('Optional, as in the WABYS curriculum manual: Domain K (knowledge), S (skill) or A (attitude); Year 1–3; Target level L1–L4 for '
+     'skills; Core attitude A1–A7 for attitudes. The full manual is in wabys-curricula-2026.xlsx.', False),
     ('طريقة العمل', True),
     ('لكل تخصص شجرة مهارات: وحدة ← عنصر ← معيار أداء. سطر واحد لكل مهارة. السطر الذي يحتوي أعمدة التخصص فقط ينشئ التخصص أو يعدّل اسمه. '
      'اكتب المستوى الأعلى قبل ما تحته، واترك "رمز المستوى الأعلى" فارغًا للوحدة. اختر "Yes" في السلامة الحرجة للمهارة التي يمنع الرسوب فيها المتدرب من الاستمرار.', False),
@@ -210,9 +223,11 @@ instructions(ins, 'VTC_LMS · Programmes and skills template · نموذج ال�
 ws = wb.create_sheet('Programmes')
 header(ws, P_COLS)
 body_style(ws, P_COLS)
-lists_sheet(wb, 'Lists', [['Unit', 'Element', 'Criterion'], ['Yes', 'No']])
+lists_sheet(wb, 'Lists', [['Unit', 'Element', 'Criterion'], ['Yes', 'No'], ['K', 'S', 'A'], ['L1', 'L2', 'L3', 'L4']])
 dropdown(ws, 'E', '=Lists!$A$1:$A$3')
 dropdown(ws, 'I', '=Lists!$B$1:$B$2')
+dropdown(ws, 'K', '=Lists!$C$1:$C$3')
+dropdown(ws, 'M', '=Lists!$D$1:$D$4')
 wb.active = 1
 wb.save(OUT / 'programmes-template.xlsx')
 write_csv(OUT / 'programmes-template.csv', P_COLS, P_EXAMPLES)

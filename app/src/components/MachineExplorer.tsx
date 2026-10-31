@@ -97,32 +97,35 @@ export interface ExplorerStrings {
   workshop?: string; studio?: string; student?: string; studentOff?: string; third?: string; first?: string;
   walkTo?: string; keysHint?: string; sectionHint?: string;
   labels?: string; whatItIs?: string; whatItDoes?: string; specs?: string;
+  vrDragNote?: string;
 }
 const EN: Required<ExplorerStrings> = {
   digitalTwin: 'Digital twin', viewModes: 'View modes', xray: 'X-ray', cutaway: 'Section', run: 'Run', stop: 'Stop',
   assemble: 'Assemble', explode: 'Explode', explodedView: 'Exploded view', component: 'Component',
   datasheet: 'Open datasheet →', hint: 'Tap any part, its label or its numbered pin for a briefing: what it is, what it does and its specification.',
   vr: 'Enter VR', vrExit: 'Exit VR',
-  vrStereoNote: 'No VR headset found, so this is the stereo view: put the phone in a VR viewer (Cardboard-style) and drag to look around.',
+  vrStereoNote: 'No VR headset found, so this is the stereo view: put the phone in a VR viewer (Cardboard-style) and turn your head to look around. Tap the screen to re-centre.',
   vrHeadset: 'Immersive VR on your headset. Take it off or press Exit VR to come back.',
   section: 'Section view', cutOff: 'Off', cutLong: 'Lengthwise', cutCross: 'Across', cutPlan: 'Plan', cutQuarter: 'Quarter',
   cutOffset: 'Plane position', cutAngle: 'Plane angle', views: 'Camera', viewIso: 'Iso', viewFront: 'Front', viewSide: 'Side', viewTop: 'Top',
   workshop: 'Workshop', studio: 'Studio', student: 'WABYS student', studentOff: 'Off', third: '3rd person', first: '1st person',
   walkTo: 'Walk to', keysHint: 'W A S D or arrows to walk · drag to look', sectionHint: 'Hatched faces are where the plane cuts solid metal.',
   labels: 'Labels', whatItIs: 'What it is', whatItDoes: 'What it does', specs: 'Specification',
+  vrDragNote: 'Stereo view. Motion sensors are off, so drag to look around. On an iPhone, open the centre\'s https:// address and allow motion access to look around by turning your head.',
 };
 const AR: Required<ExplorerStrings> = {
   digitalTwin: 'التوأم الرقمي', viewModes: 'أوضاع العرض', xray: 'أشعة', cutaway: 'مقطع', run: 'تشغيل', stop: 'إيقاف',
   assemble: 'تجميع', explode: 'تفكيك', explodedView: 'العرض المفكك', component: 'المكوّن',
   datasheet: 'افتح ورقة البيانات ←', hint: 'اضغط أي قطعة أو اسمها أو دبوسها المرقّم لعرض نبذة عنها: ما هي ووظيفتها ومواصفاتها.',
   vr: 'دخول الواقع الافتراضي', vrExit: 'خروج من الواقع الافتراضي',
-  vrStereoNote: 'لا توجد نظارة واقع افتراضي، لذا هذا عرض مجسم مزدوج: ضع الهاتف في نظارة من نوع Cardboard واسحب للنظر حولك.',
+  vrStereoNote: 'لا توجد نظارة واقع افتراضي، لذا هذا عرض مجسم مزدوج: ضع الهاتف في نظارة من نوع Cardboard وحرّك رأسك للنظر حولك. اضغط الشاشة لإعادة التوسيط.',
   vrHeadset: 'واقع افتراضي غامر على نظارتك. انزعها أو اضغط الخروج للعودة.',
   section: 'عرض المقطع', cutOff: 'بدون', cutLong: 'طولي', cutCross: 'عرضي', cutPlan: 'أفقي', cutQuarter: 'ربع مقطع',
   cutOffset: 'موضع المستوى', cutAngle: 'زاوية المستوى', views: 'الكاميرا', viewIso: 'منظور', viewFront: 'أمامي', viewSide: 'جانبي', viewTop: 'علوي',
   workshop: 'الورشة', studio: 'استوديو', student: 'متدرب WABYS', studentOff: 'إخفاء', third: 'منظور ثالث', first: 'بعيني المتدرب',
   walkTo: 'اذهب إلى', keysHint: 'W A S D أو الأسهم للمشي · اسحب للنظر', sectionHint: 'الأوجه المخططة هي حيث يقطع المستوى المعدن المصمت.',
   labels: 'الأسماء', whatItIs: 'ما هو', whatItDoes: 'وظيفته', specs: 'المواصفات',
+  vrDragNote: 'عرض مجسم مزدوج. حساسات الحركة غير مفعلة، لذا اسحب للنظر حولك. على الآيفون افتح عنوان المركز الذي يبدأ بـ https:// واسمح بالوصول إلى الحركة لتنظر حولك بتحريك رأسك.',
 };
 export const explorerStrings = (lang: 'en' | 'ar') => (lang === 'ar' ? AR : EN);
 
@@ -646,9 +649,88 @@ export function useImmersiveVrSupported() {
   return ok;
 }
 
+type DeviceOrientationPermission = { requestPermission?: () => Promise<'granted' | 'denied'> };
+
+/**
+ * Ask for motion-sensor access. iOS Safari needs this from a tap, and only
+ * fires orientation events on a secure (https) page. Resolves true when the
+ * sensors can be used.
+ */
+export async function requestMotionAccess(): Promise<boolean> {
+  if (typeof window === 'undefined' || !('DeviceOrientationEvent' in window) || !window.isSecureContext) return false;
+  const DOE = window.DeviceOrientationEvent as unknown as DeviceOrientationPermission;
+  if (typeof DOE.requestPermission !== 'function') return true;
+  try { return (await DOE.requestPermission()) === 'granted'; } catch { return false; }
+}
+
+const Z_AXIS = new THREE.Vector3(0, 0, 1);
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+/** Phone lying flat looks down -Z; turn it so it looks out of the back of the screen. */
+const SCREEN_TO_CAMERA = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
+
+function screenAngle() {
+  const so = typeof screen !== 'undefined' ? screen.orientation : undefined;
+  const legacy = (window as Window & { orientation?: number }).orientation;
+  return THREE.MathUtils.degToRad(so?.angle ?? legacy ?? 0);
+}
+
+/** Device orientation (alpha, beta, gamma in degrees) to a camera quaternion, as three's DeviceOrientationControls does. */
+function deviceQuaternion(out: THREE.Quaternion, a: number, b: number, g: number, orient: number) {
+  const euler = new THREE.Euler(THREE.MathUtils.degToRad(b), THREE.MathUtils.degToRad(a), -THREE.MathUtils.degToRad(g), 'YXZ');
+  out.setFromEuler(euler).multiply(SCREEN_TO_CAMERA);
+  return out.multiply(new THREE.Quaternion().setFromAxisAngle(Z_AXIS, -orient));
+}
+
+/**
+ * Turns the camera with the phone while stereo VR is on, so a Cardboard-style
+ * viewer works like a headset: look around by turning your head. The first
+ * reading is lined up with where the camera was already looking, and a tap
+ * on the screen re-centres. Orbit controls are paused meanwhile.
+ */
+function useHeadTracking(on: boolean) {
+  const { camera, gl, controls } = useThree();
+  const latest = useRef<{ a: number; b: number; g: number } | null>(null);
+  const yaw = useRef<number | null>(null);
+  useEffect(() => {
+    if (!on) return;
+    const orbit = controls as unknown as OrbitImpl | null;
+    const saved = camera.quaternion.clone();
+    const wasEnabled = orbit?.enabled ?? true;
+    const onOrient = (e: DeviceOrientationEvent) => {
+      if (e.alpha == null || e.beta == null || e.gamma == null) return;
+      latest.current = { a: e.alpha, b: e.beta, g: e.gamma };
+      if (orbit) orbit.enabled = false;
+    };
+    const recentre = () => { yaw.current = null; };
+    window.addEventListener('deviceorientation', onOrient);
+    gl.domElement.addEventListener('click', recentre);
+    return () => {
+      window.removeEventListener('deviceorientation', onOrient);
+      gl.domElement.removeEventListener('click', recentre);
+      if (latest.current) camera.quaternion.copy(saved);
+      latest.current = null; yaw.current = null;
+      if (orbit) { orbit.enabled = wasEnabled; orbit.update(); }
+    };
+  }, [on, camera, gl, controls]);
+
+  const q = useMemo(() => new THREE.Quaternion(), []);
+  const fix = useMemo(() => new THREE.Quaternion(), []);
+  const fwd = useMemo(() => new THREE.Vector3(), []);
+  /** Heading (rotation about Y) of a camera looking along -Z after q. */
+  const heading = (quat: THREE.Quaternion) => { fwd.set(0, 0, -1).applyQuaternion(quat); return Math.atan2(-fwd.x, -fwd.z); };
+  return () => {
+    const d = latest.current;
+    if (!on || !d) return;
+    deviceQuaternion(q, d.a, d.b, d.g, screenAngle());
+    if (yaw.current == null) yaw.current = heading(camera.quaternion) - heading(q);
+    camera.quaternion.copy(fix.setFromAxisAngle(Y_AXIS, yaw.current).multiply(q));
+  };
+}
+
 /** Inside the Canvas: opens the XR session, or renders side-by-side stereo. */
 function VrDriver({ mode, onEnd }: { mode: VrMode; onEnd: () => void }) {
   const { gl, scene, camera, size } = useThree();
+  const track = useHeadTracking(mode === 'stereo');
   const effect = useMemo(() => new StereoEffect(gl), [gl]);
   useEffect(() => { effect.setSize(size.width, size.height); }, [effect, size]);
 
@@ -666,7 +748,7 @@ function VrDriver({ mode, onEnd }: { mode: VrMode; onEnd: () => void }) {
   }, [mode, gl, onEnd]);
 
   // Rendering with priority 1 takes over from R3F's own render while stereo is on.
-  useFrame(() => { if (mode === 'stereo') effect.render(scene, camera); }, mode === 'stereo' ? 1 : 0);
+  useFrame(() => { if (mode === 'stereo') { track(); effect.render(scene, camera); } }, mode === 'stereo' ? 1 : 0);
   useEffect(() => {
     if (mode !== 'stereo') return;
     return () => { gl.setScissorTest(false); gl.setViewport(0, 0, size.width, size.height); };
@@ -674,8 +756,10 @@ function VrDriver({ mode, onEnd }: { mode: VrMode; onEnd: () => void }) {
   return null;
 }
 
-export function VrButton({ mode, setMode, strings, onChange }: {
+export function VrButton({ mode, setMode, strings, onChange, onMotion }: {
   mode: VrMode; setMode: (m: VrMode) => void; strings: ExplorerStrings; onChange?: (on: boolean, kind: VrMode) => void;
+  /** Told whether the phone's motion sensors will steer the stereo view. */
+  onMotion?: (ok: boolean) => void;
 }) {
   const immersive = useImmersiveVrSupported();
   const on = mode !== 'off';
@@ -684,6 +768,8 @@ export function VrButton({ mode, setMode, strings, onChange }: {
       title={immersive ? strings.vrHeadset : strings.vrStereoNote}
       onClick={() => {
         const next: VrMode = on ? 'off' : immersive ? 'immersive' : 'stereo';
+        // Ask inside the tap: iOS only shows the motion prompt from a user gesture.
+        if (next === 'stereo') void requestMotionAccess().then((ok) => onMotion?.(ok));
         setMode(next);
         onChange?.(next !== 'off', next);
       }}>
@@ -703,6 +789,7 @@ export function MachineExplorer({ title, assetTag, parts, onEvent, height = 560,
   const [cut, setCut] = useState<SectionSpec>({ mode: 'off', offset: 0, angle: 0 });
   const [running, setRunning] = useState(false);
   const [vr, setVr] = useState<VrMode>('off');
+  const [motion, setMotion] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHovered] = useState<string | null>(null);
   const [shop, setShop] = useState(true);
@@ -801,7 +888,7 @@ export function MachineExplorer({ title, assetTag, parts, onEvent, height = 560,
             <button aria-pressed={running} onClick={() => toggle('kinetic', !running, () => setRunning(!running))}>
               {running ? t.stop : t.run}
             </button>
-            <VrButton mode={vr} setMode={setVr} strings={t} onChange={(on) => toggle('vr', on)} />
+            <VrButton mode={vr} setMode={setVr} strings={t} onChange={(on) => toggle('vr', on)} onMotion={setMotion} />
           </div>
         </header>
 
@@ -859,7 +946,7 @@ export function MachineExplorer({ title, assetTag, parts, onEvent, height = 560,
           </div>
         )}
         {walking && <WalkPad keys={keys} />}
-        {vr === 'stereo' && <p className="mx-vr-note" role="status">{t.vrStereoNote}</p>}
+        {vr === 'stereo' && <p className="mx-vr-note" role="status">{motion ? t.vrStereoNote : t.vrDragNote}</p>}
 
         <footer className="mx-controls">
           <button onClick={() => animateTo(0)}>{t.assemble}</button>
