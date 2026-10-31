@@ -98,6 +98,8 @@ export const GUIDES: HelpGuide[] = [
         'اضغط "المعمل الافتراضي". اختار ماكينة وحرّكها بصباعك، أو اتفرج على درس، أو جرّب تحدي السلامة.') },
       { t: tx('Tap any part of the machine to read what it is and what it does. "Section" cuts the machine open so you can see inside.',
         'اضغط على أي جزء في الماكينة علشان تقرا هو إيه وبيعمل إيه. زرار "مقطع" بيفتح الماكينة علشان تشوف جوه.') },
+      { t: tx('VR with a phone viewer (Cardboard-style): open the centre\'s https:// address on the phone, tap "Enter VR" and allow motion access. Turn the phone sideways, put it in the viewer and turn your head to look around. Tap the screen to re-centre.',
+        'الواقع الافتراضي بنظارة موبايل (زي Cardboard): افتح عنوان المركز اللي بيبدأ بـ https:// على الموبايل، اضغط "دخول الواقع الافتراضي" واسمح بالوصول للحركة. لف الموبايل بالعرض وحطه في النظارة وحرّك راسك علشان تبص حواليك. اضغط الشاشة علشان ترجّع المنظر قدامك.') },
       { t: tx('In "Safety simulator", choose your PPE and do the job step by step. A wrong step shows what happens in a real workshop; tap "Rewind and try again" and do it safely.',
         'في "محاكي السلامة" اختار معدات الوقاية واعمل المهمة خطوة بخطوة. لو خطوة غلط هتشوف اللي بيحصل في الورشة الحقيقية؛ اضغط "ارجع وحاول مرة أخرى" واعملها بأمان.') },
       { t: tx('In the fault test, find what is wrong with the machine safely. Your score comes at the end. (Some programmes have no fault test yet.)',
