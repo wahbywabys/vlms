@@ -22,8 +22,8 @@ flows, DDL and screens) is in [docs/modules.md](docs/modules.md).
 | `db/demo.sql` | Demo institution: five sign-in accounts, a cohort of 12, three weeks of history |
 | `db/migrations/` | `001_trades.sql` (four trades), `002_workshop_wbl_assessment.sql` (the modules above) |
 | `db/demo_modules.sql` | Demo data for the modules: machines and pre-checks, OJT shifts, schematics, parametric items, risk signals |
-| `db/demo_curricula.sql` | Demo cohorts for the WABYS manual programmes (student.rmg@, student.eim@, student.prt@, student.ait@, student.cws@) |
-| `db/curricula/wabys-2026.json` | The WABYS curriculum manual as data (8 programmes, K/S/A, Arabic and English); see `docs/curricula.md` |
+| `db/demo_curricula.sql` | Demo cohorts for the WABYS manual programmes (student.rmg@, .eim@, .prt@, .ait@, .cws@, and Rev 1.1: .iel@, .csn@, .rac@, .ham@, .oeq@, .ave@, .iem@) |
+| `db/curricula/wabys-2026.json` | The WABYS curriculum manual Rev 1.1 as data (15 programmes, K/S/A, shared ETF/CPM units, study systems A/B, Arabic and English); see `docs/curricula.md` |
 | `docs/` | Architecture and UI blueprint |
 | `web/` | The clickable prototype and the 3D `MachineExplorer` it shares with the app |
 | `app/src/components/modules/` | The module screens (React + Tailwind), shared with the prototype through `scripts/sync-modules.sh` |
