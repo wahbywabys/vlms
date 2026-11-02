@@ -99,11 +99,12 @@ function App() {
       <div className="labs-switch" role="radiogroup">
         {tab === '3d'
           ? prog.models.map((m) => (
-            <button key={m.id} type="button" role="radio" aria-checked={m.id === model.id} onClick={() => setModelId(m.id)}>
+            <button key={m.id} type="button" role="radio" aria-checked={m.id === model.id} onClick={() => setModelId(m.id)}
+              className={m.id.startsWith('tools-') ? 'is-tools' : 'is-machine'}>
               <b>{m.title[lang]}</b><small>{m.assetTag}</small>
             </button>))
           : jobs.map((j) => (
-            <button key={j.id} type="button" role="radio" aria-checked={j.id === job?.id} onClick={() => setJobId(j.id)}>
+            <button key={j.id} type="button" role="radio" aria-checked={j.id === job?.id} onClick={() => setJobId(j.id)} className="is-job">
               <b>{j.title[lang]}</b><small>{j.model.title[lang]}</small>
             </button>))}
       </div>
@@ -125,10 +126,10 @@ function App() {
       <section className="labs-help">
         <h2>{L('How to use it', 'طريقة الاستخدام')}</h2>
         <ul>
-          <li>{L('Drag to turn the machine, pinch or scroll to zoom. Tap any part, label or numbered pin for what it is, what it does and its safety note.', 'اسحب لتدوير الماكينة، وقرّب بإصبعين أو بعجلة الفأرة. اضغط على أي جزء أو رقم لتعرف ما هو وماذا يفعل وتعليمات السلامة.')}</li>
-          <li>{L('The tool board holds the trade\'s hand tools and instruments: tap each one to learn it.', 'لوحة العدد فيها العدد اليدوية وأجهزة القياس للتخصص: اضغط على كل أداة لتتعلمها.')}</li>
-          <li>{L('VR: tap "Enter VR". On a headset the machine stands in front of you at real size. On a phone, turn it sideways, put it in a Cardboard viewer and turn your head (motion needs the page opened over https).', 'الواقع الافتراضي: اضغط «دخول الواقع الافتراضي». في النظارة تقف الماكينة أمامك بحجمها الحقيقي. على الهاتف أدره أفقيًا وضعه في نظارة Cardboard وحرّك رأسك (تتبع الحركة يحتاج فتح الصفحة عبر https).')}</li>
-          <li>{L('Safety simulator: choose your PPE, then pick the steps in the order you think is safe. A wrong step shows what happens in a real workshop.', 'محاكي السلامة: اختر معدات الوقاية ثم اختر الخطوات بالترتيب الآمن. الخطوة الخاطئة تُظهر ما يحدث في الورشة الحقيقية.')}</li>
+          <li className="h-3d">{L('Drag to turn the machine, pinch or scroll to zoom. Tap any part, label or numbered pin for what it is, what it does and its safety note.', 'اسحب لتدوير الماكينة، وقرّب بإصبعين أو بعجلة الفأرة. اضغط على أي جزء أو رقم لتعرف ما هو وماذا يفعل وتعليمات السلامة.')}</li>
+          <li className="h-tools">{L('The tool board holds the trade\'s hand tools and instruments: tap each one to learn it.', 'لوحة العدد فيها العدد اليدوية وأجهزة القياس للتخصص: اضغط على كل أداة لتتعلمها.')}</li>
+          <li className="h-vr">{L('VR: tap "Enter VR". On a headset the machine stands in front of you at real size. On a phone, turn it sideways, put it in a Cardboard viewer and turn your head (motion needs the page opened over https).', 'الواقع الافتراضي: اضغط «دخول الواقع الافتراضي». في النظارة تقف الماكينة أمامك بحجمها الحقيقي. على الهاتف أدره أفقيًا وضعه في نظارة Cardboard وحرّك رأسك (تتبع الحركة يحتاج فتح الصفحة عبر https).')}</li>
+          <li className="h-safety">{L('Safety simulator: choose your PPE, then pick the steps in the order you think is safe. A wrong step shows what happens in a real workshop.', 'محاكي السلامة: اختر معدات الوقاية ثم اختر الخطوات بالترتيب الآمن. الخطوة الخاطئة تُظهر ما يحدث في الورشة الحقيقية.')}</li>
         </ul>
       </section>
     </div>
