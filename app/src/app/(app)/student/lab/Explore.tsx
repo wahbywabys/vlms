@@ -24,7 +24,8 @@ export default function Explore({ trade, active }: { trade: string; active: bool
       {models.length > 1 && (
         <div className="model-switch" role="radiogroup" aria-label={L('Choose a machine', 'اختر الماكينة')}>
           {models.map((m) => (
-            <button key={m.id} type="button" role="radio" aria-checked={m.id === modelId} onClick={() => choose(m.id)}>
+            <button key={m.id} type="button" role="radio" aria-checked={m.id === modelId} onClick={() => choose(m.id)}
+              className={m.id.startsWith('tools-') ? 'is-tools' : 'is-machine'}>
               <b>{pick(m.title).split(' · ')[0]}</b><small>{m.assetTag}</small>
             </button>
           ))}

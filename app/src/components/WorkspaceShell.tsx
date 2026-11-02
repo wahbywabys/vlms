@@ -17,6 +17,7 @@ export const WORKSPACE: Record<WorkspaceKey, { role: Role; label: Txt; home: str
       { href: '/student/curriculum', label: tx('My programme', 'برنامجي') },
       { href: '/student/private', label: tx('🔒 Private', '🔒 خاص') },
       { href: '/student/lab', label: tx('V-Lab', 'المعمل الافتراضي') },
+      { href: '/student/labs', label: tx('3D & VR Labs', 'معامل 3D والواقع الافتراضي') },
       { href: '/student/machine', label: tx('Machine access', 'تشغيل الماكينة') },
       { href: '/student/quiz', label: tx('Theory quiz', 'اختبار نظري') },
       { href: '/student/assess', label: tx('Applied assessment', 'تقييم تطبيقي') },
@@ -31,6 +32,7 @@ export const WORKSPACE: Record<WorkspaceKey, { role: Role; label: Txt; home: str
       { href: '/trainer/machines', label: tx('Machines', 'الماكينات') },
       { href: '/trainer/stores', label: tx('Stores', 'المخزن') },
       { href: '/trainer/vlab', label: tx('V-Lab exams', 'امتحانات المعمل') },
+      { href: '/trainer/labs', label: tx('3D & VR Labs', 'معامل 3D والواقع الافتراضي') },
       { href: '/trainer/learners', label: tx('Learners', 'المتدربون') },
       { href: '/trainer/risk', label: tx('Early warning', 'الإنذار المبكر') },
     ],
@@ -43,11 +45,15 @@ export const WORKSPACE: Record<WorkspaceKey, { role: Role; label: Txt; home: str
       { href: '/teacher/parametric', label: tx('Parameterised item', 'سؤال بمتغيرات') },
       { href: '/teacher/matrix', label: tx('Competency matrix', 'مصفوفة الجدارات') },
       { href: '/teacher/curriculum', label: tx('Curriculum', 'المنهج') },
+      { href: '/teacher/labs', label: tx('3D & VR Labs', 'معامل 3D والواقع الافتراضي') },
     ],
   },
   supervisor: {
     role: 'industry_supervisor', label: tx('Workplace supervisor', 'مشرف موقع العمل'), home: '/supervisor',
-    sections: [{ href: '/supervisor', label: tx('Logbook sign-offs', 'اعتماد سجلات التدريب'), exact: true }],
+    sections: [
+      { href: '/supervisor', label: tx('Logbook sign-offs', 'اعتماد سجلات التدريب'), exact: true },
+      { href: '/supervisor/labs', label: tx('3D & VR Labs', 'معامل 3D والواقع الافتراضي') },
+    ],
   },
   director: {
     role: 'director', label: tx('Director', 'المدير'), home: '/director', alerts: '/director', trades: 'all',
@@ -58,6 +64,7 @@ export const WORKSPACE: Record<WorkspaceKey, { role: Role; label: Txt; home: str
       { href: '/director/risk', label: tx('Early warning', 'الإنذار المبكر') },
       { href: '/director/programs', label: tx('Programmes & skills', 'التخصصات والمهارات') },
       { href: '/director/machines', label: tx('Machine register', 'سجل الماكينات') },
+      { href: '/director/labs', label: tx('3D & VR Labs', 'معامل 3D والواقع الافتراضي') },
     ],
   },
 };

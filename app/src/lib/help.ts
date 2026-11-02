@@ -100,6 +100,8 @@ export const GUIDES: HelpGuide[] = [
         'اضغط على أي جزء في الماكينة علشان تقرا هو إيه وبيعمل إيه. زرار "مقطع" بيفتح الماكينة علشان تشوف جوه.') },
       { t: tx('Open the "Tool board" of your trade to learn your hand tools and instruments: tap a tool for what it is, what it does and how to use it safely. "Explode" lifts every tool off the board.',
         'افتح "لوحة العدد" بتاعة تخصصك علشان تتعلم العدد اليدوية وأجهزة القياس: اضغط على أي أداة علشان تعرف هي إيه وبتعمل إيه وتستخدمها إزاي بأمان. زرار "تفكيك" بيشيل كل العدد من على اللوحة.') },
+      { t: tx('"3D & VR Labs" in the menu opens the labs of all 15 programmes: tap any programme card to see its machines, tool board and safety jobs, even outside your own trade. Trainers, teachers, supervisors and the director have the same page.',
+        '"معامل 3D والواقع الافتراضي" في القايمة بتفتح معامل الـ 15 تخصص: اضغط على كارت أي تخصص علشان تشوف ماكيناته ولوحة العدد ومهام السلامة، حتى لو مش تخصصك. المدربين والمدرسين والمشرفين والمدير عندهم نفس الصفحة.') },
       { t: tx('VR with a phone viewer (Cardboard-style): open the centre\'s https:// address on the phone, tap "Enter VR" and allow motion access. Turn the phone sideways, put it in the viewer and turn your head to look around. Tap the screen to re-centre.',
         'الواقع الافتراضي بنظارة موبايل (زي Cardboard): افتح عنوان المركز اللي بيبدأ بـ https:// على الموبايل، اضغط "دخول الواقع الافتراضي" واسمح بالوصول للحركة. لف الموبايل بالعرض وحطه في النظارة وحرّك راسك علشان تبص حواليك. اضغط الشاشة علشان ترجّع المنظر قدامك.') },
       { t: tx('In "Safety simulator", choose your PPE and do the job step by step. A wrong step shows what happens in a real workshop; tap "Rewind and try again" and do it safely.',

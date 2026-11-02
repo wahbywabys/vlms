@@ -24,7 +24,7 @@ export default function Safety({ trade, active }: { trade: string; active: boole
       {jobs.length > 1 && (
         <div className="model-switch" role="radiogroup" aria-label={L('Choose a job', 'اختر المهمة')}>
           {jobs.map((s) => (
-            <button key={s.id} type="button" role="radio" aria-checked={s.id === scenario.id} onClick={() => setId(s.id)}>
+            <button key={s.id} type="button" role="radio" aria-checked={s.id === scenario.id} onClick={() => setId(s.id)} className="is-job">
               <b>{pick(s.title)}</b><small>{pick(s.model.title).split(' · ')[0]}</small>
             </button>
           ))}
