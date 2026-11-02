@@ -98,6 +98,8 @@ export interface ExplorerStrings {
   walkTo?: string; keysHint?: string; sectionHint?: string;
   labels?: string; whatItIs?: string; whatItDoes?: string; specs?: string;
   vrDragNote?: string;
+  /** The button that shows or hides the view options (presets, labels, workshop, student). */
+  options?: string;
 }
 const EN: Required<ExplorerStrings> = {
   digitalTwin: 'Digital twin', viewModes: 'View modes', xray: 'X-ray', cutaway: 'Section', run: 'Run', stop: 'Stop',
@@ -111,6 +113,7 @@ const EN: Required<ExplorerStrings> = {
   workshop: 'Workshop', studio: 'Studio', student: 'WABYS student', studentOff: 'Off', third: '3rd person', first: '1st person',
   walkTo: 'Walk to', keysHint: 'W A S D or arrows to walk · drag to look', sectionHint: 'Hatched faces are where the plane cuts solid metal.',
   labels: 'Labels', whatItIs: 'What it is', whatItDoes: 'What it does', specs: 'Specification',
+  options: 'View options',
   vrDragNote: 'Stereo view. Motion sensors are off, so drag to look around. On an iPhone, open the centre\'s https:// address and allow motion access to look around by turning your head.',
 };
 const AR: Required<ExplorerStrings> = {
@@ -125,6 +128,7 @@ const AR: Required<ExplorerStrings> = {
   workshop: 'الورشة', studio: 'استوديو', student: 'متدرب WABYS', studentOff: 'إخفاء', third: 'منظور ثالث', first: 'بعيني المتدرب',
   walkTo: 'اذهب إلى', keysHint: 'W A S D أو الأسهم للمشي · اسحب للنظر', sectionHint: 'الأوجه المخططة هي حيث يقطع المستوى المعدن المصمت.',
   labels: 'الأسماء', whatItIs: 'ما هو', whatItDoes: 'وظيفته', specs: 'المواصفات',
+  options: 'خيارات العرض',
   vrDragNote: 'عرض مجسم مزدوج. حساسات الحركة غير مفعلة، لذا اسحب للنظر حولك. على الآيفون افتح عنوان المركز الذي يبدأ بـ https:// واسمح بالوصول إلى الحركة لتنظر حولك بتحريك رأسك.',
 };
 export const explorerStrings = (lang: 'en' | 'ar') => (lang === 'ar' ? AR : EN);
@@ -793,7 +797,9 @@ export function MachineExplorer({ title, assetTag, parts, onEvent, height = 560,
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHovered] = useState<string | null>(null);
   const [shop, setShop] = useState(true);
-  const [labels, setLabels] = useState(true);
+  // Name tags and the options dock start hidden so they do not cover the machine; pins and the parts list stay.
+  const [labels, setLabels] = useState(false);
+  const [dock, setDock] = useState(false);
   const [sview, setSview] = useState<StudentView | 'off'>('off');
   const [go, setGo] = useState<{ id: string; n: number } | null>(null);
   const [preset, setPreset] = useState<{ pos: THREE.Vector3; tgt: THREE.Vector3; n: number } | null>(null);
@@ -889,10 +895,11 @@ export function MachineExplorer({ title, assetTag, parts, onEvent, height = 560,
               {running ? t.stop : t.run}
             </button>
             <VrButton mode={vr} setMode={setVr} strings={t} onChange={(on) => toggle('vr', on)} onMotion={setMotion} />
+            <button type="button" className="mx-opts" aria-pressed={dock} aria-expanded={dock} onClick={() => setDock(!dock)}>⚙ {t.options ?? (lang === 'ar' ? 'خيارات العرض' : 'View options')}</button>
           </div>
         </header>
 
-        <div className="mx-dock" role="toolbar" aria-label={t.views}>
+        <div className="mx-dock" role="toolbar" aria-label={t.views} hidden={!dock}>
           <div className="mx-seg" role="group" aria-label={t.views}>
             {(['iso', 'front', 'side', 'top'] as Preset[]).map((p) => (
               <button key={p} type="button" onClick={() => goPreset(p)}>{({ iso: t.viewIso, front: t.viewFront, side: t.viewSide, top: t.viewTop })[p]}</button>
