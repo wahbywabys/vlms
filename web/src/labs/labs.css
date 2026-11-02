@@ -1,9 +1,4 @@
-:root { --ink: #14234c; --muted: #5b6670; --bg: #f2f4f7; --card: #fff; --line: #dde2e8; }
-* { box-sizing: border-box; }
-html { font-size: 14px; }
-html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: Barlow, 'IBM Plex Sans Arabic', system-ui, sans-serif; }
-[dir='rtl'] body { font-family: 'IBM Plex Sans Arabic', 'Noto Kufi Arabic', system-ui, sans-serif; }
-.labs { max-width: 1280px; margin: 0 auto; padding: 16px; display: grid; gap: 12px; }
+.labs { --ink: #14234c; --muted: #5b6670; --bg: #f2f4f7; --card: #fff; --line: #dde2e8; color: var(--ink); max-width: 1280px; margin: 0 auto; padding: 16px; display: grid; gap: 12px; }
 .labs-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-top: 4px solid var(--accent); padding-top: 10px; }
 .labs-eyebrow { margin: 0; font: 600 12px/1 'IBM Plex Mono', monospace; color: #f06721; letter-spacing: .08em; }
 .labs h1 { margin: 4px 0 0; font: 700 clamp(20px, 3.2vw, 26px)/1.1 'Barlow Condensed', 'Noto Kufi Arabic', sans-serif; }

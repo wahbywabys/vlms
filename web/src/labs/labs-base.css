@@ -1,0 +1,5 @@
+/* Page-level rules for the standalone labs page only (the LMS prototype has its own). */
+* { box-sizing: border-box; }
+html { font-size: 14px; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: Barlow, 'IBM Plex Sans Arabic', system-ui, sans-serif; }
+[dir='rtl'] body { font-family: 'IBM Plex Sans Arabic', 'Noto Kufi Arabic', system-ui, sans-serif; }
