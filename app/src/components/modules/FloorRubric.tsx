@@ -163,7 +163,7 @@ export function FloorRubric(props: {
           const mine = photos.filter((p) => p.criterionKey === c.key);
           const wantsPhoto = needPhoto.includes(c.key);
           return (
-            <li key={c.key} className={cx('grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2.5 rounded-2xl border bg-sheet p-3 shadow-card',
+            <li key={c.key} className={cx('grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2.5 rounded-2xl border bg-card p-3 shadow-card',
               c.isGate && s !== null && s < 100 ? 'border-bad' : c.isGate ? 'border-amber-fill' : 'border-rule')}>
               <span className={cx('grid h-12 w-12 place-items-center rounded-xl', TONE[cat])} title={pickAr(ui, CAT_TXT[cat].en, CAT_TXT[cat].ar)}>
                 <Glyph d={ICON[cat]} />
@@ -233,7 +233,7 @@ function CheckTap({ ui, c, value, onChange, disabled }: { ui: Ui; c: RubricCrite
         return (
           <button key={String(o.value)} type="button" role="radio" aria-checked={on} disabled={disabled} onClick={() => onChange(o.value as Mark)}
             className={cx('tw-reset flex h-14 items-center justify-center gap-2 rounded-xl border-2 px-3 text-base font-bold transition active:scale-[.97]',
-              on ? (pass ? 'border-ok bg-ok text-sheet' : 'border-bad bg-bad text-sheet') : 'border-rule bg-sunk text-ink-2')}>
+              on ? (pass ? 'border-ok bg-ok text-sheet' : 'border-bad bg-bad text-sheet') : 'border-rule bg-sheet text-ink-2')}>
             <span aria-hidden="true" className="text-xl">{pass ? '✓' : '✗'}</span>{pickAr(ui, o.en, o.ar)}
           </button>
         );
@@ -248,7 +248,7 @@ function RatingTap({ ui, c, value, onChange, disabled }: { ui: Ui; c: RubricCrit
     <div role="radiogroup" aria-label={c.label} className="grid grid-cols-4 gap-1.5">
       {d.map((o) => (
         <button key={String(o.value)} type="button" role="radio" aria-checked={value === o.value} disabled={disabled} onClick={() => onChange(o.value as Mark)}
-          className={cx('tw-reset flex h-14 flex-col items-center justify-center rounded-xl border-2 border-rule bg-sunk leading-none transition active:scale-[.97] aria-checked:border-transparent',
+          className={cx('tw-reset flex h-14 flex-col items-center justify-center rounded-xl border-2 border-rule bg-sheet leading-none transition active:scale-[.97] aria-checked:border-transparent',
             RATING_TONE[Number(o.value)] ?? '')}>
           <span className="font-display text-xl font-bold">{String(o.value)}</span>
           <span className="mt-0.5 text-[11px] leading-tight">{pickAr(ui, o.en, o.ar)}</span>
@@ -272,14 +272,14 @@ function ToleranceTap({ ui, c, value, onChange, disabled }: { ui: Ui; c: RubricC
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-1.5" dir="ltr">
         <button type="button" disabled={disabled} onClick={() => nudge(-1)} aria-label={L('Decrease', 'إنقاص')}
-          className="tw-reset h-14 w-12 rounded-xl border-2 border-rule bg-sunk text-2xl font-bold">−</button>
+          className="tw-reset h-14 w-12 rounded-xl border-2 border-rule bg-sheet text-2xl font-bold">−</button>
         <input dir="ltr" inputMode="decimal" disabled={disabled} value={raw} placeholder={e.toFixed(digits)}
           aria-label={L(`Measured value in ${unit}`, `القيمة المقاسة (${unit})`)}
           onChange={(ev) => onChange(ev.target.value.replace(',', '.').replace('٫', '.'))}
           className={cx('tw-reset h-14 w-full min-w-0 flex-1 rounded-xl border-2 bg-sheet px-3 text-center font-mono text-xl font-semibold',
             s === null ? 'border-rule' : s === 100 ? 'border-ok text-ok' : s === 50 ? 'border-amber-fill text-amber' : 'border-bad text-bad')} />
         <button type="button" disabled={disabled} onClick={() => nudge(1)} aria-label={L('Increase', 'زيادة')}
-          className="tw-reset h-14 w-12 rounded-xl border-2 border-rule bg-sunk text-2xl font-bold">+</button>
+          className="tw-reset h-14 w-12 rounded-xl border-2 border-rule bg-sheet text-2xl font-bold">+</button>
         <span className="w-10 text-center font-mono text-sm text-ink-3">{unit}</span>
       </div>
       <div className="relative h-3 rounded-full bg-bad-soft" dir="ltr" aria-hidden="true">
@@ -304,7 +304,7 @@ export function CameraButton({ ui, label, onFile, urgent, disabled, wide }: { ui
     <>
       <button type="button" disabled={disabled} onClick={() => ref.current?.click()} aria-label={label} title={label}
         className={cx('tw-reset flex h-14 shrink-0 items-center justify-center gap-2 rounded-xl border-2 transition active:scale-[.97] disabled:opacity-40',
-          wide ? 'px-4' : 'w-14', urgent ? 'animate-pulse border-bad bg-bad-soft text-bad' : 'border-rule bg-sunk text-ink-2')}>
+          wide ? 'px-4' : 'w-14', urgent ? 'animate-pulse border-bad bg-bad-soft text-bad' : 'border-rule bg-sheet text-ink-2')}>
         <Glyph d={CAMERA} />
         {wide && <span className="font-semibold">{label}</span>}
       </button>
