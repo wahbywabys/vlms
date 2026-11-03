@@ -571,6 +571,8 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
     if (typeof window === 'undefined') return;
     const synth = window.speechSynthesis ?? { cancel() {}, speak() {} };
     const vo = voiceOver();
+    // Let the last shot's clip finish when the lesson reaches its end.
+    if (ended && active && voice && !vo.paused) return;
     if (!voice || !playing || !started || filmed || !active || !canNarrate) { synth.cancel(); vo.pause(); return; }
     const text = lesson.shots[shotNo]?.caption[lang];
     if (!text) return;
@@ -598,7 +600,7 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
     // Let a clip that is about to finish end before the next shot's clip starts.
     if (!vo.paused && !vo.ended && vo.duration - vo.currentTime < 3.2) vo.onended = play;
     else play();
-  }, [shotNo, playing, voice, lang, started, filmed, active, canSpeak, canNarrate]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [shotNo, playing, voice, lang, started, filmed, active, canSpeak, canNarrate, ended]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => { if (typeof window !== 'undefined') { window.speechSynthesis?.cancel(); voiceOver().pause(); } }, []);
   const chapter = chapterAt(lesson, time);
   const hotspot = lesson.hotspots.find((h) => h.id === hot) ?? null;

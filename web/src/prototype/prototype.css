@@ -761,3 +761,25 @@ button:hover:not(:disabled) { border-color: var(--blue); }
 .progs-ksa ul > li > button small { flex: none; color: var(--ink-3); }
 .progs-ksa ol { margin: 4px 0 6px; padding-inline-start: 30px; font-size: 13px; line-height: 1.5; color: var(--ink-2); }
 .labs-host .labs { padding: 0; max-width: none; }
+
+/* Each lesson card in the list has its own colour (card tint + number badge). */
+.lesson-list li:nth-child(4n+1) { --lesson-bg: #e3effc; --lesson-ink: #1f6fc4; }
+.lesson-list li:nth-child(4n+2) { --lesson-bg: #e2f5ea; --lesson-ink: #1f8a50; }
+.lesson-list li:nth-child(4n+3) { --lesson-bg: #fdf0dc; --lesson-ink: #c27400; }
+.lesson-list li:nth-child(4n+4) { --lesson-bg: #efe8fb; --lesson-ink: #6f45c9; }
+.lesson-list li button { background: var(--lesson-bg); border-color: color-mix(in srgb, var(--lesson-ink) 30%, transparent); }
+.lesson-list li .lesson-no { background: var(--lesson-ink); }
+.lesson-list li .lesson-state:not(.done) { background: rgba(255, 255, 255, .75); }
+.lesson-list li button[aria-current="true"] { border-color: var(--lesson-ink); box-shadow: 0 0 0 2px color-mix(in srgb, var(--lesson-ink) 40%, transparent); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .lesson-list li:nth-child(4n+1) { --lesson-bg: #14263f; --lesson-ink: #5ea2ec; }
+  :root:not([data-theme="light"]) .lesson-list li:nth-child(4n+2) { --lesson-bg: #13291e; --lesson-ink: #4cc183; }
+  :root:not([data-theme="light"]) .lesson-list li:nth-child(4n+3) { --lesson-bg: #33240e; --lesson-ink: #f0a53a; }
+  :root:not([data-theme="light"]) .lesson-list li:nth-child(4n+4) { --lesson-bg: #241b3a; --lesson-ink: #a587ee; }
+  :root:not([data-theme="light"]) .lesson-list li .lesson-state:not(.done) { background: rgba(0, 0, 0, .3); }
+}
+:root[data-theme="dark"] .lesson-list li:nth-child(4n+1) { --lesson-bg: #14263f; --lesson-ink: #5ea2ec; }
+:root[data-theme="dark"] .lesson-list li:nth-child(4n+2) { --lesson-bg: #13291e; --lesson-ink: #4cc183; }
+:root[data-theme="dark"] .lesson-list li:nth-child(4n+3) { --lesson-bg: #33240e; --lesson-ink: #f0a53a; }
+:root[data-theme="dark"] .lesson-list li:nth-child(4n+4) { --lesson-bg: #241b3a; --lesson-ink: #a587ee; }
+:root[data-theme="dark"] .lesson-list li .lesson-state:not(.done) { background: rgba(0, 0, 0, .3); }
