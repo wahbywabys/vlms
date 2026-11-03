@@ -8,7 +8,7 @@
 .mx-header h2 { margin: 0; font-size: 17px; font-weight: 650; }
 .mx-tag { font-size: 12px; color: #8fa3b8; }
 .mx-modes { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-.mx-root button { min-height: 40px; padding: 0 14px; border-radius: 9px; border: 1px solid #2a3a4d; background: #16212d;
+.mx-root button { min-height: 34px; padding: 0 11px; border-radius: 8px; font-size: 13px; border: 1px solid #2a3a4d; background: #16212d;
   color: inherit; font: inherit; font-weight: 550; cursor: pointer; }
 .mx-root button:hover { border-color: #3aa0ff; }
 .mx-root button[aria-pressed="true"] { background: #ff9f1c; border-color: #ff9f1c; color: #1a1205; }
@@ -18,8 +18,8 @@
 .mx-slider { flex: 1; display: grid; gap: 2px; font-size: 12px; color: #a9b9cb; }
 .mx-slider b { color: #fff; font-variant-numeric: tabular-nums; }
 .mx-slider input { width: 100%; height: 28px; accent-color: #ff9f1c; }
-.mx-pin { min-height: 0 !important; width: 28px; height: 28px; padding: 0 !important; border-radius: 50% !important;
-  background: #3aa0ff !important; border: 2px solid #fff !important; color: #fff; font-size: 13px; font-weight: 700;
+.mx-pin { min-height: 0 !important; width: 24px; height: 24px; padding: 0 !important; border-radius: 50% !important;
+  background: #3aa0ff !important; border: 2px solid #fff !important; color: #fff; font-size: 12px; font-weight: 700;
   box-shadow: 0 0 0 4px rgba(58, 160, 255, .25); transition: transform .15s; }
 .mx-pin:hover, .mx-pin.is-active { transform: scale(1.18); background: #ff9f1c !important; color: #1a1205 !important; }
 .mx-panel { background: #121c27; border-inline-start: 1px solid #1f2c3a; padding: 16px; overflow-y: auto; display: flex;
@@ -106,9 +106,9 @@
 /* Part labels: a name tag beside every pin, and the briefing card. */
 .mx-pinwrap { position: relative; display: flex; align-items: center; gap: 6px; pointer-events: auto; }
 .mx-label { min-height: 0 !important; padding: 3px 8px !important; border-radius: 6px !important; white-space: nowrap; max-width: 200px;
-  overflow: hidden; text-overflow: ellipsis; font-size: 12px; font-weight: 600; line-height: 1.3; color: #fff;
-  background: rgba(12, 20, 30, .82) !important; border: 1px solid rgba(255, 255, 255, .25) !important; cursor: pointer;
-  position: absolute; inset-inline-start: 34px; top: 50%; transform: translateY(-50%); }
+  overflow: hidden; text-overflow: ellipsis; font-size: 11px; font-weight: 600; line-height: 1.3; color: #fff;
+  background: rgba(12, 20, 30, .7) !important; border: 1px solid rgba(255, 255, 255, .25) !important; cursor: pointer;
+  position: absolute; inset-inline-start: 28px; top: 50%; transform: translateY(-50%); }
 .mx-pinwrap.is-active .mx-label, .mx-label:hover { background: #ff9f1c !important; color: #1a1205; border-color: #ff9f1c !important; }
 .mx-root.is-stereo .mx-label { display: none !important; }
 .mx-brief { display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: rgba(58, 160, 255, .1); border: 1px solid rgba(58, 160, 255, .35); }
@@ -116,3 +116,6 @@
 .mx-brief h4:first-child { margin-top: 0; }
 .mx-brief p { margin: 0; color: #e6edf5; font-size: 14px; line-height: 1.45; }
 .mx-spec-h { color: #a9b9cb; }
+
+.mx-dock[hidden] { display: none !important; }
+.mx-root.is-stereo .mx-opts { display: none; }

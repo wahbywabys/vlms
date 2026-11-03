@@ -15,6 +15,7 @@
   --color-paper: var(--paper);
   --color-sheet: var(--sheet);
   --color-sunk: var(--sunk);
+  --color-card: var(--card-gray, #d3d9e2);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-ink-3: var(--ink-3);

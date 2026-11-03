@@ -4,13 +4,17 @@
     python3 scripts/build-curricula.py
 
 Reads db/curricula/wabys-2026.json (every programme of the WABYS Manual for
-Vocational Education & Applied Technology Curriculums, 2026 edition, with its
-knowledge modules, skill competencies and attitudes, in English and Arabic)
-and writes:
+Vocational Education & Applied Technology Curriculums, Revision 1.1, with its
+knowledge modules, skill competencies and attitudes, in English and Arabic;
+scripts/import-manual.py fills it from the HTML manual) and writes:
 
-  db/migrations/006_wabys_curricula.sql        the programmes, their skills tree and the core attitudes
-  app/public/templates/wabys-curricula-2026.xlsx  the same rows in the programmes import format
+  db/migrations/007_wabys_rev11.sql             the seven programmes added in Revision 1.1, with their
+                                                skills trees, and the Revision 1.1 profile of all fifteen
+  app/public/templates/wabys-curricula-2026.xlsx  every programme in the programmes import format
   app/public/templates/wabys-curricula-2026.csv
+
+Migration 006 (the first eight programmes, first edition) is already applied
+in centres and is not regenerated; its trees stay as they are.
 
 The skills tree follows the manual: for each programme and year there is one
 unit per domain (Knowledge, Skills, Attitudes); each module, competency or
@@ -28,7 +32,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / 'db' / 'curricula' / 'wabys-2026.json'
-SQL = ROOT / 'db' / 'migrations' / '006_wabys_curricula.sql'
+SQL = ROOT / 'db' / 'migrations' / '007_wabys_rev11.sql'
+FIRST_EDITION = {'ELI', 'AUT', 'CNC', 'RMG', 'EIM', 'PRT', 'AIT', 'CWS'}
 OUT = ROOT / 'app' / 'public' / 'templates'
 EFFECTIVE = '2026-09-01'
 
@@ -42,6 +47,13 @@ ICONS = {
     'prt': 'M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z',
     'ait': 'M8 8h8v8H8zM5 5h14v14H5zM9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3',
     'cws': 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a7 7 0 0 1 14 0v1M16 3.1a4 4 0 0 1 0 7.8M22 21v-1a7 7 0 0 0-4-6.3',
+    'iel': 'M7 3v4M12 3v4M17 3v4M7 17v4M12 17v4M17 17v4M3 7h18v10H3zM8 12h8',
+    'csn': 'M4 4h16v6H4zM4 14h16v6H4zM8 7h.01M8 17h.01M12 10v4',
+    'rac': 'M12 2v20M4.9 4.9l14.2 14.2M2 12h20M4.9 19.1 19.1 4.9M9 3l3 3 3-3M9 21l3-3 3 3',
+    'ham': 'M5 2h14v20H5zM5 7h14M12 15m-4 0a4 4 0 1 0 8 0 4 4 0 1 0-8 0M8 4.5h.01M11 4.5h.01',
+    'oeq': 'M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6zM17 12h.01',
+    'ave': 'M2 5h20v12H2zM8 21h8M12 17v4M10 9l4 2-4 2z',
+    'iem': 'M12 12m-6 0a6 6 0 1 0 12 0 6 6 0 1 0-12 0M12 12m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0M18 12h4M2 12h4',
 }
 # Skills whose failure in a practical is a safety gate (automatic "not yet competent", manual 1.3.2).
 SAFETY = re.compile(r'\b(safe|safely|safety|LOTO|de-energi[sz]e|HV|SRS|lift)\b', re.I)
@@ -71,6 +83,7 @@ for p in data['programs']:
     fw = f"WABYS-{p['code']}-2026"
     trade = p['trade']
     items = p['items']
+    in_sql = p['code'] not in FIRST_EDITION  # 006 already holds the first eight trees
     for y in (1, 2, 3):
         for d in 'KSA':
             its = [i for i in items if i['year'] == y and i['ksa'] == d]
@@ -80,20 +93,20 @@ for p in data['programs']:
             yt = YEARS[str(y)]
             title = f"Year {y} · {DOMAINS[d]['en']}"
             title_ar = f"{yt['ar'].split(' · ')[0]} · {DOMAINS[d]['ar']}"
-            hours = sum(i.get('hours', 0) for i in its) or None
-            rows_units.append((fw, ucode, title, title_ar, yt['en'], yt['ar'], d, y, hours, 10 * y + 'KSA'.index(d)))
+            hours = sum(i.get('hours') or 0 for i in its) or None
+            in_sql and rows_units.append((fw, ucode, title, title_ar, yt['en'], yt['ar'], d, y, hours, 10 * y + 'KSA'.index(d)))
             sheet.append([p['code'], p['name']['en'], p['name']['ar'], ucode, 'unit', '', title, title_ar, d, y, '', '', '', '', hours or ''])
             for n, i in enumerate(its, 1):
                 crit = i['criteria']
                 safety = d == 'S' and bool(SAFETY.search(i['title']['en']))
-                rows_elements.append((fw, i['code'], ucode, i['title']['en'], i['title']['ar'],
+                in_sql and rows_elements.append((fw, i['code'], ucode, i['title']['en'], i['title']['ar'],
                                       '; '.join(c['en'] for c in crit), ar_join([c['ar'] for c in crit]),
                                       d, y, i.get('hours'), i.get('level'), i.get('core'), safety, n))
                 sheet.append([p['code'], '', '', i['code'], 'element', ucode, i['title']['en'], i['title']['ar'], d, y,
                               i.get('level') or '', i.get('core') or '', '; '.join(c['en'] for c in crit), ar_join([c['ar'] for c in crit]),
                               i.get('hours') or '', 'yes' if safety else ''])
                 for m, c in enumerate(crit, 1):
-                    rows_criteria.append((fw, f"{i['code']}.{m}", i['code'], c['en'], c['ar'], d, y, m))
+                    in_sql and rows_criteria.append((fw, f"{i['code']}.{m}", i['code'], c['en'], c['ar'], d, y, m))
                     sheet.append([p['code'], '', '', f"{i['code']}.{m}", 'criterion', i['code'], c['en'], c['ar'], d, y, '', '', '', '', ''])
 
 
@@ -102,72 +115,46 @@ def values(rows):
 
 
 programs = data['programs']
+added = [p for p in programs if p['code'] not in FIRST_EDITION]
 existing = {'cnc', 'auto', 'elec'}
 out = []
 w = out.append
-w(f"""-- WABYS vocational curricula (generated by scripts/build-curricula.py from
+w(f"""-- WABYS curricula, Revision 1.1 (generated by scripts/build-curricula.py from
 -- db/curricula/wabys-2026.json; edit the JSON and run the script, do not edit by hand).
 --
 -- Source: {data['source']}
 --
--- Eight programmes, each a trade. ELI, AUT and CNC are the electrical,
--- automotive and CNC trades the LMS already had; RMG, EIM, PRT, AIT and CWS
--- are new. Every programme gets a framework WABYS-<code>-2026 whose skills
--- tree is: year × domain (Knowledge / Skills / Attitudes) → module, competency
--- or attitude → content topic, performance criterion or observable behaviour.
--- Each competency also records its domain, year, target performance level
--- (L1–L4), WABYS core attitude (A1–A7) and its full text in both languages.
+-- Revision 1.1 adds seven programmes from the PVTD occupations (IEL, CSN,
+-- RAC, HAM, OEQ, AVE, IEM), the shared Electro-technology Foundation (ETF)
+-- and Cross-Program Modules (CPM), and two study systems: A (60 %
+-- competence standard) and B (80 % mastery standard, PVTD centres) with a
+-- training-unit plan per new programme. The new programmes' trees include
+-- the ETF and CPM units they adopt, under their shared codes, so a learner
+-- who moves between electrical-family programmes keeps the credit.
+-- The programme card (trades.profile) of all fifteen gains the Revision 1.1
+-- fields: duration in both systems, PVTD reference occupation, shared units
+-- and the System B plan.
 SET search_path = vtc, public;
-
--- -----------------------------------------------------------------------------
--- Programme profile and the manual's own code on each trade
--- -----------------------------------------------------------------------------
-ALTER TABLE trades
-  ADD COLUMN program_code text UNIQUE,     -- the curriculum manual's code ('ELI'); trades.code stays the code used in labs
-  ADD COLUMN accent       text,            -- colour that marks the programme's screens
-  ADD COLUMN profile      jsonb;           -- bilingual programme card: overview, EQF level, hours, occupations, standards, equipment, tracks, capstone
-
--- -----------------------------------------------------------------------------
--- Knowledge / skills / attitudes on each competency
--- -----------------------------------------------------------------------------
-ALTER TABLE competencies
-  ADD COLUMN description_ar text,
-  ADD COLUMN ksa            text CHECK (ksa IN ('K', 'S', 'A')),
-  ADD COLUMN year           smallint CHECK (year BETWEEN 1 AND 6),
-  ADD COLUMN target_level   text,          -- performance level at year end: 'L3', 'L2–L3'
-  ADD COLUMN core_attitude  text,          -- WABYS core attitude A1–A7 an attitude contextualises
-  ADD COLUMN sort_order     integer;
-CREATE INDEX idx_competencies_ksa ON competencies(framework_id, year, ksa);
-
-CREATE TABLE core_attitudes (
-  code           text PRIMARY KEY CHECK (code ~ '^A[0-9]$'),
-  name           text NOT NULL,
-  name_ar        text,
-  indicators     text,
-  indicators_ar  text
-);
-INSERT INTO core_attitudes (code, name, name_ar, indicators, indicators_ar) VALUES
-{values([(a['code'], a['en'], a['ar'], a['ind_en'], a['ind_ar']) for a in data['attitudes']])};
-
--- -----------------------------------------------------------------------------
--- The programmes
--- -----------------------------------------------------------------------------""")
+""")
 for p in programs:
-    profile = {k: p[k] for k in ('occupation', 'overview', 'eqf', 'hours', 'occupations', 'standards', 'equipment', 'tracks', 'capstone')}
+    profile = {k: p.get(k) for k in ('occupation', 'overview', 'eqf', 'hours', 'occupations', 'standards', 'equipment', 'tracks', 'capstone',
+                                     'duration', 'pvtd', 'adopts', 'system_b')}
     profile['source'] = {'en': data['source'], 'ar': data['source_ar']}
-    if p['trade'] in existing:
-        w(f"UPDATE trades SET name = {q(p['name']['en'])}, name_ar = {q(p['name']['ar'])}, program_code = {q(p['code'])}, accent = {q(p['accent'])},\n"
-          f"  profile = {jq(profile)}\n WHERE id = {q(p['trade'])};")
+    profile['revision'] = '1.1'
+    if p['code'] in FIRST_EDITION:
+        w(f"UPDATE trades SET profile = {jq(profile)}\n WHERE program_code = {q(p['code'])};")
+        for r in p.get('revised', []):
+            w(f"UPDATE competencies c SET title = {q(r['title']['en'])}, title_ar = {q(r['title']['ar'])}\n"
+              f"  FROM competency_frameworks f WHERE f.id = c.framework_id AND f.code = 'WABYS-{p['code']}-2026' AND c.code = {q(r['code'])};")
     else:
         w(f"INSERT INTO trades (id, code, name, name_ar, icon, sort_order, program_code, accent, profile) VALUES ({q(p['trade'])}, {q(p['code'])}, "
           f"{q(p['name']['en'])}, {q(p['name']['ar'])}, {q(ICONS[p['trade']])}, {p['sort']}, {q(p['code'])}, {q(p['accent'])},\n"
           f"  {jq(profile)})\n  ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, name_ar = EXCLUDED.name_ar, program_code = EXCLUDED.program_code,"
           f" accent = EXCLUDED.accent, profile = EXCLUDED.profile;")
-w("UPDATE trades SET accent = '#f06721' WHERE id = 'weld' AND accent IS NULL;")
 
 w(f"""
 INSERT INTO competency_frameworks (code, title, issuing_body, version, effective_from, trade_id) VALUES
-{values([(f"WABYS-{p['code']}-2026", f"WABYS {p['name']['en']} (EQF {p['eqf'].replace('EQF ', '')})", 'WABYS for Training and Education', data['edition'], EFFECTIVE, p['trade']) for p in programs])}
+{values([(f"WABYS-{p['code']}-2026", f"WABYS {p['name']['en']} (EQF {p['eqf'].replace('EQF ', '')})", 'WABYS for Training and Education', data['edition'], EFFECTIVE, p['trade']) for p in added])}
 ON CONFLICT (code) DO UPDATE SET trade_id = EXCLUDED.trade_id, title = EXCLUDED.title, version = EXCLUDED.version;
 
 -- -----------------------------------------------------------------------------
@@ -180,7 +167,7 @@ SELECT f.id, v.code, v.title, v.title_ar, v.descr, v.descr_ar, 'unit', v.ksa, v.
   ) AS v(fw, code, title, title_ar, descr, descr_ar, ksa, year, hours, sort)
   JOIN competency_frameworks f ON f.code = v.fw;
 
--- Elements: knowledge modules, skill competencies and attitudes
+-- Elements: knowledge modules, skill competencies and attitudes (ETF-… and CPM-… are the shared units)
 INSERT INTO competencies (framework_id, parent_id, code, title, title_ar, description, description_ar, kind, ksa, year, nominal_hours,
                           target_level, core_attitude, is_safety_critical, sort_order)
 SELECT f.id, p.id, v.code, v.title, v.title_ar, v.descr, v.descr_ar, 'element', v.ksa, v.year, v.hours, v.lvl, v.core, v.safety, v.sort
@@ -200,26 +187,29 @@ SELECT f.id, p.id, v.code, v.title, v.title_ar, 'criterion', v.ksa, v.year, v.so
   JOIN competencies p ON p.framework_id = f.id AND p.code = v.parent;
 
 -- -----------------------------------------------------------------------------
--- Machine types for the new programmes, and the CNC milling twin
+-- Machine types for the new programmes and their 3D twins
 -- -----------------------------------------------------------------------------
 INSERT INTO machine_types (id, trade_id, name, name_ar, model_id, twin_match, precheck_code, sort_order) VALUES
-  ('lockstitch',        'rmg',  'Industrial lockstitch sewing machine', 'ماكينة خياطة صناعية غرزة مقفولة', 'lockstitch',   'exact',   NULL, 50),
-  ('overlock',          'rmg',  'Overlock / coverstitch machine',       'ماكينة أوفرلوك / كافر ستيتش',     'lockstitch',   'similar', NULL, 51),
-  ('band_knife',        'rmg',  'Straight-knife / band-knife cutter',   'ماكينة قص بالسكين',               NULL,           NULL,      NULL, 52),
-  ('fusing_press',      'rmg',  'Fusing press',                         'مكبس لصق حراري',                  NULL,           NULL,      NULL, 53),
-  ('pump_rig',          'eim',  'Pump and motor alignment rig',         'منصة محاذاة مضخة ومحرك',          'pump-rig',     'exact',   NULL, 60),
-  ('gearbox_rig',       'eim',  'Gearbox / drive train rig',            'منصة علبة تروس ونقل حركة',        'pump-rig',     'similar', NULL, 61),
-  ('hydraulic_trainer', 'eim',  'Hydraulic / pneumatic trainer',        'وحدة تدريب هيدروليك وهوائيات',    NULL,           NULL,      NULL, 62),
-  ('mps_line',          'eim',  'Mechatronic production line',          'خط إنتاج ميكاتروني',              NULL,           NULL,      NULL, 63),
-  ('offset_press',      'prt',  'Sheetfed offset press',                'ماكينة طباعة أوفست بالأفرخ',      'offset-press', 'exact',   NULL, 70),
-  ('flexo_press',       'prt',  'Flexo label press',                    'ماكينة طباعة فلكسو للملصقات',      'offset-press', 'similar', NULL, 71),
-  ('guillotine',        'prt',  'Guillotine paper cutter',              'مقصلة ورق',                       NULL,           NULL,      NULL, 72),
-  ('digital_press',     'prt',  'Digital / wide-format printer',        'طابعة رقمية أو عريضة النسق',       NULL,           NULL,      NULL, 73),
-  ('vision_cell',       'ait',  'Vision inspection cell',               'خلية فحص بالرؤية الآلية',          'vision-cell',  'exact',   NULL, 80),
-  ('edge_ai_kit',       'ait',  'Edge AI and IoT sensor kit',           'طقم ذكاء اصطناعي طرفي وحساسات',    'vision-cell',  'similar', NULL, 81)
+  ('electronics_bench', 'iel', 'Electronics bench (scope, generator, supply, rework)', 'طاولة إلكترونيات (راسم موجات ومولد ومصدر ولحام)', 'electronics-bench', 'exact', NULL, 90),
+  ('plc_trainer',       'iel', 'PLC and process-control trainer',    'وحدة تدريب PLC والتحكم في العمليات',   'electronics-bench', 'similar', NULL, 91),
+  ('pcb_line',          'iel', 'PCB exposure and etching line',      'خط تعريض وحفر الدوائر المطبوعة',       NULL,                NULL,      NULL, 92),
+  ('network_rack',      'csn', 'Network rack (switch, router, server, UPS)', 'خزانة شبكات (سويتش وموجه وخادم وUPS)', 'network-rack', 'exact', NULL, 100),
+  ('pc_bench',          'csn', 'PC assembly bench',                  'طاولة تجميع حاسبات',                   'network-rack',      'similar', NULL, 101),
+  ('split_ac',          'rac', 'Split air-conditioner service rig',  'منصة صيانة مكيف سبليت',                 'split-ac',          'exact',   NULL, 110),
+  ('fridge_trainer',    'rac', 'Domestic refrigeration trainer',     'وحدة تدريب التبريد المنزلي',           'split-ac',          'similar', NULL, 111),
+  ('recovery_unit',     'rac', 'Refrigerant recovery machine',       'ماكينة استرجاع وسيط التبريد',          NULL,                NULL,      NULL, 112),
+  ('washing_machine',   'ham', 'Washing machine on repair bench',    'غسالة على طاولة الإصلاح',              'washing-machine',   'exact',   NULL, 120),
+  ('dishwasher',        'ham', 'Dishwasher trainer',                 'وحدة تدريب غسالة أطباق',               'washing-machine',   'similar', NULL, 121),
+  ('pat_tester',        'ham', 'Appliance safety tester (PAT)',      'جهاز اختبار سلامة الأجهزة',            NULL,                NULL,      NULL, 122),
+  ('laser_mfp',         'oeq', 'Laser multifunction printer (MFP)',  'طابعة ليزر متعددة الوظائف',            'laser-mfp',         'exact',   NULL, 130),
+  ('copier',            'oeq', 'Photocopier',                        'ماكينة تصوير مستندات',                 'laser-mfp',         'similar', NULL, 131),
+  ('pos_terminal',      'oeq', 'POS terminal and banknote counter',  'جهاز نقاط بيع وعداد نقود',             NULL,                NULL,      NULL, 132),
+  ('tv_bench',          'ave', 'TV / display repair bench',          'طاولة إصلاح التلفزيون والشاشات',       'tv-bench',          'exact',   NULL, 140),
+  ('cctv_kit',          'ave', 'IP-CCTV kit with NVR',               'طقم كاميرات IP مع جهاز تسجيل',          NULL,                NULL,      NULL, 141),
+  ('rewind_bench',      'iem', 'Motor rewinding and test bench',     'طاولة لف واختبار المحركات',            'motor-rewind',      'exact',   NULL, 150),
+  ('motor_control',     'iem', 'Motor-control bench (DOL, star-delta, VFD)', 'طاولة التحكم في المحركات',       'dol-panel',         'similar', NULL, 151),
+  ('transformer_trainer','iem', 'Transformer trainer',                'وحدة تدريب المحولات',                  NULL,                NULL,      NULL, 152)
 ON CONFLICT (id) DO NOTHING;
-UPDATE machine_types SET model_id = 'cnc-mill', twin_match = 'exact' WHERE id = 'cnc_mill';
-UPDATE machine_types SET model_id = 'cnc-mill', twin_match = 'similar' WHERE id = 'milling';
 """)
 SQL.write_text('\n'.join(out), encoding='utf-8')
 

@@ -1,6 +1,8 @@
 import { StrictMode, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DirectorDashboard } from './DirectorDashboard';
+import { LabsApp } from '../labs/LabsApp';
+import { Programmes } from './Programmes';
 import { ApprenticePhone, DirectorSkills, RiskScreen, StudentAssess, StudentMachine, TrainerMachines, TrainerStores } from './Modules';
 import { FullscreenIcon, useFullscreen } from './fullscreen';
 import { tx } from './i18n';
@@ -17,12 +19,28 @@ import wabysLogo from './assets/wabys-logo.png';
 import './prototype.css';
 
 /** Screens inside each role. The first is the role's home; all stay mounted so work in progress survives switching. */
+/** Every role can browse the 15 WABYS programmes and open their 3D & VR labs. */
+const shared = [
+  { id: 'programmes', label: tx('Programmes (15)', 'البرامج (15)'), el: () => <Programmes /> },
+  { id: 'labs', label: tx('3D & VR Labs', 'معامل 3D والواقع الافتراضي'), el: (on: boolean) => <LabsHost active={on} /> },
+];
+
+function LabsHost({ active }: { active: boolean }) {
+  const { lang } = useStore();
+  // Mounted the first time it is opened (each role has this screen, and an unopened 3D canvas per role would slow the
+  // page), then kept so the chosen programme and machine survive switching screens.
+  const [seen, setSeen] = useState(active);
+  if (active && !seen) setSeen(true);
+  return seen ? <div className="labs-host"><LabsApp lang={lang} active={active} /></div> : null;
+}
+
 const SCREENS: Record<Role, { id: string; label: ReturnType<typeof tx>; el: (visible: boolean) => ReactNode }[]> = {
   trainer: [
     { id: 'floor', label: tx('Workshop floor', 'أرضية الورشة'), el: () => <TrainerFloor /> },
     { id: 'machines', label: tx('Machines', 'الماكينات'), el: () => <TrainerMachines /> },
     { id: 'stores', label: tx('Stores', 'المخزن'), el: () => <TrainerStores /> },
     { id: 'risk', label: tx('Early warning', 'الإنذار المبكر'), el: () => <RiskScreen /> },
+    ...shared,
   ],
   student: [
     { id: 'lab', label: tx('V-Lab', 'المعمل الافتراضي'), el: () => <StudentLab /> },
@@ -30,11 +48,13 @@ const SCREENS: Record<Role, { id: string; label: ReturnType<typeof tx>; el: (vis
     { id: 'assess', label: tx('Applied assessment', 'تقييم تطبيقي'), el: () => <StudentAssess /> },
     { id: 'ojt', label: tx('OJT logbook · phone', 'سجل التدريب الميداني · الهاتف'), el: () => <ApprenticePhone /> },
     { id: 'private', label: tx('🔒 Private', '🔒 خاص'), el: (on) => <StudentPrivate active={on} /> },
+    ...shared,
   ],
   director: [
     { id: 'overview', label: tx('Overview', 'نظرة عامة'), el: () => <DirectorDashboard /> },
     { id: 'skills', label: tx('Skills heatmap', 'خريطة المهارات'), el: () => <DirectorSkills /> },
     { id: 'risk', label: tx('Early warning', 'الإنذار المبكر'), el: () => <RiskScreen all /> },
+    ...shared,
   ],
 };
 

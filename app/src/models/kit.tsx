@@ -24,6 +24,8 @@ export interface BiPart {
   spin?: PartSpec['spin'];
   animate?: PartSpec['animate'];
   hotspot?: { position: Vec3; title: Txt; specs: [Txt, string | Txt][]; safety?: Txt };
+  /** Inline briefing, for generated models that are not in briefs.ts. */
+  brief?: { what: Txt; does: Txt };
   render: () => ReactNode;
 }
 
@@ -68,7 +70,7 @@ export interface ModelEnv {
   /** What the machine stands on. */
   stand?: 'floor' | 'bench' | 'engine-stand' | 'wall' | 'skid' | 'trolley';
   /** Which trade's equipment fills the rest of the bay. */
-  bay?: 'cnc' | 'auto' | 'elec' | 'weld' | 'rmg' | 'eim' | 'prt' | 'ait';
+  bay?: 'cnc' | 'auto' | 'elec' | 'weld' | 'rmg' | 'eim' | 'prt' | 'ait' | 'iel' | 'csn' | 'rac' | 'ham' | 'oeq' | 'ave' | 'iem';
   /** Where the student can go. The first is home; one called 'ppe' puts the PPE station there. */
   stations: StationDef[];
 }
@@ -93,6 +95,7 @@ export function localize(parts: BiPart[], lang: 'en' | 'ar'): PartSpec[] {
       specs: Object.fromEntries(b.hotspot.specs.map(([k, v]) => [p(k), typeof v === 'string' ? v : p(v)])),
       safety: b.hotspot.safety && p(b.hotspot.safety),
     },
+    brief: b.brief && { what: p(b.brief.what), does: p(b.brief.does) },
   }));
 }
 
@@ -248,3 +251,11 @@ export const COLORS = {
   brass: '#c9a54a', red: '#c8312b', green: '#2f9e57', yellow: '#f2c230', orange: '#f06721', blue: '#2f5f93', navy: '#14234c',
   cream: '#e9e4d6', ral7035: '#d5d8d6', glass: '#9fd3ff',
 };
+
+/** Set the glow of a named mesh (or every mesh under a named group). */
+export function glowOf(g: THREE.Object3D, name: string, v: number) {
+  child(g, name)?.traverse((o) => {
+    const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+    if (m && 'emissiveIntensity' in m) m.emissiveIntensity = v;
+  });
+}

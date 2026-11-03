@@ -23,10 +23,12 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'app' / 'public' / 'templates'
 NAVY, ORANGE, SOFT, GREY = '14234C', 'F06721', 'FDEBDD', 'F3F4F7'
 TRADES = {'cnc': 'CNC machining', 'auto': 'Automotive', 'elec': 'Electrical', 'weld': 'Welding', 'rmg': 'Garments',
-          'eim': 'Industrial maintenance', 'prt': 'Printing', 'ait': 'AI for technicians', 'cws': 'Work skills', None: 'Any'}
+          'eim': 'Industrial maintenance', 'prt': 'Printing', 'ait': 'AI for technicians', 'cws': 'Work skills',
+          'iel': 'Industrial electronics', 'csn': 'Computer systems & networks', 'rac': 'Refrigeration & AC', 'ham': 'Home appliances',
+          'oeq': 'Office equipment', 'ave': 'Audio-visual electronics', 'iem': 'Industrial electricity & machines', None: 'Any'}
 
 TYPES = []
-for mig in ['004_centers_programs_machines.sql', '006_wabys_curricula.sql']:
+for mig in ['004_centers_programs_machines.sql', '006_wabys_curricula.sql', '007_wabys_rev11.sql']:
     sql = (ROOT / 'db' / 'migrations' / mig).read_text(encoding='utf-8')
     for m in re.finditer(r"\('([a-z_]+)',\s+(NULL|'[a-z]+'),\s+'([^']+)',\s+'([^']+)',\s+(NULL|'[a-z-]+'),\s+(NULL|'[a-z]+'),", sql):
         tid, trade, en, ar, model, match = m.groups()

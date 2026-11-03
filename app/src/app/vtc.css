@@ -6,6 +6,7 @@
   --paper: #f2f4f8;
   --sheet: #ffffff;
   --sunk: #f6f8fb;
+  --card-gray: #d3d9e2;
   --ink: #14203a;
   --ink-2: #4b5670;
   --ink-3: #6b7590;
@@ -47,7 +48,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #0a1020; --sheet: #121a2e; --sunk: #0e1527; --ink: #e6ebf5; --ink-2: #a6b1c8; --ink-3: #8090ab; --rule: #253150; --rule-strong: #34426a;
+    --paper: #0a1020; --sheet: #121a2e; --sunk: #0e1527; --card-gray: #24304d; --ink: #e6ebf5; --ink-2: #a6b1c8; --ink-3: #8090ab; --rule: #253150; --rule-strong: #34426a;
     --blue: #8fb0f0; --blue-strong: #b4cbf6; --brand: #3a5aa6; --on-brand: #ffffff; --blue-soft: #18233f; --on-blue: #0a1020;
     --accent: #ff8a4c; --accent-ink: #ff9a63; --accent-soft: #3a1f12; --wm: #e6ebf5;
     --amber: #ffad3b; --amber-fill: #ffad3b; --amber-soft: #33240e; --on-amber: #1f1300;
@@ -56,7 +57,7 @@
   }
 }
 :root[data-theme="dark"] {
-  --paper: #0a1020; --sheet: #121a2e; --sunk: #0e1527; --ink: #e6ebf5; --ink-2: #a6b1c8; --ink-3: #8090ab; --rule: #253150; --rule-strong: #34426a;
+  --paper: #0a1020; --sheet: #121a2e; --sunk: #0e1527; --card-gray: #24304d; --ink: #e6ebf5; --ink-2: #a6b1c8; --ink-3: #8090ab; --rule: #253150; --rule-strong: #34426a;
   --blue: #8fb0f0; --blue-strong: #b4cbf6; --brand: #3a5aa6; --on-brand: #ffffff; --blue-soft: #18233f; --on-blue: #0a1020;
   --accent: #ff8a4c; --accent-ink: #ff9a63; --accent-soft: #3a1f12; --wm: #e6ebf5;
   --amber: #ffad3b; --amber-fill: #ffad3b; --amber-soft: #33240e; --on-amber: #1f1300;
@@ -710,3 +711,38 @@ button:hover:not(:disabled) { border-color: var(--blue); }
 @media print { .shell-side, .topbar, .tradebar, .page-head .head-actions { display: none !important; } }
 /* Grid children may shrink below their content, so long names truncate instead of widening the page on phones. */
 .page > * { min-width: 0; }
+
+/* WABYS 3D & VR Labs: programme picker, and one colour per group of cards (machines, tool board, safety jobs). */
+.labs-programmes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin: 0 0 12px; }
+.labs-programmes button { display: grid; gap: 1px; text-align: start; padding: 7px 10px; border-radius: 9px; cursor: pointer; font: inherit;
+  background: color-mix(in srgb, var(--p-accent, #888) 10%, var(--sheet)); border: 1px solid color-mix(in srgb, var(--p-accent, #888) 35%, transparent);
+  border-inline-start: 4px solid var(--p-accent, #888); }
+.labs-programmes button b { font: 600 11px var(--f-mono); color: var(--ink-3); }
+.labs-programmes button span { font-size: 12.5px; font-weight: 600; line-height: 1.25; }
+.labs-programmes button[aria-checked="true"] { background: var(--p-accent); color: #fff; }
+.labs-programmes button[aria-checked="true"] b { color: rgba(255, 255, 255, .85); }
+.model-switch button.is-machine { background: #e7f1fb; border-color: #9cc3ea; }
+.model-switch button.is-tools { background: #fff4dc; border-color: #f0c870; }
+.model-switch button.is-job { background: #fde9e7; border-color: #f0a49b; }
+
+/* Each lesson card in the list has its own colour (card tint + number badge). */
+.lesson-list li:nth-child(4n+1) { --lesson-bg: #e3effc; --lesson-ink: #1f6fc4; }
+.lesson-list li:nth-child(4n+2) { --lesson-bg: #e2f5ea; --lesson-ink: #1f8a50; }
+.lesson-list li:nth-child(4n+3) { --lesson-bg: #fdf0dc; --lesson-ink: #c27400; }
+.lesson-list li:nth-child(4n+4) { --lesson-bg: #efe8fb; --lesson-ink: #6f45c9; }
+.lesson-list li button { background: var(--lesson-bg); border-color: color-mix(in srgb, var(--lesson-ink) 30%, transparent); }
+.lesson-list li .lesson-no { background: var(--lesson-ink); }
+.lesson-list li .lesson-state:not(.done) { background: rgba(255, 255, 255, .75); }
+.lesson-list li button[aria-current="true"] { border-color: var(--lesson-ink); box-shadow: 0 0 0 2px color-mix(in srgb, var(--lesson-ink) 40%, transparent); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .lesson-list li:nth-child(4n+1) { --lesson-bg: #14263f; --lesson-ink: #5ea2ec; }
+  :root:not([data-theme="light"]) .lesson-list li:nth-child(4n+2) { --lesson-bg: #13291e; --lesson-ink: #4cc183; }
+  :root:not([data-theme="light"]) .lesson-list li:nth-child(4n+3) { --lesson-bg: #33240e; --lesson-ink: #f0a53a; }
+  :root:not([data-theme="light"]) .lesson-list li:nth-child(4n+4) { --lesson-bg: #241b3a; --lesson-ink: #a587ee; }
+  :root:not([data-theme="light"]) .lesson-list li .lesson-state:not(.done) { background: rgba(0, 0, 0, .3); }
+}
+:root[data-theme="dark"] .lesson-list li:nth-child(4n+1) { --lesson-bg: #14263f; --lesson-ink: #5ea2ec; }
+:root[data-theme="dark"] .lesson-list li:nth-child(4n+2) { --lesson-bg: #13291e; --lesson-ink: #4cc183; }
+:root[data-theme="dark"] .lesson-list li:nth-child(4n+3) { --lesson-bg: #33240e; --lesson-ink: #f0a53a; }
+:root[data-theme="dark"] .lesson-list li:nth-child(4n+4) { --lesson-bg: #241b3a; --lesson-ink: #a587ee; }
+:root[data-theme="dark"] .lesson-list li .lesson-state:not(.done) { background: rgba(0, 0, 0, .3); }
