@@ -340,11 +340,15 @@ function voiceOver(): HTMLAudioElement {
   return (w.__vtcVo ??= new Audio());
 }
 
-/** Recorded clips are named by the 32-bit FNV-1a hash of the caption text. */
-function voiceOverUrl(text: string) {
+/**
+ * Recorded clips are named by the 32-bit FNV-1a hash of the caption text and live in ./vo/.
+ * They are bundled (inlined in the single-file demo), so the player knows which shots have one.
+ */
+import { VO_CLIPS } from './voClips';
+function voiceOverUrl(text: string): string | undefined {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619) >>> 0;
-  return '/vo/' + h.toString(16).padStart(8, '0') + '.mp3';
+  return VO_CLIPS['./vo/' + h.toString(16).padStart(8, '0') + '.mp3'];
 }
 
 /** The browser's speech voices (they load asynchronously). */
@@ -416,6 +420,9 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
   const [voice, setVoice] = useState(true);
   const voices = useVoices();
   const canSpeak = voices.some((v) => v.lang.toLowerCase().startsWith(lang));
+  // Shots with a recorded clip play it even where the browser has no speech voice for the language.
+  const recorded = useMemo(() => lesson.shots.some((sh) => voiceOverUrl(sh.caption[lang])), [lesson, lang]);
+  const canNarrate = canSpeak || recorded;
   useEffect(() => { if (!active) setPlaying(false); }, [active]);
 
   // Reset when the lesson changes.
@@ -558,17 +565,18 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
   const frame = frameAt(lesson, time, timing.current);
   const shotNo = frame.shot;
   // Spoken narration of each shot's caption, in the lesson language, while playing.
-  // A recorded voice-over (assets/vo/<fnv1a of the caption>.mp3) is used where one exists;
+  // A recorded voice-over (components/vo/<fnv1a of the caption>.mp3) is used where one exists;
   // otherwise the browser's speech voice reads the caption.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const synth = window.speechSynthesis ?? { cancel() {}, speak() {} };
     const vo = voiceOver();
-    if (!voice || !playing || !started || filmed || !active || !canSpeak) { synth.cancel(); vo.pause(); return; }
+    if (!voice || !playing || !started || filmed || !active || !canNarrate) { synth.cancel(); vo.pause(); return; }
     const text = lesson.shots[shotNo]?.caption[lang];
     if (!text) return;
     synth.cancel();
     const speak = () => {
+      if (!canSpeak) return;
       const u = new SpeechSynthesisUtterance(text);
       u.lang = lang === 'ar' ? 'ar-SA' : 'en-GB';
       const v = voices.find((x) => x.lang.toLowerCase().startsWith(lang) && /natural|google|microsoft|premium|enhanced/i.test(x.name))
@@ -577,10 +585,12 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
       u.rate = Math.min(1.8, 1.05 * speed);
       synth.speak(u);
     };
+    const clip = voiceOverUrl(text);
     const play = () => {
       vo.onended = null;
+      if (!clip) { vo.pause(); speak(); return; }
       vo.onerror = speak;
-      vo.src = voiceOverUrl(text);
+      vo.src = clip;
       vo.playbackRate = Math.min(2, Math.max(0.5, speed));
       vo.play().catch((e: Error) => { if (!(e && /NotAllowed|Abort/.test(e.name))) speak(); });
     };
@@ -588,7 +598,7 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
     // Let a clip that is about to finish end before the next shot's clip starts.
     if (!vo.paused && !vo.ended && vo.duration - vo.currentTime < 3.2) vo.onended = play;
     else play();
-  }, [shotNo, playing, voice, lang, started, filmed, active, canSpeak]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [shotNo, playing, voice, lang, started, filmed, active, canSpeak, canNarrate]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => { if (typeof window !== 'undefined') { window.speechSynthesis?.cancel(); voiceOver().pause(); } }, []);
   const chapter = chapterAt(lesson, time);
   const hotspot = lesson.hotspots.find((h) => h.id === hot) ?? null;
@@ -781,7 +791,7 @@ export function LessonPlayer({ lesson, lang = 'en', onEvent, onComplete, height 
               </select>
             </label>
             <button type="button" aria-pressed={cc} onClick={() => setCc(!cc)} title={t.captions}>CC</button>
-            {!filmed && canSpeak && (
+            {!filmed && canNarrate && (
               <button type="button" aria-pressed={voice} onClick={() => setVoice(!voice)} title={voice ? t.narrationOff : t.narration} aria-label={t.narration}>
                 {voice ? '🔊' : '🔇'}
               </button>
